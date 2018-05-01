@@ -1,0 +1,28 @@
+{
+  "name": "yuno-gasai-2",
+  "version": "2.0.0",
+  "description": "The remade of Yuno Gasai, flawless & bugless",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo No test defined.",
+    "generate-doc": "jsdoc .\\src -r -p -d docs -t node_modules/docdash",
+    "generate-doc-notheme": "jsdoc .\\src -r -p -d docs"
+  },
+  "author": "Maeeen <marwanazuz@gmail.com>",
+  "license": "ISC",
+  "_comment": "The bot has been tested with the discord.js with thses packages and their version",
+  "okDependencies": {
+    "discord.js": "11.3.2"
+  },
+  "dependencies": {
+    "discord.js": "git+https://github.com/discordjs/discord.js.git",
+    "get-cursor-position": "^1.0.5",
+    "sqlite3": "^3.1.13"
+  },
+  "devDependencies": {
+    "docdash": "^0.4.0",
+    "eslint": "^4.19.0",
+    "heapdump": "^0.3.9",
+    "stack-trace": "0.0.10"
+  }
+}

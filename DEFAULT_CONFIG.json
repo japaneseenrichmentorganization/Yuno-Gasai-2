@@ -1,0 +1,44 @@
+{
+    "discord.token": "<empty>",
+
+    "_comment": "Parameters about logging.",
+    "logging.hidden-groups": [],
+    "logging.show-time": true,
+    "logging.group-colors": {},
+
+    "_comment": "Master users. When they'll execute a command through Discord's Chat, not any verification about permissions will be done. They'll also be able to do .execute-admin to execute commands like it was executed in the terminal.",
+    "commands.master-users": ["364593276583673857", "239882051166142465"],
+    "commands.default-prefix": ".",
+
+    "_comment": "The default image shown when someone is banned. Can be null",
+    "ban.default-image": "https://i.imgur.com/vrEDCui.gif",
+
+    "_comment": "Where the errors should be logged in chat, can be null.",
+    "errors.dropon": {
+        "guild": "402680432916955136",
+        "channel": "yuno-errors"
+    },
+    "_comment": "Can be roles ids or users ids.",
+    "errors.mentionwhencrash": ["134353632387661824"],
+
+    "_comment": "The database file (relative to the root of the project)",
+    "database": "yuno-2-database.db",
+
+    "_comment": "The bot will only react, send message, execute commands in this guild if this is a guild-id",
+    "debug.work-only-on-guild": "402680432916955136",
+
+    "_comment": "Message sent when someone talks with the bot in DM",
+    "chat.dm": "I'm just a bot :'(",
+    
+    "_comment": "Replied to a user who didn't have the permissions to execute a command",
+    "chat.insufficient-permissions": ":negative_squared_cross_mark: ${author} You don't have enough permissions to execute this command",
+
+    "_comment": "The number of warnings before a ban (when spamming)",
+    "spam.max-warnings": 3,
+
+    "_comment": "Number of experience given per msg",
+    "chat.exppermsg": 15,
+
+    "_comment": "Object describing presence (https://discord.js.org/#/docs/main/master/typedef/PresenceData). JSON not supported.",
+    "discord.presence": null
+}
