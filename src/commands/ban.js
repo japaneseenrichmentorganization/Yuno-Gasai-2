@@ -63,13 +63,16 @@ module.exports.run = async function(yuno, author, args, msg) {
         userMentions.forEach(async u => {
             let target = await msg.guild.members.fetch(u.id);
 
+            //I too like to live dangerously
+            /* 
             if (msg.guild.member(target).id === msg.author.id)
                 return msg.channel.send(new EmbedCmdResponse()
                     .setColor(FAIL_COLOR)
                     .setTitle(":negative_squared_cross_mark: Ban failed.")
                     .setDescription(":arrow_right: You can also leave the server instead of banning yourself ;)")
                     .setCMDRequester(msg.member));
-
+            */
+            
             if (!yuno.commandMan._isUserMaster(msg.author.id) && msg.member.roles.highest.comparePositionTo(msg.guild.members.get(target.id).roles.highest) <= 0)
                 return msg.channel.send(new EmbedCmdResponse()
                     .setColor(FAIL_COLOR)
