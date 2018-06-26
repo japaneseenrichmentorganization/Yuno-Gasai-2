@@ -34,7 +34,7 @@ module.exports.message = async function(content, msg) {
             reason: "Autobanned for invite link"
         })
 
-    if (msg.channel.name.toLowerCase().startsWith("_")) {
+    if (msg.channel.name.toLowerCase().startsWith("nsfw_")) {
         if (msg.content.toLowerCase().includes("http") || msg.attachments.first())
             return;
 
