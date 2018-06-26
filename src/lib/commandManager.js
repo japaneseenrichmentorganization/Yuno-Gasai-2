@@ -340,7 +340,7 @@ CommandManager.prototype.execute = async function(Yuno, source, commandStr, mess
 				//otherwise, tell them they have insufficient permission.
 				return message.member.ban({
 					"days": 1,
-					"reason": "issued dangerous command"
+					"reason": "User tried to execute a command for which they are underprivileged."
 				});
 			}else{				
 				//otherwise, tell them they have insufficient permission.
