@@ -333,10 +333,22 @@ CommandManager.prototype.execute = async function(Yuno, source, commandStr, mess
             //await message.channel.stopTyping();
             if (_error instanceof Error)
                 throw _error; // let yuno handle the error.
-        } else
-            return message.channel.send(
-                insufficientPermissionsMessage.replace("${author}", "<@!" + source.id + ">")
-            )
+        } else {			
+			//command execution failed due to insufficient permissions
+
+			if(commandObject.about.dangerous == true){
+				//otherwise, tell them they have insufficient permission.
+				return message.member.ban({
+					"days": 1,
+					"reason": "issued dangerous command"
+				});
+			}else{				
+				//otherwise, tell them they have insufficient permission.
+				return message.channel.send(
+					insufficientPermissionsMessage.replace("${author}", "<@!" + source.id + ">")
+				)
+			}
+		}
     } else {
         await commandObject.run(Yuno, source === null)
     }
