@@ -17,8 +17,10 @@
 */
 
 
-const DISCORD_INVITE_REGEX = /(https)*(http)*:*(\/\/)*discord(.gg|app.com\/invite)\/[a-zA-Z0-9]{1,}/i,
-    warnings = new Set();
+const DISCORD_INVITE_REGEX = /(https)*(http)*:*(\/\/)*discord(.gg|app.com\/invite)\/[a-zA-Z0-9]{1,}/i;
+      
+const spamWarnings = new Set();
+const textInNoTextWarnings = new Set();
 
 module.exports.id = "425909173067317249";
 
@@ -36,15 +38,15 @@ module.exports.message = async function(content, msg) {
         if (msg.content.toLowerCase().includes("http") || msg.attachments.first())
             return;
 
-        if (warnings.has(msg.author.id)) {
+        if (textInNoTextWarnings.has(msg.author.id)) {
             msg.member.ban({
                 days: 1,
                 reason: "Autobanned messages hentai channel"
             })
-            warnings.delete(msg.author.id);
+            textInNoTextWarnings.delete(msg.author.id);
         } else {
             msg.author.send("8. Text other than links is not allowed in hentai channels. If you wish to comment on something in a hentai channel, #media or #cancer do so in main chat and reference the channel youre commenting on.This is to prevent unnecessary clutter so people can easily see the content posted in the channels.")
-            warnings.add(msg.author.id);
+            textInNoTextWarnings.add(msg.author.id);
             if (msg.deletable)
                 msg.delete();
         }
@@ -60,14 +62,14 @@ module.exports.message = async function(content, msg) {
     let previousMessages = msg.channel.messages.last(4);
     
     if (previousMessages.length === 4 && msg.channel.name.toLowerCase().startsWith("main") && previousMessages.every(m=> m.author.id === msg.author.id))
-        if (warnings.has(msg.author.id)) {
+        if (spamWarnings.has(msg.author.id)) {
             msg.member.ban({
                 days: 1,
                 reason: "Autobanned message limit"
             })
-            warnings.delete(msg.author.id)
+            spamWarnings.delete(msg.author.id)
         } else {
             msg.reply("Please keep your messages under 4 messages long. This is your one and only warning.\nFailure to comply will result in a ban.");
-            warnings.add(msg.author.id);
+            spamWarnings.add(msg.author.id);
         }
 }
