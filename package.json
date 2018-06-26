@@ -17,7 +17,7 @@
   "dependencies": {
     "discord.js": "git+https://github.com/discordjs/discord.js.git",
     "get-cursor-position": "^1.0.5",
-    "sqlite3": "^3.1.13"
+    "sqlite3": "^4.0.0"
   },
   "devDependencies": {
     "docdash": "^0.4.0",
