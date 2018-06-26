@@ -107,7 +107,7 @@ module.exports.run = async function(yuno, author, args, msg) {
             })
         })
     else
-        msg.channel.send(":negative_squared_cross_mark: No users mentionned.")
+        msg.channel.send(":negative_squared_cross_mark: No users mentioned.")
 }
 
 module.exports.about = {
@@ -120,6 +120,6 @@ module.exports.about = {
     "list": true,
     "listTerminal": false,
     "requiredPermissions": ["BAN_MEMBERS"],
-    "aliases": ["bean", "banne"]
+    "aliases": ["bean", "banne"],
     "dangerous": true
 }
