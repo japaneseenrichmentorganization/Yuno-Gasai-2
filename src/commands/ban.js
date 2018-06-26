@@ -121,4 +121,5 @@ module.exports.about = {
     "listTerminal": false,
     "requiredPermissions": ["BAN_MEMBERS"],
     "aliases": ["bean", "banne"]
+    "dangerous": true
 }
