@@ -16,7 +16,7 @@
     along with this program.  If not, see https://www.gnu.org/licenses/.
 */
 
-const scold = require('../Data/scoldImages.json')
+const scold = require('../data/scoldImages.json')
 
 module.exports.run = async function(yuno, author, args, msg) {
     if (!msg.mentions.users.size) {

@@ -16,7 +16,7 @@
     along with this program.  If not, see https://www.gnu.org/licenses/.
 */
 
-const quote = require('../Data/quotes.json')
+const quote = require('../data/quotes.json')
 
 module.exports.run = async function(yuno, author, args, msg) {
     msg.channel.send(quote[Math.floor(Math.random() * quote.length)])
