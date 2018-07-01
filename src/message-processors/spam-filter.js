@@ -23,6 +23,7 @@ const {MessageEmbed} = require("discord.js"),
     prompt = (require("../lib/prompt")).init();
 
 const DISCORD_INVITE_REGEX = /(https)*(http)*:*(\/\/)*discord(.gg|app.com\/invite)\/[a-zA-Z0-9]{1,}/i;
+const LINK_REGEX = /[-a-zA-Z0-9@:%_\+.~#?&//=]{2,256}\.[a-z]{2,4}\b(\/[-a-zA-Z0-9@:%_\+.~#?&//=]*)?/gi;
 
 let maxWarnings = 3,
     spamfilt = {},
@@ -88,6 +89,10 @@ module.exports.message = async function(content, msg) {
     if (test !== null && test.length > 0)
         return ban(msg, "Autobanned by spam filter: Discord invitation link sent.", "Don't send any Discord invitation links here.");
 
+    let aLink = LINK_REGEX.exec(content);
+
+    if (aLink !== null && aLink.length > 0)
+        return ban(msg, "Autobanned by spam filter: Link sent.", "Don't send any links here.")
     
     let messages = msg.channel.messages.last(4);
     if (!msg.channel.nsfw && messages.length === 4 && messages.every(m => m.author.id === msg.author.id))

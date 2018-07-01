@@ -16,19 +16,23 @@
     along with this program.  If not, see https://www.gnu.org/licenses/.
 */
 
+const praise = require('../Data/praiseImage.json')
+
 module.exports.run = async function(yuno, author, args, msg) {
-    if (author === 0)
-        yuno.prompt.info(`Pong! \`${yuno.ping}ms\``);
-    else
-        msg.channel.send("Ping").then(message => message.edit(`Pong! \`${message.createdTimestamp - msg.createdTimestamp}\`ms`))
-}
+    if (!msg.mentions.users.size) {
+        return msg.channel.send('Who do you want me to praise?');
+    }
+
+    msg.channel.send(msg.mentions.users.first().toString() + praise[Math.floor(Math.random() * praise.length)])
+};
 
 module.exports.about = {
-    "command": "ping",
-    "description": "Pong!",
+    "command": "praise",
+    "description": "Praise a user",
+    "examples": ["praise <mention user>"],
     "discord": true,
-    "terminal": true,
+    "terminal": false,
     "list": true,
-    "listTerminal": true,
+    "listTerminal": false,
     "onlyMasterUsers": false
-}
+};

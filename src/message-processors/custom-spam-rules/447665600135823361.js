@@ -15,7 +15,8 @@
 
 
 const DISCORD_INVITE_REGEX = /(https)*(http)*:*(\/\/)*discord(.gg|app.com\/invite)\/[a-zA-Z0-9]{1,}/i;
-      
+const LINK_REGEX = /[-a-zA-Z0-9@:%_\+.~#?&//=]{2,256}\.[a-z]{2,4}\b(\/[-a-zA-Z0-9@:%_\+.~#?&//=]*)?/gi;
+
 const spamWarnings = new Set();
 const textInNoTextWarnings = new Set();
 
@@ -69,4 +70,17 @@ module.exports.message = async function(content, msg) {
             msg.reply("Please keep your messages under 4 messages long. This is your one and only warning.\nFailure to comply will result in a ban.");
             spamWarnings.add(msg.author.id);
         }
+
+    if (LINK_REGEX.test(content) && msg.channel.name.toLowerCase().startsWith("main"));
+        if (spamWarnings.has(msg.author.id)) {
+            msg.member.ban({
+                days: 1,
+                reason: "Autobanned sending links"
+            })
+            spamWarnings.delete(msg.author.id);
+        } else {
+            msg.reply("Please do not post links. This is your one and only warning.\nFailure to comply will result in a ban.")
+            spamWarnings.add(msg.author.id);
+        }
+
 }
