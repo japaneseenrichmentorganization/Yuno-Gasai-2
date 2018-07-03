@@ -16,7 +16,7 @@
     along with this program.  If not, see https://www.gnu.org/licenses/.
 */
 
-const praise = require('../data/praiseImage.json')
+const praise = require('../data/praiseImages.json')
 
 module.exports.run = async function(yuno, author, args, msg) {
     if (!msg.mentions.users.size) {
