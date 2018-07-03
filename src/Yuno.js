@@ -28,7 +28,6 @@ const DEFAULT_CONFIG_FILE = "config.json",
 const Util = require("util"),
     fs = require("fs"),
     path = require("path"),
-    popura = require('popura'),
     EventEmitter = require("events"),
     {Client} = require("discord.js");
 
@@ -644,7 +643,6 @@ Yuno.prototype.launch = async function() {
             this.config.set("discord.token", CUSTOM_TOKEN).save();
         let token = this.config.get("discord.token");
         await this.discordClient.login(token);
-        this.animeClient = popura(this.config.animeUser, this.config.animePass)
     } catch(e) {
         if (e.message.indexOf("invalid token") > -1 || e.message.indexOf("Incorrect login") > -1)
             throw new Error("Error while connecting to Discord. Incorrect token.")
