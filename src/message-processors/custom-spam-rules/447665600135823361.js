@@ -23,6 +23,7 @@ const textInNoTextWarnings = new Set();
 module.exports.id = "447665600135823361";
 
 module.exports.message = async function(content, msg) {
+
     if (msg.member.hasPermission("MANAGE_MESSAGES"))
         return;
 
@@ -33,7 +34,7 @@ module.exports.message = async function(content, msg) {
         })
 
     if (msg.channel.name.toLowerCase().startsWith("nsfw_")) {
-        if (msg.content.toLowerCase().includes("http") || msg.attachments.first())
+        if (msg.content.toLowerCase().includes("http") || msg.attachments.first() || LINK_REGEX.test(content))
             return;
 
         if (textInNoTextWarnings.has(msg.author.id)) {
@@ -57,6 +58,18 @@ module.exports.message = async function(content, msg) {
             reason: "Autobanned by spam filter: usage of @everyone/@here"
         })
 
+    if (LINK_REGEX.test(content) && msg.channel.name.toLowerCase().startsWith("main"))
+    if (spamWarnings.has(msg.author.id)) {
+        msg.member.ban({
+            days: 1,
+            reason: "Autobanned for sending links"
+        })
+        spamWarnings.delete(msg.author.id)
+    } else {
+        msg.reply("Please do not send links. This is your one and only warning.\nFailure to comply will result in a ban.");
+        spamWarnings.add(msg.author.id);
+    }
+
     let previousMessages = msg.channel.messages.last(4);
     
     if (previousMessages.length === 4 && msg.channel.name.toLowerCase().startsWith("main") && previousMessages.every(m=> m.author.id === msg.author.id))
@@ -70,17 +83,4 @@ module.exports.message = async function(content, msg) {
             msg.reply("Please keep your messages under 4 messages long. This is your one and only warning.\nFailure to comply will result in a ban.");
             spamWarnings.add(msg.author.id);
         }
-
-    if (LINK_REGEX.test(content) && msg.channel.name.toLowerCase().startsWith("main"));
-        if (spamWarnings.has(msg.author.id)) {
-            msg.member.ban({
-                days: 1,
-                reason: "Autobanned sending links"
-            })
-            spamWarnings.delete(msg.author.id);
-        } else {
-            msg.reply("Please do not post links. This is your one and only warning.\nFailure to comply will result in a ban.")
-            spamWarnings.add(msg.author.id);
-        }
-
 }

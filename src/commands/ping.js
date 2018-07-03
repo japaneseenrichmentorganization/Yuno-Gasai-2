@@ -18,7 +18,7 @@
 
 module.exports.run = async function(yuno, author, args, msg) {
     if (author === 0)
-        yuno.prompt.info(`Pong! \`${yuno.ping}ms\``);
+        yuno.prompt.info("Pong");
     else
         msg.channel.send("Ping").then(message => message.edit(`Pong! \`${message.createdTimestamp - msg.createdTimestamp}\`ms`))
 }

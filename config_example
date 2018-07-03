@@ -4,6 +4,8 @@
         "guild": "402680432916955136",
         "channel": "439254822856687617"
     },
+    "animeUser": "INSERT_MyAnimeList_API_User"
+    "animePass": "INSERT_MyAnimeList_API_Password"
     "logging.hidden-groups": "[]",
     "logging.show-time": true,
     "logging.group-colors": "{}"
