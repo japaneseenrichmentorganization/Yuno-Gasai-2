@@ -1,12 +1,11 @@
 {
     "discord.token": "INSERT_BOT_TOKEN_HERE",
     "errors.dropon": {
-        "guild": "402680432916955136",
-        "channel": "439254822856687617"
+        "guild": "Guild ID",
+        "channel": "Channel Name"
     },
-    "animeUser": "INSERT_MyAnimeList_API_User"
-    "animePass": "INSERT_MyAnimeList_API_Password"
     "logging.hidden-groups": "[]",
     "logging.show-time": true,
-    "logging.group-colors": "{}"
-}
+    "logging.group-colors": "{}",
+    "animeUser": "MAL_Username",
+    "animePass": "MAL_Password"

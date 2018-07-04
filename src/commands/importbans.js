@@ -19,7 +19,7 @@
 let fs = require("fs");
 
 module.exports.run = async function(yuno, author, args, msg) {
-    if (args.length === 0)
+    if (!args[0])
         return msg.channel.send("Give the guild-id please.");
 
     let guid = args[0];
@@ -33,9 +33,10 @@ module.exports.run = async function(yuno, author, args, msg) {
                 let bans = JSON.parse(data);
                 bans.forEach((el, ind, arr) => {
                     try {
-                        msg.guild.ban(el);
+                        let getMember = msg.guild.members.fetch(el);
+                        msg.guild.ban(getMember)
                     } catch(e) {
-                        console.log("Skipped", el);
+                        console.log("Skipped: " + el + "error:" + e);
                     }
                 })
                 msg.channel.send("Ban successful");
