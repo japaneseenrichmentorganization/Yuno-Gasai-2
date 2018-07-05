@@ -55,8 +55,20 @@ module.exports.run = async function(yuno, author, args, msg) {
         })(el);
     }
 
-    if (!user)
-        return msg.channel.send(":robot: Bots doesn't have xp!")
+    try {
+        if (user.user.bot) {
+            return msg.channel.send(":robot: Bots don't have xp!");
+        }
+    } catch(err) {
+        msg.guild.members.fetch(user).then(member => {
+            if (!member) return msg.channel.send(":robot: Bots don't have xp!");
+        })
+        yuno.prompt.error(err);
+    } finally {
+        if (user.user.bot) {
+            return msg.channel.send(":robot: Bots don't have xp!");
+        }
+    }
 
     if (user.id === msg.author.id && args.length > 0 && fromid)
         return msg.channel.send(":negative_squared_cross_mark: Cannot find the asked user. He's maybe not on the server :thinking: ?");

@@ -24,7 +24,7 @@ module.exports.id = "447665600135823361";
 
 module.exports.message = async function(content, msg) {
 
-    if (msg.member.hasPermission("MANAGE_MESSAGES"))
+    if (msg.member.hasPermission("MANAGE_MESSAGES"));
         return;
 
     if (DISCORD_INVITE_REGEX.test(content))
