@@ -76,13 +76,9 @@ module.exports.message = async function(content, msg) {
         return customspamrules[msg.guild.id].message(content, msg);
 
      //If the user is a bot, ignore them
-     try {
-        if (!msg.member)
-            return;
-     } catch(err) {
-         Yuno.prompt.error(err);
-         msg.guild.members.fetch(msg.member.id);
-     }
+    if (!msg.member)
+        return;
+
 
     //If the user has the ability to manage messages, ignore them
     if (msg.member.hasPermission("MANAGE_MESSAGES"))
