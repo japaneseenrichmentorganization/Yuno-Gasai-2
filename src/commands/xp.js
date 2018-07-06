@@ -55,7 +55,7 @@ module.exports.run = async function(yuno, author, args, msg) {
         })(el);
     }
 
-        if (user.user.bot) {
+        if (user.user.bot)
             return msg.channel.send(":robot: Bots don't have xp!");
 
     if (user.id === msg.author.id && args.length > 0 && fromid)
