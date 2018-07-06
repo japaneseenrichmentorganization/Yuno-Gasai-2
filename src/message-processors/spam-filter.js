@@ -80,14 +80,9 @@ module.exports.message = async function(content, msg) {
         if (!msg.member)
             return;
      } catch(err) {
-         Yuno.prompt.error(err)
-         msg.guild.members.fetch(msg.member).then(member => {
-             if (!member) return;
-         });
-     } finally {
-         if (!msg.member)
-            return;
-     };
+         Yuno.prompt.error(err);
+         msg.guild.members.fetch(msg.member.id);
+     }
 
     //If the user has the ability to manage messages, ignore them
     if (msg.member.hasPermission("MANAGE_MESSAGES"))
