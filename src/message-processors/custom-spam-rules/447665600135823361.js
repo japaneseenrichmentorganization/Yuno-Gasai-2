@@ -20,12 +20,12 @@ const LINK_REGEX = /[A-Z0-9-].(com|org|net|edu|xyz|gg|ly|co|gov|biz|tv|de|cc)/gi
 const spamWarnings = new Set();
 const textInNoTextWarnings = new Set();
 
-module.exports.id = "447665600135823361";
+module.exports.id = "460934631487700993";
 
 module.exports.message = async function(content, msg) {
 
-    if (msg.member.hasPermission("MANAGE_MESSAGES"))
-        return;
+        if (msg.member.hasPermission("MANAGE_MESSAGES"))
+            return;
 
     if (DISCORD_INVITE_REGEX.test(content))
         return msg.member.ban({
