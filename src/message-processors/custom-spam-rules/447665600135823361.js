@@ -68,6 +68,8 @@ module.exports.message = async function(content, msg) {
             } else {
                 msg.reply("Please do not send links. This is your one and only warning.\nFailure to comply will result in a ban.");
                 spamWarnings.add(msg.author.id);
+                if (msg.deletabe);
+                    msg.delete();
             };
         };
 
