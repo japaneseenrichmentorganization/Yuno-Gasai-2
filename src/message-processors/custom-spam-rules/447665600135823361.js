@@ -15,12 +15,12 @@
 
 
 const DISCORD_INVITE_REGEX = /(https)*(http)*:*(\/\/)*discord(.gg|app.com\/invite)\/[a-zA-Z0-9]{1,}/i;
-const LINK_REGEX = /[A-Z0-9-].(com|org|net|edu|xyz|gg|ly|co|gov|biz|tv|de|cc)/gi;
+const LINK_REGEX = /(ftp|http|https):\/\/(www\.)??[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}\b([-a-zA-Z0-9@:%_\+.~#?&//=]*)/ig;
 
 const spamWarnings = new Set();
 const textInNoTextWarnings = new Set();
 
-module.exports.id = "460934631487700993";
+module.exports.id = "447665600135823361";
 
 module.exports.message = async function(content, msg) {
 
@@ -68,8 +68,6 @@ module.exports.message = async function(content, msg) {
             } else {
                 msg.reply("Please do not send links. This is your one and only warning.\nFailure to comply will result in a ban.");
                 spamWarnings.add(msg.author.id);
-                if (msg.deletable)
-                    msg.delete();
             };
         };
 
