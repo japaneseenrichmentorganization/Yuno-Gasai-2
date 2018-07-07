@@ -15,15 +15,17 @@
 
 
 const DISCORD_INVITE_REGEX = /(https)*(http)*:*(\/\/)*discord(.gg|app.com\/invite)\/[a-zA-Z0-9]{1,}/i;
-      
+const LINK_REGEX = /(ftp|http|https):\/\/(www\.)??[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}\b([-a-zA-Z0-9@:%_\+.~#?&//=]*)/ig;
+
 const spamWarnings = new Set();
 const textInNoTextWarnings = new Set();
 
 module.exports.id = "447665600135823361";
 
 module.exports.message = async function(content, msg) {
-    if (msg.member.hasPermission("MANAGE_MESSAGES"))
-        return;
+
+        if (msg.member.hasPermission("MANAGE_MESSAGES"))
+            return;
 
     if (DISCORD_INVITE_REGEX.test(content))
         return msg.member.ban({
@@ -32,7 +34,7 @@ module.exports.message = async function(content, msg) {
         })
 
     if (msg.channel.name.toLowerCase().startsWith("nsfw_")) {
-        if (msg.content.toLowerCase().includes("http") || msg.attachments.first())
+        if (msg.content.toLowerCase().includes("http") || msg.attachments.first() || LINK_REGEX.test(content))
             return;
 
         if (textInNoTextWarnings.has(msg.author.id)) {
@@ -55,6 +57,21 @@ module.exports.message = async function(content, msg) {
             days: 1,
             reason: "Autobanned by spam filter: usage of @everyone/@here"
         })
+
+        if (LINK_REGEX.test(content) && msg.channel.name.toLowerCase().startsWith("main")) {
+            if (spamWarnings.has(msg.author.id)) {
+                msg.member.ban({
+                    days: 1,
+                    reason: "Autobanned for sending links"
+                })
+                spamWarnings.delete(msg.author.id);
+            } else {
+                msg.reply("Please do not send links. This is your one and only warning.\nFailure to comply will result in a ban.");
+                spamWarnings.add(msg.author.id);
+                if (msg.deletabe);
+                    msg.delete();
+            };
+        };
 
     let previousMessages = msg.channel.messages.last(4);
     

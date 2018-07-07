@@ -73,12 +73,12 @@ module.exports.run = async function(yuno, author, args, msg) {
                     .setCMDRequester(msg.member));
             */
             
-            if (!yuno.commandMan._isUserMaster(msg.author.id) && msg.member.roles.highest.comparePositionTo(msg.guild.members.get(target.id).roles.highest) <= 0)
-                return msg.channel.send(new EmbedCmdResponse()
-                    .setColor(FAIL_COLOR)
-                    .setTitle(":negative_squared_cross_mark: Ban failed.")
-                    .setDescription(":arrow_right: Failed to ban user " + target.user.tag + ". The user has a higher or the same hierarchy than you.")
-                    .setCMDRequester(msg.member));
+             if (yuno.commandMan._isUserMaster(msg.author.id))
+                 return msg.channel.send(new EmbedCmdResponse()
+                     .setColor(FAIL_COLOR)
+                     .setTitle(":negative_squared_cross_mark: Ban failed.")
+                     .setDescription(":arrow_right: Failed to ban user " + target.user.tag + ". The user is on the master list.")
+                     .setCMDRequester(msg.member));
 
             let successfulEmbed = (new EmbedCmdResponse()
                     .setColor(SUCCESS_COLOR)

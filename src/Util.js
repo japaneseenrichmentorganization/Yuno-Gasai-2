@@ -62,5 +62,24 @@ module.exports = {
         return (
             /(http|https):\/\/(\w+:{0,1}\w*)?(\S+)(:[0-9]+)?(\/|\/([\w#!:.?+=&%!\-\/]))?/
         ).test(url)
+    },
+
+    /**
+     * Give a more simple and easy to read synopsis from an anime
+     * @param {String}
+     * @return {url} 
+     */
+    "cleanSynopsis": function(str, id, type) {
+        if (str.length > 2048) {
+            str = str.slice(0, 1950).split('.');
+            str.pop();
+            str = `${str.join('.')}.\n\n[[ Read More ]](https://myanimelist.net/${type}/${id})\n\n`;
+        }
+        str = str
+            .replace(/\n\n/g, '\n')
+            .replace(/\[.*\]/g, '')
+            .replace(/\(Source: .*\)/g, '');
+
+        return str;
     }
 }
