@@ -23,6 +23,7 @@ const {MessageEmbed} = require("discord.js"),
     prompt = (require("../lib/prompt")).init();
 
 const DISCORD_INVITE_REGEX = /(https)*(http)*:*(\/\/)*discord(.gg|app.com\/invite)\/[a-zA-Z0-9]{1,}/i;
+const LINK_REGEX = /(ftp|http|https):\/\/(www\.)??[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}\b([-a-zA-Z0-9@:%_\+.~#?&//=]*)/ig;
 
 let maxWarnings = 3,
     spamfilt = {},
@@ -73,22 +74,33 @@ module.exports.message = async function(content, msg) {
 
     if (Object.keys(customspamrules).includes(msg.guild.id))
         return customspamrules[msg.guild.id].message(content, msg);
-        
+
+     //If the user is a bot, ignore them
     if (!msg.member)
         return;
 
+
+    //If the user has the ability to manage messages, ignore them
     if (msg.member.hasPermission("MANAGE_MESSAGES"))
         return;
 
+    //If the user pings @everyone or @here, ban them
     if (content.indexOf("@everyone") > -1 || content.indexOf("@here") > -1)
         return ban(msg, "Autobanned by spam filter: usage of @everyone/@here.", "Don't mention @everyone or @here.");
 
     let test = DISCORD_INVITE_REGEX.exec(content);
 
+    //If the user sends a discord invite link, warn them and then ban them after 3 warnings
     if (test !== null && test.length > 0)
         return ban(msg, "Autobanned by spam filter: Discord invitation link sent.", "Don't send any Discord invitation links here.");
 
+    let linkReg = LINK_REGEX.exec(content);
+
+    //If a user sends a link, warn them and then ban them after 3 warnings
+    if (linkReg !== null && linkReg.length > 0)
+        return ban(msg, "Autobanned by spam filter: Link sent.", "Don't send any links here.");
     
+    //If a user sends more than 4 messages before another user, warn them and ban them after 3 warnings
     let messages = msg.channel.messages.last(4);
     if (!msg.channel.nsfw && messages.length === 4 && messages.every(m => m.author.id === msg.author.id))
         ban(msg, "Autobanned by spam filter: 4 messages at a row.", "Please keep your messages under 4 messages long.");

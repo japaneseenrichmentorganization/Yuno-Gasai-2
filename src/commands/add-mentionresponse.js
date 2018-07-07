@@ -20,10 +20,10 @@ const {MessageEmbed} = require("discord.js");
 
 module.exports.run = async function(yuno, author, args, msg) {
     if (args.length <= 1)
-        return msg.channel.send(":negative_squared_cross_mark: Not enough argument.");
+        return msg.channel.send(":negative_squared_cross_mark: You must provide a trigger and response, url is not required.");
 
     let trigger = args[0],
-        response = args[1]
+        response = args[1],
         image = args[args.length - 1];
 
     if (!yuno.UTIL.checkIfUrl(image))
