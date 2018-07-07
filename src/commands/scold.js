@@ -20,7 +20,7 @@ const scold = require('../data/scoldImages.json')
 
 module.exports.run = async function(yuno, author, args, msg) {
     if (!msg.mentions.users.size) {
-        return msg.channel.send('Who do you want me to praise?');
+        return msg.channel.send('Who do you want me to scold?');
     }
 
     msg.channel.send(msg.mentions.users.first().toString() + scold[Math.floor(Math.random() * scold.length)])
