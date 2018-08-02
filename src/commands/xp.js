@@ -55,9 +55,25 @@ module.exports.run = async function(yuno, author, args, msg) {
         })(el);
     }
 
+    try {
         if (user.user.bot)
-            return msg.channel.send(":robot: Bots don't have xp!");
+        return msg.channel.send(":robot: Bots doesn't have xp!")
+} catch(err) {
+    Yuno.prompt.error(err);
+    if(msg.guild && !msg.guild.members.has(msg.author.id) && !msg.webhookID) {
+    msg.member = await msg.guild.members.fetch(msg.author); 
 
+  //If you want to fetch guild member here do it as if the user isn't a bot then it'll not ignore them so fetch the user then check them to see if they're a bot or not
+
+if (msg.guild && !msg.guild.members.has(Yuno.dC.user.id)) {
+            await msg.guild.members.fetch(Yuno.dC.user.id);
+       }
+
+        if (!msg.member) {
+                return;
+}
+}
+}
     if (user.id === msg.author.id && args.length > 0 && fromid)
         return msg.channel.send(":negative_squared_cross_mark: Cannot find the asked user. He's maybe not on the server :thinking: ?");
 
