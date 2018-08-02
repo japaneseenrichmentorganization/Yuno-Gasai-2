@@ -87,8 +87,8 @@ module.exports.message = async function(content, msg) {
 
   //If you want to fetch guild member here do it as if the user isn't a bot then it'll not ignore them so fetch the user then check them to see if they're a bot or not
 
-    if (message.guild && !message.guild.members.has(this.client.user.id)) {
-            await message.guild.members.fetch(this.client.user.id);
+if (msg.guild && !msg.guild.members.has(Yuno.dC.user.id)) {
+            await msg.guild.members.fetch(Yuno.dC.user.id);
        }
 
         if (!msg.member) {
