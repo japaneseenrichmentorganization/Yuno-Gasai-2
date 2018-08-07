@@ -75,27 +75,15 @@ module.exports.message = async function(content, msg) {
     if (Object.keys(customspamrules).includes(msg.guild.id))
         return customspamrules[msg.guild.id].message(content, msg);
 
-     //If the user is a bot, ignore them
-  try {
-    if (!msg.member) {
-        return;
- }
- } catch(err) {
-    Yuno.prompt.error(err);
+    // Obtain the member if we don't have it
     if(msg.guild && !msg.guild.members.has(msg.author.id) && !msg.webhookID) {
-    msg.member = await msg.guild.members.fetch(msg.author); 
+        msg.member = await msg.guild.members.fetch(msg.author);
+    }
+    // Obtain the member for the ClientUser if it doesn't already exist
+    if(msg.guild && !msg.guild.members.has(Yuno.dC.user.id)) {
+        await msg.guild.members.fetch(Yuno.dC.user.id);
+    }
 
-  //If you want to fetch guild member here do it as if the user isn't a bot then it'll not ignore them so fetch the user then check them to see if they're a bot or not
-
-    if (message.guild && !message.guild.members.has(this.client.user.id)) {
-            await message.guild.members.fetch(this.client.user.id);
-       }
-
-        if (!msg.member) {
-                return;
-}
-}
-}
     //If the user has the ability to manage messages, ignore them
     if (msg.member.hasPermission("MANAGE_MESSAGES"))
         return;
