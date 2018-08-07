@@ -27,6 +27,16 @@ let getAvatarURL = function(user) {
 module.exports.run = async function(yuno, author, args, msg) {
     await fetchWhereExpIsEnabled(yuno);
 
+    
+    // Obtain the member if we don't have it
+    if(msg.guild && !msg.guild.members.has(msg.author.id) && !msg.webhookID) {
+        msg.member = await msg.guild.members.fetch(msg.author);
+    }
+    // Obtain the member for the ClientUser if it doesn't already exist
+    if(msg.guild && !msg.guild.members.has(Yuno.dC.user.id)) {
+        await msg.guild.members.fetch(Yuno.dC.user.id);
+    }
+    
     if (!whereExpIsEnabled.includes(msg.guild.id))
         return msg.channel.send("Experience counting is __disabled__ on the server.");
 
@@ -54,7 +64,7 @@ module.exports.run = async function(yuno, author, args, msg) {
             }
         })(el);
     }
-
+    
         if (user.user.bot)
             return msg.channel.send(":robot: Bots don't have xp!");
 
