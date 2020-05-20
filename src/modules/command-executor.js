@@ -65,7 +65,7 @@ let discordConnected = async function(yuno) {
     prefixes = await Yuno.dbCommands.getPrefixes(Yuno.database);
 
     // the workOnlyOnGuild future value (if the bot has joined the guild)
-    let workOnlyOnGuild_ = discClient.guilds.get(workOnlyOnGuild);
+    let workOnlyOnGuild_ = discClient.guilds.cache.get(workOnlyOnGuild);
 
     if (workOnlyOnGuild_ !== null)
         workOnlyOnGuild = workOnlyOnGuild_

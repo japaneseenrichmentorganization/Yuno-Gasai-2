@@ -37,12 +37,12 @@ let discordConnected = function(Yuno) {
     let dC = Yuno.dC,
         guilds = dC.guilds;
 
-    guild = guilds.get(guildId);
+    guild = guilds.cache.get(guildId);
 
     if (typeof guild === "undefined")
         return Yuno.prompt.error("Cannot log bot errors into a channel: GuildID: " + guildId + " is invalid. Try putting a guild ID instead")
 
-    channel = guild.channels.find("name", channelName);
+    channel = guild.channels.cache.find(name =>name.channelName === 'name');
 
     if (typeof channel === "undefined")
         return Yuno.prompt.error("Cannot log bot errors into a channel: ChannelName: " + channelName + " is invalid. Try putting a channel name instead")

@@ -71,15 +71,15 @@ module.exports.message = async function(content, msg) {
 
     if (Object.keys(customspamrules).includes(msg.guild.id))
         return customspamrules[msg.guild.id].message(content, msg);
-
-    // Obtain the member if we don't have it
-    if(msg.guild && !msg.guild.members.has(msg.author.id) && !msg.webhookID) {
+// Obtain the member if we don't have it
+    if(msg.guild && !msg.guild.members.cache.has(msg.author.id) && !msg.webhookID) {
         msg.member = await msg.guild.members.fetch(msg.author);
     }
     // Obtain the member for the ClientUser if it doesn't already exist
-    if(msg.guild && !msg.guild.members.has(Yuno.dC.user.id)) {
+    if(msg.guild && !msg.guild.members.cache.has(Yuno.dC.user.id)) {
         await msg.guild.members.fetch(Yuno.dC.user.id);
     }
+
 
     //If the user has the ability to manage messages, ignore them
     if (msg.member.hasPermission("MANAGE_MESSAGES"))
@@ -102,7 +102,7 @@ module.exports.message = async function(content, msg) {
         return ban(msg, "Autobanned by spam filter: Link sent.", "Don't send any links here.");
     
     //If a user sends more than 4 messages before another user, warn them and ban them after 3 warnings
-    let messages = msg.channel.messages.last(4);
+    let messages = msg.channel.messages.cache.last(4);
     if (!msg.channel.nsfw && messages.length === 4 && messages.every(m => m.author.id === msg.author.id))
         ban(msg, "Autobanned by spam filter: 4 messages at a row.", "Please keep your messages under 4 messages long.");
     

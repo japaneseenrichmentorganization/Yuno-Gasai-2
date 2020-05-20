@@ -61,7 +61,7 @@ let discordConnected = async function(Yuno) {
         await e.discordConnected(Yuno);
     })
 
-    let workOnlyOnGuild_ = discClient.guilds.get(workOnlyOnGuild);
+    let workOnlyOnGuild_ = discClient.guilds.cache.get(workOnlyOnGuild);
     
     if (workOnlyOnGuild_ !== null)
         workOnlyOnGuild = workOnlyOnGuild_

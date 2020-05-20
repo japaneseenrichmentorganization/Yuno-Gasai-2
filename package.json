@@ -8,21 +8,22 @@
     "generate-doc": "jsdoc .\\src -r -p -d docs -t node_modules/docdash",
     "generate-doc-notheme": "jsdoc .\\src -r -p -d docs"
   },
-  "author": "Maeeen <marwanazuz@gmail.com>",
-  "license": "ISC",
-  "_comment": "The bot has been tested with the discord.js with thses packages and their version",
-  "okDependencies": {
-    "discord.js": "11.3.2"
-  },
-  "dependencies": {
-    "discord.js": "git+https://github.com/discordjs/discord.js.git",
-    "get-cursor-position": "^1.0.5",
-    "sqlite3": "^3.1.13"
-  },
   "devDependencies": {
     "docdash": "^0.4.0",
-    "eslint": "^4.19.0",
+    "eslint": "^7.0.0",
     "heapdump": "^0.3.9",
     "stack-trace": "0.0.10"
+  },
+  "dependencies": {
+    "acord": "^1.0.0",
+    "bluebird": "^3.7.2",
+    "discord.js": "^12.0.0",
+    "he": "^1.2.0",
+    "longjohn": "^0.2.12",
+    "moment": "^2.26.0",
+    "moment-duration-format": "^2.3.2",
+    "snekfetch": "^4.0.4",
+    "sqlite3": "^4.2.0",
+    "urban": "^0.3.2"
   }
 }

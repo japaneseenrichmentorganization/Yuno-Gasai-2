@@ -26,11 +26,11 @@ module.exports.run = async function(yuno, author, args, msg) {
 
     
     // Obtain the member if we don't have it
-    if(msg.guild && !msg.guild.members.has(msg.author.id) && !msg.webhookID) {
+    if(msg.guild && !msg.guild.members.cache.has(msg.author.id) && !msg.webhookID) {
         msg.member = await msg.guild.members.fetch(msg.author);
     }
     // Obtain the member for the ClientUser if it doesn't already exist
-    if(msg.guild && !msg.guild.members.has(Yuno.dC.user.id)) {
+    if(msg.guild && !msg.guild.members.cache.has(Yuno.dC.user.id)) {
         await msg.guild.members.fetch(Yuno.dC.user.id);
     }
     
@@ -52,7 +52,7 @@ module.exports.run = async function(yuno, author, args, msg) {
                     if (!isNaN(parseInt(el[5])))
                         return;
 
-            let temp = msg.guild.members.get(el);
+            let temp = msg.guild.members.cache.get(el);
 
             fromid = true;
 
