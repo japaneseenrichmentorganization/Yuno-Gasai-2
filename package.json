@@ -15,7 +15,7 @@
     "stack-trace": "0.0.10"
   },
   "dependencies": {
-    "acord": "^1.0.0",
+    "acord": ">=5.7.4",
     "bluebird": "^3.7.2",
     "discord.js": "^12.0.0",
     "he": "^1.2.0",
