@@ -29,4 +29,4 @@ Edit the config.json and DEFAULT_CONFIG.json to the bots and your needs
 tmux
 
 NODE_ENV=production node index.json          to start the bot
-remove the NODE_ENV=production to use full stackc tracing.
+remove the NODE_ENV=production to use full stacck tracing.
