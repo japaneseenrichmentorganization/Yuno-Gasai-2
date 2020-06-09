@@ -61,7 +61,11 @@ let eventDiscord = function() {
         }
 
         if (send)
-            member.send(embed)
+            member.send(embed).catch(error => {
+    if (error.code == 50007) {
+        console.error('Failed to send message:', error);
+    }
+});
     })
 }
 
