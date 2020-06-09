@@ -9,7 +9,7 @@ Installation
 LINUX
 
 Prerequisites
-Node 9.x, node-gyp, make/build-essential, sqlite3, git, tmux (if you wish to use the interactive shell)
+Node 12.x, node-gyp, make/build-essential, sqlite3, git, tmux (if you wish to use the interactive shell)
 
 Use your package manager to install these and/or the script provided by nodejs
 
@@ -23,8 +23,10 @@ Ensure sqlite3 is installed
 
 npm install sqlite3
 
+
 Edit the config.json and DEFAULT_CONFIG.json to the bots and your needs
 
 tmux
 
-node index.json          to start the bot
+NODE_ENV=production node index.json          to start the bot
+remove the NODE_ENV=production to use full stackc tracing.

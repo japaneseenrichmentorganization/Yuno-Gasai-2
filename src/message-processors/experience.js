@@ -64,5 +64,5 @@ module.exports.message = async function(content, msg) {
         return;
 
     if (rolemap && rolemap[xp.level])
-        msg.member.roles.add(msg.guild.roles.get(rolemap[xp.level]));
+        msg.member.roles.add(msg.guild.roles.cache.get(rolemap[xp.level]));
 }

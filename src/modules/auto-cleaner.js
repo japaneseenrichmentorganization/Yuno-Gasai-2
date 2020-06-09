@@ -27,7 +27,7 @@ let setupCleaners = async function(Yuno) {
         cleans = await dcom.getCleans(Yuno.database);
 
     cleans.forEach(el => {
-        let g = Yuno.dC.guilds.get(el.guildId);
+        let g = Yuno.dC.guilds.cache.get(el.guildId);
 
         if (!(g instanceof Guild))
             return this.prompt.error("Cannot (auto-)clean a channel: guild doesn't exists! GuildId: " + el.guildId);
@@ -39,7 +39,7 @@ let setupCleaners = async function(Yuno) {
                 if (actualClean === null)
                     return;
 
-                let ch = g.channels.find("name", el.channelName);
+                let ch = g.channels.cache.find(name => el.channelName === 'channelName');
 
                 if (!(ch instanceof Channel)) {
                     Yuno.dbCommands.delClean(Yuno.database, el.guildId, el.channelName)

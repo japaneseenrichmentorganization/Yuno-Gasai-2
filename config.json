@@ -1,0 +1,10 @@
+{
+    "discord.token": "TOKEN_HERE",
+    "errors.dropon": {
+        "guild": "GUILD_ID",
+        "channel": "CHANNEL_ID"
+    },
+    "logging.hidden-groups": "[]",
+    "logging.show-time": true,
+    "logging.group-colors": "{}"
+}
