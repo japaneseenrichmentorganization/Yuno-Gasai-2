@@ -16,7 +16,7 @@
     along with this program.  If not, see https://www.gnu.org/licenses/.
 */
 
-const {Guild, Channel, MessageEmbed} = require("discord.js");
+const {Guild, Channel, GuildChannel, MessageEmbed} = require("discord.js");
 
 let intervalManager = null;
 
@@ -41,7 +41,7 @@ let setupCleaners = async function(Yuno) {
 
                 let ch = g.channels.cache.find(name => el.channelName === 'channelName');
 
-                if (!(ch instanceof Channel)) {
+                if (!(ch === GuildChannel)) {
                     Yuno.dbCommands.delClean(Yuno.database, el.guildId, el.channelName)
                     return Yuno.prompt.error("Cannot (auto-)clean a channel: channel doesn't exists! Guild name: " + g.name + "; ChannelName: " + el.channelName);
                 }
