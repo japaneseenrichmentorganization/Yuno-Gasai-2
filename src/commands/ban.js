@@ -73,7 +73,7 @@ module.exports.run = async function(yuno, author, args, msg) {
                     .setCMDRequester(msg.member));
             */
             
-             if (yuno.commandMan._isUserMaster(msg.author.id))
+             if (yuno.commandMan._isUserMaster(target))
                  return msg.channel.send(new EmbedCmdResponse()
                      .setColor(FAIL_COLOR)
                      .setTitle(":negative_squared_cross_mark: Ban failed.")

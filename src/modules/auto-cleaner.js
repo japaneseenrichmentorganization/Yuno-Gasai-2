@@ -39,7 +39,7 @@ let setupCleaners = async function(Yuno) {
                 if (actualClean === null)
                     return;
 
-                let ch = g.channels.cache.find(name => el.channelName === 'channelName');
+                let ch = g.channels.cache.find((ch) => ch.name.toLowerCase() === el.channelName);
 
                 if (!(ch instanceof Channel)) {
                     Yuno.dbCommands.delClean(Yuno.database, el.guildId, el.channelName)
