@@ -23,10 +23,9 @@
     "longjohn": "^0.2.12",
     "moment": "^2.26.0",
     "moment-duration-format": "^2.3.2",
-    "npm": "^7.10.0",
+    "npm": "^7.24.1",
     "snekfetch": "^4.0.4",
-    "sqlite3": "^5.0.2",
+    "sqlite3": "github:blubaustin/node-sqlite3",
     "urban": "^0.3.2"
   }
 }
-
