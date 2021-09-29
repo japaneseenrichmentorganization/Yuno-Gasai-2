@@ -19,7 +19,7 @@
     "bluebird": "^3.7.2",
     "discord.js": "^12.5.3",
     "he": "^1.2.0",
-    "i": "^0.3.6",
+    "i": "^0.3.7",
     "longjohn": "^0.2.12",
     "moment": "^2.26.0",
     "moment-duration-format": "^2.3.2",
