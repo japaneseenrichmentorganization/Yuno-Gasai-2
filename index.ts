@@ -14,19 +14,15 @@
 */
 
 // Consoling (to be sure that the right file is being executed: debug)
-console.log("Starting Yuno-Gasai-2");
+import Yuno from './src/Yuno';
+console.log('Starting Yuno-Gasai-2');
 
 
 if(process.env.NODE_ENV !== 'production') {
-    const longjohn = require('longjohn'); 
-    global.Promise = require("bluebird"); 
-    process.env.BLUEBIRD_LONG_STACK_TRACES = 1; 
+	require('longjohn'); 
 }
 
-
-
-let Yuno = require("./src/Yuno"),
-    instance = new Yuno();
+const instance = new Yuno();
 
 instance.parseArguments(process.argv);
 
@@ -36,14 +32,14 @@ instance.parseArguments(process.argv);
 
 
 if(process.env.NODE_ENV !== 'production') {
-process.on('uncaughtException', (err) => {
-    console.log('\x1b[35m', "Stack-Trace: " + err.stack); 
-});
+	process.on('uncaughtException', (err) => {
+		console.log('\x1b[35m', 'Stack-Trace: ' + err.stack); 
+	});
 
-process.on('unhandledRejection', (err) => {
-    console.log('\x1b[35m', "Stack-Trace: " + err.stack); 
-});
+	process.on('unhandledRejection', (err: unknown) => {
+		console.log('\x1b[35m', 'Stack-Trace: ' + (err instanceof Error? err.stack : '')); 
+	});
 }
 
-process.on("SIGTERM", () => instance.shutdown(-1))
-process.on("SIGINT", () => instance.shutdown(-1))
+process.on('SIGTERM', () => instance.shutdown(-1));
+process.on('SIGINT', () => instance.shutdown(-1));
