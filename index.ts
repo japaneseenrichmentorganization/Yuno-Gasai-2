@@ -12,34 +12,36 @@
     You should have received a copy of the GNU Affero General Public License
     along with this program.  If not, see https://www.gnu.org/licenses/.
 */
-
-// Consoling (to be sure that the right file is being executed: debug)
-import Yuno from './src/Yuno';
-console.log('Starting Yuno-Gasai-2');
-
-
-if(process.env.NODE_ENV !== 'production') {
-	require('longjohn'); 
-}
-
-const instance = new Yuno();
-
-instance.parseArguments(process.argv);
-
-//custom colors  [custom color code][console color reset]
-// \x1b[35m - magenta 
-// \x1b[31m - red
-
-
-if(process.env.NODE_ENV !== 'production') {
-	process.on('uncaughtException', (err) => {
-		console.log('\x1b[35m', 'Stack-Trace: ' + err.stack); 
-	});
-
-	process.on('unhandledRejection', (err: unknown) => {
-		console.log('\x1b[35m', 'Stack-Trace: ' + (err instanceof Error? err.stack : '')); 
-	});
-}
-
-process.on('SIGTERM', () => instance.shutdown(-1));
-process.on('SIGINT', () => instance.shutdown(-1));
+import { Yuno } from './src/Yuno';
+(async () => {
+	try {
+        console.log('Starting Yuno-Gasai-2');
+        // Creates a new Yuno instance, a guild ID must be passed
+		const instance = new Yuno('');
+		await instance.start(
+			''
+		);
+        // Sets a listeners for easier debugging
+        if (process.env.NODE_ENV !== 'production') {
+            process.on('uncaughtException', (err) => {
+                console.log('\x1b[35m', 'Stack-Trace: ' + err.stack);
+            });
+        
+            process.on('unhandledRejection', (err: unknown) => {
+                console.log(
+                    '\x1b[35m',
+                    'Stack-Trace: ' + (err instanceof Error ? err.stack : '')
+                );
+            });
+        }
+        process.on('warning', (warn: Error) =>{
+            console.log('\x1b[35m', warn.name);
+            console.log('\x1b[35m', warn.message);
+            console.log('\x1b[35m', warn.stack);
+            process.exit(1);
+        })
+	} catch (e: unknown) {
+		//Critical error probably no token and no guildid
+        console.error(`Critical error: ${e instanceof Error ? e.stack : e}`)
+	}
+})();
