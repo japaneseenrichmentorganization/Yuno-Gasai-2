@@ -26,9 +26,14 @@ interface RunOptions {
 	args: CommandInteractionOptionResolver;
 }
 
-type RunFunction = (options: RunOptions) => void;
+type RunFunction = (options: RunOptions) => void | Promise<void>;
 
 export type CommandType = {
 	userPermissions?: PermissionResolvable[];
 	run: RunFunction;
 } & ChatInputApplicationCommandData;
+
+export interface Command {
+	commandOptions: CommandType;
+	constructor(commandOptions: CommandType): void;
+}
