@@ -16,33 +16,33 @@
     along with this program.  If not, see https://www.gnu.org/licenses/.
 */
 
-module.exports.modulename = "invite-deletor";
+module.exports.modulename = 'invite-deletor';
 
 let DISCORD_EVENTED = false;
 
 let discordConnected = async function(Yuno) {
-    if (!DISCORD_EVENTED)
-        Yuno.dC.on("guildMemberRemove", async function(member) {
-            (await member.guild.fetchInvites()).filter(invite => {
-                if (!invite.inviter)
-                    return [];
-                return invite.inviter.id === member.id
-            }).forEach(async el => await el.delete());
-        })
+	if (!DISCORD_EVENTED)
+		Yuno.dC.on('guildMemberRemove', async function(member) {
+			(await member.guild.fetchInvites()).filter(invite => {
+				if (!invite.inviter)
+					return [];
+				return invite.inviter.id === member.id;
+			}).forEach(async el => await el.delete());
+		});
 
-    DISCORD_EVENTED = true;
+	DISCORD_EVENTED = true;
 };
 
 module.exports.init = function(Yuno, hotReloaded) {
-    if (hotReloaded)
-        discordConnected(Yuno);
-    else
-        Yuno.on("discord-connected", discordConnected)
-}
+	if (hotReloaded)
+		discordConnected(Yuno);
+	else
+		Yuno.on('discord-connected', discordConnected);
+};
 
 module.exports.configLoaded = async function(Yuno, config) {
-    let presenceData_ = await config.get("discord.presence");
+	let presenceData_ = await config.get('discord.presence');
 
-    if (typeof presenceData_ === "object")
-        presenceData = presenceData_; 
-}
+	if (typeof presenceData_ === 'object')
+		presenceData = presenceData_; 
+};
