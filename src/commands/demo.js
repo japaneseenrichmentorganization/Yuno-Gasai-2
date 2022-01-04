@@ -17,32 +17,32 @@
 */
 
 module.exports.run = async function(yuno, author, args, msg) {
-    if (author === 0)
-        yuno.prompt.info("Modified!");
-    else
-        if (msg)
-            msg.reply("Hey xd");
-}
+	if (author === 0)
+		yuno.prompt.info('Modified!');
+	else
+	if (msg)
+		msg.reply('Hey xd');
+};
 
 module.exports.about = {
-    // This "command" value isn't necessary.
-    "command": "demo",
-    // Some description text.
-    "description": "Some demo text.",
-    // Exemples
-    "examples": ["demo -t", "demo @[user]"],
-    // Does the command will be accessible through Discord's chat. Default: true
-    "discord": false,
-    // Does the command will be accessible through terminal. Default: true
-    "terminal": true,
-    // Does the cmd shows in list/help
-    "list": true,
-    // Does the cmd shows in list/help even in the console. Default: true
-    "listTerminal": true,
-    // All permissions that are required to the user. From the terminal, this will be ignored. Default: command only accessible by terminal.
-    "requiredPermissions": ["MANAGE_MESSAGES"],/*
+	// This "command" value isn't necessary.
+	'command': 'demo',
+	// Some description text.
+	'description': 'Some demo text.',
+	// Exemples
+	'examples': ['demo -t', 'demo @[user]'],
+	// Does the command will be accessible through Discord's chat. Default: true
+	'discord': false,
+	// Does the command will be accessible through terminal. Default: true
+	'terminal': true,
+	// Does the cmd shows in list/help
+	'list': true,
+	// Does the cmd shows in list/help even in the console. Default: true
+	'listTerminal': true,
+	// All permissions that are required to the user. From the terminal, this will be ignored. Default: command only accessible by terminal.
+	'requiredPermissions': ['MANAGE_MESSAGES'],/*
     // If any aliases of the command. Type: array/string
     "aliases": ["demo_"],*/
-    // Master user, does the command will be opened only for masters.
-    "onlyMasterUsers": false
-}
+	// Master user, does the command will be opened only for masters.
+	'onlyMasterUsers': false
+};

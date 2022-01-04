@@ -17,11 +17,11 @@
 */
 
 // hot-reload
-delete require.cache[require.resolve("../Util")]
+delete require.cache[require.resolve('../Util')];
 
-const {MessageEmbed} = require("discord.js"),
-    Util = require("util"),
-    DiscordUtil = require("../Util");
+const {MessageEmbed} = require('discord.js'),
+	Util = require('util'),
+	DiscordUtil = require('../Util');
 
 
 /**
@@ -30,15 +30,15 @@ const {MessageEmbed} = require("discord.js"),
  * @extends {MessageEmbed}
  */
 let EmbedCmdResponse = function(data) {
-    Object.getPrototypeOf(MessageEmbed.prototype).constructor.call(this, data);
-}
+	Object.getPrototypeOf(MessageEmbed.prototype).constructor.call(this, data);
+};
 
 EmbedCmdResponse.setCMDRequester = function(embed, user) {
-    let username = user.nickname ? user.nickname : user.user.tag;
+	let username = user.nickname ? user.nickname : user.user.tag;
     
-    embed.setFooter("Requested by " + username, DiscordUtil.getAvatarURL(user.user))
-    return embed;
-}
+	embed.setFooter('Requested by ' + username, DiscordUtil.getAvatarURL(user.user));
+	return embed;
+};
 
 Util.inherits(EmbedCmdResponse, MessageEmbed);
 
@@ -49,11 +49,11 @@ Util.inherits(EmbedCmdResponse, MessageEmbed);
  * @deprecated
  */
 EmbedCmdResponse.prototype.setCMDRequester = function(user) {
-    let username = user.nickname ? user.nickname : user.user.tag;
+	let username = user.nickname ? user.nickname : user.user.tag;
     
-    this.setFooter("Requested by " + username, DiscordUtil.getAvatarURL(user.user))
-    return this;
-}
+	this.setFooter('Requested by ' + username, DiscordUtil.getAvatarURL(user.user));
+	return this;
+};
 
 /**
  * Sets the description of the footer, but joins the arguments
@@ -62,15 +62,15 @@ EmbedCmdResponse.prototype.setCMDRequester = function(user) {
  * @deprecated
  */
 EmbedCmdResponse.prototype.setDescription = function() {
-    let things = Array.from(arguments),
-        description = "";
+	let things = Array.from(arguments),
+		description = '';
 
-    things.forEach(el => description += el + " ");
+	things.forEach(el => description += el + ' ');
 
-    description.substring(0, -1);
+	description.substring(0, -1);
 
-    MessageEmbed.prototype.setDescription.call(this, description);
-    return this;
-}
+	MessageEmbed.prototype.setDescription.call(this, description);
+	return this;
+};
 
 module.exports = EmbedCmdResponse;

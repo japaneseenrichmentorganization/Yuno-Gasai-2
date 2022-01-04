@@ -16,53 +16,91 @@
     along with this program.  If not, see https://www.gnu.org/licenses/.
 */
 
-const {MessageEmbed} = require("discord.js");
+import { MessageEmbed } from 'discord.js';
 
-module.exports.run = async function(yuno, author, args, msg) {
-    if (!msg.mentions.channels.size)
-        return msg.channel.send("Please mention a channel.");
+const run = async function (yuno, author, args, msg) {
+	if (!msg.mentions.channels.size)
+		return msg.channel.send('Please mention a channel.');
 
-    let ch = msg.mentions.channels.first();
+	let ch = msg.mentions.channels.first();
 
-    if (args[0] === "--force") {
-        let confirmmsg = await msg.channel.send(new MessageEmbed().setColor("#42d7f4").setTitle("Confirm channel clear.").setDescription("This will **instantly** clean this channel, __without any warning__.\n\nConfirm by sending `yes`. You have 10s to answer.\nSending any other message will cancel the clean")),
-            coll = msg.channel.createMessageCollector(m => msg.author.id === m.author.id, { time: 10000 })
-        
-        coll.on("collect", async(m) => {
-            if (m.content.toLowerCase() === "yes") {
-                try {
-                    (await yuno.UTIL.clean(ch)).send(new MessageEmbed()
-                    .setImage("https://vignette3.wikia.nocookie.net/futurediary/images/9/94/Mirai_Nikki_-_06_-_Large_05.jpg")
-                    .setAuthor("Yuno is done cleaning.", yuno.UTIL.getAvatarURL(yuno.dC.user))
-                    .setColor("#ff51ff"));
-                } catch(e) {
-                    msg.author.send("Cleaning failed: ```" + e.message + "```" + "```" + e.stack + "```");
-                }
-            }
-            coll.stop();
-        })
-    } else {
-        let clean = await yuno.dbCommands.getClean(yuno.database, msg.guild.id, ch.name);
+	if (args[0] === '--force') {
+		await msg.channel.send(
+			new MessageEmbed()
+				.setColor('#42d7f4')
+				.setTitle('Confirm channel clear.')
+				.setDescription(
+					'This will **instantly** clean this channel, __without any warning__.\n\nConfirm by sending `yes`. You have 10s to answer.\nSending any other message will cancel the clean'
+				)
+		),
+		coll = msg.channel.createMessageCollector(
+			(m) => msg.author.id === m.author.id,
+			{ time: 10000 }
+		);
 
-        if (clean === null)
-            return msg.channel.send(":negative_squared_cross_mark: There's no auto-clean for this channel.");
-        else {
-            yuno.dbCommands.setClean(yuno.database, msg.guild.id, ch.name, clean.timeFEachClean, clean.timeBeforeClean, clean.timeBeforeClean)
-            return msg.channel.send("Clean commencing in " + clean.timeBeforeClean + " minutes.")
-        }
-    }
-}
+		coll.on('collect', async (m) => {
+			if (m.content.toLowerCase() === 'yes') {
+				try {
+					(await yuno.UTIL.clean(ch)).send(
+						new MessageEmbed()
+							.setImage(
+								'https://vignette3.wikia.nocookie.net/futurediary/images/9/94/Mirai_Nikki_-_06_-_Large_05.jpg'
+							)
+							.setAuthor(
+								'Yuno is done cleaning.',
+								yuno.UTIL.getAvatarURL(yuno.dC.user)
+							)
+							.setColor('#ff51ff')
+					);
+				} catch (e) {
+					msg.author.send(
+						'Cleaning failed: ```' + e.message + '```' + '```' + e.stack + '```'
+					);
+				}
+			}
+			coll.stop();
+		});
+	} else {
+		let clean = await yuno.dbCommands.getClean(
+			yuno.database,
+			msg.guild.id,
+			ch.name
+		);
 
-module.exports.about = {
-    "command": "clean",
-    "description": "Cleans a channel.",
-    "usage": "clean [--force]",
-    "examples": ["clean #channel-mention"],
-    "discord": true,
-    "terminal": false,
-    "list": true,
-    "listTerminal": false,
-    "aliases": "auto-clean clean",
-    "requiredPermissions": ["MANAGE_MESSAGES"],
-    "onlyMasterUsers": false
-}
+		if (clean === null)
+			return msg.channel.send(
+				':negative_squared_cross_mark: There\'s no auto-clean for this channel.'
+			);
+		else {
+			yuno.dbCommands.setClean(
+				yuno.database,
+				msg.guild.id,
+				ch.name,
+				clean.timeFEachClean,
+				clean.timeBeforeClean,
+				clean.timeBeforeClean
+			);
+			return msg.channel.send(
+				'Clean commencing in ' + clean.timeBeforeClean + ' minutes.'
+			);
+		}
+	}
+};
+
+const about = {
+	command: 'clean',
+	description: 'Cleans a channel.',
+	usage: 'clean [--force]',
+	examples: ['clean #channel-mention'],
+	discord: true,
+	terminal: false,
+	list: true,
+	listTerminal: false,
+	aliases: 'auto-clean clean',
+	requiredPermissions: ['MANAGE_MESSAGES'],
+	onlyMasterUsers: false,
+};
+export default{
+	about,
+	run
+};

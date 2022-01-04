@@ -16,53 +16,53 @@
     along with this program.  If not, see https://www.gnu.org/licenses/.
 */
 
-module.exports.messageProcName = "experience"
+module.exports.messageProcName = 'experience';
 
 let guildsWhereExpIsEnabled = [],
-    exppermsg = 5,
-    yuno;
+	exppermsg = 5,
+	yuno;
 
 module.exports.discordConnected = async function(Yuno) {
-    guildsWhereExpIsEnabled = await Yuno.dbCommands.getGuildsWhereExpIsEnabled(Yuno.database);
-}
+	guildsWhereExpIsEnabled = await Yuno.dbCommands.getGuildsWhereExpIsEnabled(Yuno.database);
+};
 
 module.exports.configLoaded = function(Yuno, config) {
-    yuno = Yuno;
-    let exppermsg_ = config.get("chat.exppermsg");
+	yuno = Yuno;
+	let exppermsg_ = config.get('chat.exppermsg');
 
-    if (typeof exppermsg_ === "number")
-        exppermsg = exppermsg_;
-    else
-        Yuno.prompt.warning("The value chat.exppermsg was expected to be a number, but it's a " + typeof exppermsg_ + ". Using default max-warnings value: " + exppermsg);
-}
+	if (typeof exppermsg_ === 'number')
+		exppermsg = exppermsg_;
+	else
+		Yuno.prompt.warning('The value chat.exppermsg was expected to be a number, but it\'s a ' + typeof exppermsg_ + '. Using default max-warnings value: ' + exppermsg);
+};
 
 module.exports.message = async function(content, msg) {
-    if (msg.author.bot)
-        return;
+	if (msg.author.bot)
+		return;
 
-    let dbCommands = yuno.dbCommands,
-        db = yuno.database;
+	let dbCommands = yuno.dbCommands,
+		db = yuno.database;
     
-    if (!guildsWhereExpIsEnabled.includes(msg.guild.id))
-        return;
+	if (!guildsWhereExpIsEnabled.includes(msg.guild.id))
+		return;
 
-    let xp = await dbCommands.getXPData(db, msg.guild.id, msg.author.id),
-        neededXP = 5 * Math.pow(xp.level, 2) + 50 * xp.level + 100
+	let xp = await dbCommands.getXPData(db, msg.guild.id, msg.author.id),
+		neededXP = 5 * Math.pow(xp.level, 2) + 50 * xp.level + 100;
 
-    xp.xp += exppermsg;
+	xp.xp += exppermsg;
 
-    if (xp.xp >= neededXP) {
-        xp.level += 1;
-        xp.xp -= neededXP;
-    }
+	if (xp.xp >= neededXP) {
+		xp.level += 1;
+		xp.xp -= neededXP;
+	}
 
-    await dbCommands.setXPData(db, msg.guild.id, msg.author.id, xp.xp, xp.level);
+	await dbCommands.setXPData(db, msg.guild.id, msg.author.id, xp.xp, xp.level);
 
-    let rolemap = await dbCommands.getLevelRoleMap(db, msg.guild.id);
+	let rolemap = await dbCommands.getLevelRoleMap(db, msg.guild.id);
 
-    if (rolemap === null)
-        return;
+	if (rolemap === null)
+		return;
 
-    if (rolemap && rolemap[xp.level])
-        msg.member.roles.add(msg.guild.roles.cache.get(rolemap[xp.level]));
-}
+	if (rolemap && rolemap[xp.level])
+		msg.member.roles.add(msg.guild.roles.cache.get(rolemap[xp.level]));
+};

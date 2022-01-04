@@ -16,7 +16,7 @@
     along with this program.  If not, see https://www.gnu.org/licenses/.
 */
 
-const sqlite = require("sqlite3");
+const sqlite = require('sqlite3');
 
 let instance = null;
 
@@ -26,8 +26,8 @@ let instance = null;
  * @singleton
  */
 let Database = function() {
-    this.db = null;
-}
+	this.db = null;
+};
 
 /**
  * Opens a file as a sqlite3 database.
@@ -36,14 +36,14 @@ let Database = function() {
  * @async
  */
 Database.prototype.open = function(file) {
-    return new Promise((function(resolve, reject) {
-        this.db = new sqlite.Database(file, (function(err) {
-            if (err)
-                reject(new Error("Impossible to connect to the database " + file + ". " + err.message));
-            resolve(this);
-        }).bind(this));
-    }).bind(this));
-}
+	return new Promise((function(resolve, reject) {
+		this.db = new sqlite.Database(file, (function(err) {
+			if (err)
+				reject(new Error('Impossible to connect to the database ' + file + '. ' + err.message));
+			resolve(this);
+		}).bind(this));
+	}).bind(this));
+};
 
 /**
  * Runs a SQL command
@@ -53,10 +53,10 @@ Database.prototype.open = function(file) {
  * @param {function(e)?} [callback] Error is null on success, otherwise, it contains the error
  */
 Database.prototype.run = function(sqlCommand, param, callback) {
-    if (this.db === null)
-        throw new Error("Tryied to access database, but not opened!");
-    return this.db.run(sqlCommand, param, callback);
-}
+	if (this.db === null)
+		throw new Error('Tryied to access database, but not opened!');
+	return this.db.run(sqlCommand, param, callback);
+};
 
 /**
  * Runs a SQL command but returns a Promise instead of {@link Database.prototype.run}
@@ -66,17 +66,17 @@ Database.prototype.run = function(sqlCommand, param, callback) {
  * @returns {Promise}
  */
 Database.prototype.runPromise = function(sqlCommand, param) {
-    if (this.db === null)
-        throw new Error("Tryied to access database, but not opened!");
-    return new Promise((function(resolve, reject) {
-        this.run(sqlCommand, param, (function(err) {
-            if (err)
-                reject(err);
-            else
-                resolve();
-        }))
-    }).bind(this));
-}
+	if (this.db === null)
+		throw new Error('Tryied to access database, but not opened!');
+	return new Promise((function(resolve, reject) {
+		this.run(sqlCommand, param, (function(err) {
+			if (err)
+				reject(err);
+			else
+				resolve();
+		}));
+	}).bind(this));
+};
 
 /**
  * Retriggers callback for every row returned by the SQL command
@@ -87,10 +87,10 @@ Database.prototype.runPromise = function(sqlCommand, param) {
  * @param {function} [complete] Executed when the iteration is done.
  */
 Database.prototype.each = function(sql, param, callback, complete) {
-    if (this.db === null)
-        throw new Error("Tryied to access database, but not opened!");
-    return this.db.each(sql, param, callback, complete);
-}
+	if (this.db === null)
+		throw new Error('Tryied to access database, but not opened!');
+	return this.db.each(sql, param, callback, complete);
+};
 
 /**
  * Executes a SQL command and returns the given rows :
@@ -101,10 +101,10 @@ Database.prototype.each = function(sql, param, callback, complete) {
  * @param {function(err, rows)} [callback]
  */
 Database.prototype.all = function(sql, param, callback) {
-    if (this.db === null)
-        throw new Error("Tryied to access database, but not opened!");
-    return this.db.all(sql, param, callback);
-}
+	if (this.db === null)
+		throw new Error('Tryied to access database, but not opened!');
+	return this.db.all(sql, param, callback);
+};
 
 /**
  * Executes a SQL command and returns the given rows through the callback and the Promise's onfulfilled
@@ -114,45 +114,45 @@ Database.prototype.all = function(sql, param, callback) {
  * @return {Promise} onfulfilled(err|rows)
  */
 Database.prototype.allPromise = function(sql, param) {
-    if (this.db === null)
-        throw new Error("Tryied to access database, but not opened!");
-    return new Promise((function(resolve, reject) {
-        this.db.all(sql, param, function(err, rows) {
-            if (err)
-                reject(err);
-            else
-                resolve(rows);
-        });
-    }).bind(this));
-}
+	if (this.db === null)
+		throw new Error('Tryied to access database, but not opened!');
+	return new Promise((function(resolve, reject) {
+		this.db.all(sql, param, function(err, rows) {
+			if (err)
+				reject(err);
+			else
+				resolve(rows);
+		});
+	}).bind(this));
+};
 
 /**
  * Close the database.
  */
 Database.prototype.close = function(callback) {
-    if (this.db === null)
-        return callback();
+	if (this.db === null)
+		return callback();
 
-    let callback_ = (function() {
-        this.db = null;
-        return callback();
-    }).bind(this);
+	let callback_ = (function() {
+		this.db = null;
+		return callback();
+	}).bind(this);
 
-    return this.db.close(callback_);
-}
+	return this.db.close(callback_);
+};
 
 /**
  * Close the database but with a promise.
  */
 Database.prototype.closePromise = function() {
-    if (this.db === null);
-        return;
+	if (this.db === null);
+	return;
 
-    return new Promise((function(resolve, reject) {
-        this.db.close((function() {
-            resolve();
-        }))
-    }).bind(this));
-}
+	return new Promise((function(resolve, reject) {
+		this.db.close((function() {
+			resolve();
+		}));
+	}).bind(this));
+};
 
 module.exports = Database;

@@ -17,18 +17,18 @@
 */
 
 module.exports.run = async function(yuno, author, args, msg) {
-    if (author === 0)
-        yuno.prompt.info("Pong");
-    else
-        msg.channel.send("Ping").then(message => message.edit(`Pong! \`${message.createdTimestamp - msg.createdTimestamp}\`ms`))
-}
+	if (author === 0)
+		yuno.prompt.info('Pong');
+	else
+		msg.channel.send('Ping').then(message => message.edit(`Pong! \`${message.createdTimestamp - msg.createdTimestamp}\`ms`));
+};
 
 module.exports.about = {
-    "command": "ping",
-    "description": "Pong!",
-    "discord": true,
-    "terminal": true,
-    "list": true,
-    "listTerminal": true,
-    "onlyMasterUsers": false
-}
+	'command': 'ping',
+	'description': 'Pong!',
+	'discord': true,
+	'terminal': true,
+	'list': true,
+	'listTerminal': true,
+	'onlyMasterUsers': false
+};

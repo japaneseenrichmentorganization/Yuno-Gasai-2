@@ -16,8 +16,8 @@
     along with this program.  If not, see https://www.gnu.org/licenses/.
 */
 
-const fs = require("fs"),
-    Util = require("util");
+const fs = require('fs'),
+	Util = require('util');
 
 let instance = null;
 
@@ -36,11 +36,11 @@ function ConfigManager() {
  * @return {ConfigManager} The instance.
  */
 ConfigManager.init = function() {
-    if (instance === null)
-        instance = new ConfigManager();
+	if (instance === null)
+		instance = new ConfigManager();
 
-    return instance;
-}
+	return instance;
+};
 
 /**
  * Reads a file and returns a config if success synchronously
@@ -49,17 +49,17 @@ ConfigManager.init = function() {
  * @return {null|Config}
  */
 ConfigManager.prototype.readConfigSync = function(file) {
-    let fileContent = fs.readFileSync(file, "utf8");
+	let fileContent = fs.readFileSync(file, 'utf8');
 
-    if (this._isJSON(fileContent)) {
-        let json = JSON.parse(fileContent)
-        return new Config(json, file);
-    } else {
-        throw new Error("Config file " + file + " doesn't exsists or isn't JSON.")
-    }
+	if (this._isJSON(fileContent)) {
+		let json = JSON.parse(fileContent);
+		return new Config(json, file);
+	} else {
+		throw new Error('Config file ' + file + ' doesn\'t exsists or isn\'t JSON.');
+	}
 
-    return;
-}
+	return;
+};
 
 /**
  * Reads a file and returns a config if success
@@ -68,18 +68,18 @@ ConfigManager.prototype.readConfigSync = function(file) {
  * Rejects with a {@link Error} if fail.
  */
 ConfigManager.prototype.readConfig = function(file) {
-    return new Promise((function(resolve, reject) {
-        fs.readFile(file, "utf8", (function(err, data) {
-            if (err)
-                return reject(err);
+	return new Promise((function(resolve, reject) {
+		fs.readFile(file, 'utf8', (function(err, data) {
+			if (err)
+				return reject(err);
 
-            if (this._isJSON(data))
-                return resolve(new Config(JSON.parse(data), file));
-            else
-                return reject("Config file " + file + " isn't JSON.");
-        }).bind(this));
-    }).bind(this));
-}
+			if (this._isJSON(data))
+				return resolve(new Config(JSON.parse(data), file));
+			else
+				return reject('Config file ' + file + ' isn\'t JSON.');
+		}).bind(this));
+	}).bind(this));
+};
 
 /**
  * Checks if a String is valid JSON.
@@ -88,10 +88,10 @@ ConfigManager.prototype.readConfig = function(file) {
  * @return {boolean}
  */
 ConfigManager.prototype._isJSON = function(json) {
-    return /^[\],:{}\s]*$/.test(json.replace(/\\["\\\/bfnrtu]/g, '@').
-    replace(/"[^"\\\n\r]*"|true|false|null|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?/g, ']').
-    replace(/(?:^|:|,)(?:\s*\[)+/g, ''))
-}
+	return /^[\],:{}\s]*$/.test(json.replace(/\\["\\\/bfnrtu]/g, '@').
+		replace(/"[^"\\\n\r]*"|true|false|null|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?/g, ']').
+		replace(/(?:^|:|,)(?:\s*\[)+/g, ''));
+};
 
 /**
  * A config
@@ -101,18 +101,18 @@ ConfigManager.prototype._isJSON = function(json) {
  * @param {String?} [file] The path to the file.
  */
 function Config(obj, file) {
-    obj = this._objToIterable(obj);
-    const self = (Object.getPrototypeOf(this) === Map.prototype) ? this : new Map(obj);
-    Object.setPrototypeOf(self, Config.prototype);
+	obj = this._objToIterable(obj);
+	const self = (Object.getPrototypeOf(this) === Map.prototype) ? this : new Map(obj);
+	Object.setPrototypeOf(self, Config.prototype);
 
-    self._defaultObj = null;
+	self._defaultObj = null;
 
-    self.file = null;
+	self.file = null;
 
-    if (typeof file === "string")
-        self.file = file;
+	if (typeof file === 'string')
+		self.file = file;
 
-    return self;
+	return self;
 }
 
 Util.inherits(Config, Map);
@@ -125,14 +125,14 @@ Object.setPrototypeOf(Config, Map);
  * @return {Map} Iterable.
  */
 Config.prototype._objToIterable = function(obj) {
-    let m = new Map();
+	let m = new Map();
 
-    Object.keys(obj).forEach(key => {
-        m.set(key, obj[key])
-    })
+	Object.keys(obj).forEach(key => {
+		m.set(key, obj[key]);
+	});
 
-    return m;
-}
+	return m;
+};
 
 /**
  * Defines the default object.
@@ -142,9 +142,9 @@ Config.prototype._objToIterable = function(obj) {
  * @returns {Config} Returns itself.
  */
 Config.prototype.defaults = function(defaultObj) {
-    this._defaultObj = defaultObj
-    return this;
-}
+	this._defaultObj = defaultObj;
+	return this;
+};
 
 /**
  * Returns a value of the config from its key.
@@ -152,13 +152,13 @@ Config.prototype.defaults = function(defaultObj) {
  * @returns {any} The value
  */
 Config.prototype.get = function(key) {
-    let value = this.getWithoutDefault(key);
+	let value = this.getWithoutDefault(key);
 
-    if (typeof value === "undefined")
-        return this.getDefault(key);
+	if (typeof value === 'undefined')
+		return this.getDefault(key);
 
-    return value;
-}
+	return value;
+};
 
 /**
  * Returns a value from the default object
@@ -166,13 +166,13 @@ Config.prototype.get = function(key) {
  * @returns {null} Returns null if the default object hasn't been defined.
  */
 Config.prototype.getDefault = function(key) {
-    let v = this._defaultObj[key];
+	let v = this._defaultObj[key];
     
-    if (typeof v === "undefined")
-        return;
+	if (typeof v === 'undefined')
+		return;
 
-    return v;
-}
+	return v;
+};
 
 /**
  * Returns a value from its key without considerating the default one.
@@ -180,19 +180,19 @@ Config.prototype.getDefault = function(key) {
  * @returns {any} The value.
  */
 Config.prototype.getWithoutDefault = function(key) {
-    return Map.prototype.get.call(this, key);
-}
+	return Map.prototype.get.call(this, key);
+};
 
 /**
  * Convers the map to an object.
  * @return {Object}
  */
 Config.prototype.object = function() {
-    let obj = {};
+	let obj = {};
 
-    this.forEach((v,k) => { obj[k] = v });
-    return obj;
-}
+	this.forEach((v,k) => { obj[k] = v; });
+	return obj;
+};
 
 /**
  * Saves the config to a file.
@@ -201,15 +201,15 @@ Config.prototype.object = function() {
  * @param {String} file
  */
 Config.prototype.save = function(file) {
-    if (typeof file !== "string")
-        file = this.file;
+	if (typeof file !== 'string')
+		file = this.file;
 
-    if (typeof file !== "string")
-        return;
+	if (typeof file !== 'string')
+		return;
 
-    return new Promise((function(resolve, reject) {
-        fs.writeFile(file, JSON.stringify(this.object(), null, 4), "utf8", resolve);
-    }).bind(this));
-}
+	return new Promise((function(resolve, reject) {
+		fs.writeFile(file, JSON.stringify(this.object(), null, 4), 'utf8', resolve);
+	}).bind(this));
+};
 
 module.exports = ConfigManager;

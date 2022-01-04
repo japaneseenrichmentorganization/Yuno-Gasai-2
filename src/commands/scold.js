@@ -16,23 +16,23 @@
     along with this program.  If not, see https://www.gnu.org/licenses/.
 */
 
-const scold = require('../data/scoldImages.json')
+const scold = require('../data/scoldImages.json');
 
 module.exports.run = async function(yuno, author, args, msg) {
-    if (!msg.mentions.users.size) {
-        return msg.channel.send('Who do you want me to scold?');
-    }
+	if (!msg.mentions.users.size) {
+		return msg.channel.send('Who do you want me to scold?');
+	}
 
-    msg.channel.send(msg.mentions.users.first().toString() + scold[Math.floor(Math.random() * scold.length)])
+	msg.channel.send(msg.mentions.users.first().toString() + scold[Math.floor(Math.random() * scold.length)]);
 };
 
 module.exports.about = {
-    "command": "scold",
-    "description": "scold a user",
-    "examples": ["scold <mention user>"],
-    "discord": true,
-    "terminal": false,
-    "list": true,
-    "listTerminal": false,
-    "onlyMasterUsers": false
+	'command': 'scold',
+	'description': 'scold a user',
+	'examples': ['scold <mention user>'],
+	'discord': true,
+	'terminal': false,
+	'list': true,
+	'listTerminal': false,
+	'onlyMasterUsers': false
 };

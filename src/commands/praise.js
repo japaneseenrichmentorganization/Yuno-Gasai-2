@@ -16,23 +16,23 @@
     along with this program.  If not, see https://www.gnu.org/licenses/.
 */
 
-const praise = require('../data/praiseImages.json')
+const praise = require('../data/praiseImages.json');
 
 module.exports.run = async function(yuno, author, args, msg) {
-    if (!msg.mentions.users.size) {
-        return msg.channel.send('Who do you want me to praise?');
-    }
+	if (!msg.mentions.users.size) {
+		return msg.channel.send('Who do you want me to praise?');
+	}
 
-    msg.channel.send(msg.mentions.users.first().toString() + praise[Math.floor(Math.random() * praise.length)])
+	msg.channel.send(msg.mentions.users.first().toString() + praise[Math.floor(Math.random() * praise.length)]);
 };
 
 module.exports.about = {
-    "command": "praise",
-    "description": "Praise a user",
-    "examples": ["praise <mention user>"],
-    "discord": true,
-    "terminal": false,
-    "list": true,
-    "listTerminal": false,
-    "onlyMasterUsers": false
+	'command': 'praise',
+	'description': 'Praise a user',
+	'examples': ['praise <mention user>'],
+	'discord': true,
+	'terminal': false,
+	'list': true,
+	'listTerminal': false,
+	'onlyMasterUsers': false
 };

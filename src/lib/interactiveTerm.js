@@ -16,13 +16,13 @@
     along with this program.  If not, see https://www.gnu.org/licenses/.
 */
 
-const EventEmitter = require("events"),
-    Util = require("util"),
-    readline = require("readline"),
-    prompt = (require("./prompt")).init();
+const EventEmitter = require('events'),
+	Util = require('util'),
+	readline = require('readline'),
+	prompt = (require('./prompt')).init();
 
 let instance = null,
-    stdin = process.stdin;
+	stdin = process.stdin;
 
 /**
  * The interactive terminal.
@@ -35,12 +35,12 @@ let instance = null,
  * @extends EventEmitter
  */
 let InteractiveTerminal = function(handler) {
-    this.listening = false;
-    this.handler = handler;
+	this.listening = false;
+	this.handler = handler;
 
-    this._input = "";
-    this._line = true;
-}
+	this._input = '';
+	this._line = true;
+};
 
 Util.inherits(InteractiveTerminal, EventEmitter);
 
@@ -50,77 +50,77 @@ Util.inherits(InteractiveTerminal, EventEmitter);
  * @return {InteractiveTerminal} The instance.
  */
 InteractiveTerminal.init = function(handler) {
-    if (instance === null)
-        instance = new InteractiveTerminal(handler);
-    return instance;
-}
+	if (instance === null)
+		instance = new InteractiveTerminal(handler);
+	return instance;
+};
 
 /**
  * Starts listening for commands
  * @return {InteractiveTerminal}
  */
 InteractiveTerminal.prototype.listen = function() {
-    if (this.listening)
-        return;
+	if (this.listening)
+		return;
 
-    if (this.debuggerInteractivity) {
-        return;
-    }
+	if (this.debuggerInteractivity) {
+		return;
+	}
 
-    stdin.setRawMode(true);
-    stdin.setEncoding("utf8");
+	stdin.setRawMode(true);
+	stdin.setEncoding('utf8');
 
-    this.listening = true;
-    stdin.resume();
+	this.listening = true;
+	stdin.resume();
 
-    this._commandinp();
-}
+	this._commandinp();
+};
 
 InteractiveTerminal.prototype._commandinp = function() {
-    stdin.once("data", (function(key) {
-        readline.cursorTo(process.stdout, 0);
-        readline.clearLine(process.stdout, 0)
+	stdin.once('data', (function(key) {
+		readline.cursorTo(process.stdout, 0);
+		readline.clearLine(process.stdout, 0);
 
-        switch(key) {
-            case "\r":
-                // enter
-                process.stdout.write("> " + this._input);
-                process.stdout.write("\n");
-                this._command().then((function() {
-                    this._commandinp();
-                }).bind(this));
-                this._input = "";
-                return;
-                break;
+		switch(key) {
+		case '\r':
+			// enter
+			process.stdout.write('> ' + this._input);
+			process.stdout.write('\n');
+			this._command().then((function() {
+				this._commandinp();
+			}).bind(this));
+			this._input = '';
+			return;
+			break;
 
-            case "\u0003":
-                // ctrl+c
-                this.emit("quit");
-                break;
+		case '\u0003':
+			// ctrl+c
+			this.emit('quit');
+			break;
 
-            case "\b":
-                // backspace
-                this._input = this._input.substring(0, this._input.length - 1);
-                break;
+		case '\b':
+			// backspace
+			this._input = this._input.substring(0, this._input.length - 1);
+			break;
 
-            default:
-                this._input += key;
-                break;
-        }
+		default:
+			this._input += key;
+			break;
+		}
 
-        this._commandinp();
-    }).bind(this));
-    process.stdout.write("> " + this._input);
-}
+		this._commandinp();
+	}).bind(this));
+	process.stdout.write('> ' + this._input);
+};
 
 InteractiveTerminal.prototype._command = function() {
-    let command = this._input;
+	let command = this._input;
 
-    return new Promise((async function(res, rej) {
-        await this.handler(command);
-        res();
-    }).bind(this));
-}
+	return new Promise((async function(res, rej) {
+		await this.handler(command);
+		res();
+	}).bind(this));
+};
 
 /**
  * Defines the handler of the commands.
@@ -128,18 +128,18 @@ InteractiveTerminal.prototype._command = function() {
  * @return {InteractiveTerminal} Returns itself.
  */
 InteractiveTerminal.prototype.setHandler = function(handler) {
-    this.handler = handler;
-    return this;
-}
+	this.handler = handler;
+	return this;
+};
 
 /**
  * Stops listening for commands
  */
 InteractiveTerminal.prototype.stop = function() {
-    this.listening = false;
-    stdin.pause();
-    readline.cursorTo(process.stdout, 0);
-    readline.clearLine(process.stdout, 0)
-}
+	this.listening = false;
+	stdin.pause();
+	readline.cursorTo(process.stdout, 0);
+	readline.clearLine(process.stdout, 0);
+};
 
 module.exports = InteractiveTerminal;

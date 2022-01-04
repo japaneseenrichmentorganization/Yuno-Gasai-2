@@ -17,10 +17,10 @@
 */
 
 module.exports.run = async function(yuno, author, args, msg) {
-    throw new Error("Error handling check...");
-}
+	throw new Error('Error handling check...');
+};
 
 module.exports.about = {
-    "command": "debug-error",
-    "onlyMasterUsers": true
-}
+	'command': 'debug-error',
+	'onlyMasterUsers': true
+};

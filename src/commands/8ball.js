@@ -15,34 +15,34 @@
     You should have received a copy of the GNU Affero General Public License
     along with this program.  If not, see https://www.gnu.org/licenses/.
 */
-const {MessageEmbed} = require("discord.js");
-const ballResponse = require('../data/ballResponses.json')
+const {MessageEmbed} = require('discord.js');
+const ballResponse = require('../data/ballResponses.json');
 
 module.exports.run = async function(yuno, author, args, msg) {
-    if (!args[0]) {
-        return msg.channel.send("What do you want to ask the Magic 8 ball?");
-    }
+	if (!args[0]) {
+		return msg.channel.send('What do you want to ask the Magic 8 ball?');
+	}
 
-    if (msg.content.endsWith("?")) {
-        const result = `${ballResponse[Math.floor(Math.random() * ballResponse.length)]}`
-        msg.channel.send(new MessageEmbed()
-                .setTitle('🎱 Magic 8 Ball 🎱')
-                .setDescription(result)
-                .setColor(0x000000)
-            )
-    } else {
-        msg.channel.send('Was that a question? Try asking again with a question mark at the end.')
-    }
+	if (msg.content.endsWith('?')) {
+		const result = `${ballResponse[Math.floor(Math.random() * ballResponse.length)]}`;
+		msg.channel.send(new MessageEmbed()
+			.setTitle('🎱 Magic 8 Ball 🎱')
+			.setDescription(result)
+			.setColor(0x000000)
+		);
+	} else {
+		msg.channel.send('Was that a question? Try asking again with a question mark at the end.');
+	}
 };
 
 module.exports.about = {
-    "command": "8ball",
-    "description": "Use the magic 8 ball",
-    "examples": ["8ball how is the weather today?"],
-    "discord": true,
-    "terminal": false,
-    "list": true,
-    "listTerminal": false,
-    "aliases": "eightBall",
-    "onlyMasterUsers": false
+	'command': '8ball',
+	'description': 'Use the magic 8 ball',
+	'examples': ['8ball how is the weather today?'],
+	'discord': true,
+	'terminal': false,
+	'list': true,
+	'listTerminal': false,
+	'aliases': 'eightBall',
+	'onlyMasterUsers': false
 };

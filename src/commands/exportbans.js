@@ -15,41 +15,41 @@
     You should have received a copy of the GNU Affero General Public License
     along with this program.  If not, see https://www.gnu.org/licenses/.
 */
-let fs = require("fs");
+let fs = require('fs');
 
 module.exports.run = async function(yuno, author, args, msg) {
-    if (!msg.member.hasPermission("BAN_MEMBERS"))
-        return msg.channel.send('No permission to');
+	if (!msg.member.hasPermission('BAN_MEMBERS'))
+		return msg.channel.send('No permission to');
 
-    let guid = msg.guild.id;
+	let guid = msg.guild.id;
 
-    msg.guild.fetchBans().then(bans => {
-        let arr = Array.from(bans.values()),
-        json = [];
+	msg.guild.fetchBans().then(bans => {
+		let arr = Array.from(bans.values()),
+			json = [];
 
-    arr.forEach((el, ind, arr) => {
-        json.push(el.user.id);
-    });
+		arr.forEach((el, ind, arr) => {
+			json.push(el.user.id);
+		});
 
-    let banstr = JSON.stringify(json);
+		let banstr = JSON.stringify(json);
 
-    fs.writeFile("./BANS-" + guid + ".txt", banstr, (err) => {
-        if (err)
-            msg.channel.send("Error while saving bans :( :" + err.code);
-        else
-            msg.channel.send("Bans saved with the Guild ID (use it to re-apply bans) : " + guid);
-        })
-    })
-}
+		fs.writeFile('./BANS-' + guid + '.txt', banstr, (err) => {
+			if (err)
+				msg.channel.send('Error while saving bans :( :' + err.code);
+			else
+				msg.channel.send('Bans saved with the Guild ID (use it to re-apply bans) : ' + guid);
+		});
+	});
+};
 
 module.exports.about = {
-    "command": "exportbans",
-    "description": "Export the banlist to a .txt",
-    "examples": ["exportbans"],
-    "discord": true,
-    "terminal": false,
-    "list": true,
-    "listTerminal": false,
-    "aliases": "ebans",
-    "onlyMasterUsers": true
-}
+	'command': 'exportbans',
+	'description': 'Export the banlist to a .txt',
+	'examples': ['exportbans'],
+	'discord': true,
+	'terminal': false,
+	'list': true,
+	'listTerminal': false,
+	'aliases': 'ebans',
+	'onlyMasterUsers': true
+};

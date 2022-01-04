@@ -18,13 +18,13 @@ module.exports.run = async function(yuno, author, args, msg) {
 };
 
 module.exports.about = {
-    "command": "_base",
-    "description": "base for commands",
-    "examples": [],
-    "discord": true,
-    "terminal": false,
-    "list": true,
-    "listTerminal": false,
-    "aliases": "",
-    "onlyMasterUsers": false
+	'command': '_base',
+	'description': 'base for commands',
+	'examples': [],
+	'discord': true,
+	'terminal': false,
+	'list': true,
+	'listTerminal': false,
+	'aliases': '',
+	'onlyMasterUsers': false
 };

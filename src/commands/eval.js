@@ -16,49 +16,49 @@
     along with this program.  If not, see https://www.gnu.org/licenses/.
 */
 
-const util = require("util");
+const util = require('util');
 
 module.exports.run = async function(yuno, author, args, msg) {
-    let isSilent = args.includes("--silent"),
-        code = "";
+	let isSilent = args.includes('--silent'),
+		code = '';
 
-    if (isSilent)
-        args = args.slice(1);
+	if (isSilent)
+		args = args.slice(1);
 
-    code = args.join(" ")
+	code = args.join(' ');
 
-    let result = "No return.";
+	let result = 'No return.';
     
-    try {
-        result = eval("(function() { " + code + "})").bind(yuno)();
-        if (result instanceof Promise)
-            result = await result;
-    } catch(e) {
-        result = e.message;
-    }
+	try {
+		result = eval('(function() { ' + code + '})').bind(yuno)();
+		if (result instanceof Promise)
+			result = await result;
+	} catch(e) {
+		result = e.message;
+	}
 
-    if (typeof result === "string")
-        result = result.replace(new RegExp(Yuno.dC.token, "gi"), "[token]");
-    else
-        result = util.inspect(result, { depth: 0 });
+	if (typeof result === 'string')
+		result = result.replace(new RegExp(Yuno.dC.token, 'gi'), '[token]');
+	else
+		result = util.inspect(result, { depth: 0 });
 
-    if (isSilent && author !== 0)
-        msg.delete();
-    else
-        if (author !== 0)
-            msg.channel.send("```js\n " + result + " \n```")
-        else
-            yuno.prompt.info("Evaluation result:\n" + result);
+	if (isSilent && author !== 0)
+		msg.delete();
+	else
+	if (author !== 0)
+		msg.channel.send('```js\n ' + result + ' \n```');
+	else
+		yuno.prompt.info('Evaluation result:\n' + result);
     
-}
+};
 
 module.exports.about = {
-    "command": "eval",
-    "description": "Evaluates some Javascript code inside the bot, in the context of Yuno's instance.",
-    "examples": ["eval console.log(\"Yuno Gasai is okay.\")", "eval --silent something() // Will delete the message & send no result"],
-    "discord": true,
-    "terminal": true,
-    "list": false,
-    "listTerminal": true,
-    "onlyMasterUsers": true
-}
+	'command': 'eval',
+	'description': 'Evaluates some Javascript code inside the bot, in the context of Yuno\'s instance.',
+	'examples': ['eval console.log("Yuno Gasai is okay.")', 'eval --silent something() // Will delete the message & send no result'],
+	'discord': true,
+	'terminal': true,
+	'list': false,
+	'listTerminal': true,
+	'onlyMasterUsers': true
+};

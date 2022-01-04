@@ -17,66 +17,66 @@
 */
 
 let say = function(yuno, isTerminal, msg, tosay) {
-    if (isTerminal)
-        yuno.prompt.info(tosay);
-    else
-        msg.channel.send(tosay);
-}
+	if (isTerminal)
+		yuno.prompt.info(tosay);
+	else
+		msg.channel.send(tosay);
+};
 
 module.exports.run = async function(yuno, author, args, msg) {
-    if (args.length === 0)
-        return say(yuno, author === 0, msg, "Maybe some arguments ? :thinking:");
+	if (args.length === 0)
+		return say(yuno, author === 0, msg, 'Maybe some arguments ? :thinking:');
     
-    let action = args[0],
-        key = args[1],
-        value;
+	let action = args[0],
+		key = args[1],
+		value;
 
-    if (action === "get")
-        if (args.length >= 2)
-            key = args[1]
-        else
-            return say(yuno, author === 0, msg, "No key given with `config get`.");
-    else if (action === "set")
-        if (args.length >= 3) {
-            key = args[1];
-            value = args.slice(2).join(" ");
-        } else
-            return say(yuno, author === 0, msg, "Not enough arguments for `config set`.");
-    else {
-        if (args.length >= 2) {
-            action = "set";
-            key = args[0];
-            value = (args.slice(1)).join(" ");
-        } else {
-            key = action;
-            action = "get";
-        }
-    }
+	if (action === 'get')
+		if (args.length >= 2)
+			key = args[1];
+		else
+			return say(yuno, author === 0, msg, 'No key given with `config get`.');
+	else if (action === 'set')
+		if (args.length >= 3) {
+			key = args[1];
+			value = args.slice(2).join(' ');
+		} else
+			return say(yuno, author === 0, msg, 'Not enough arguments for `config set`.');
+	else {
+		if (args.length >= 2) {
+			action = 'set';
+			key = args[0];
+			value = (args.slice(1)).join(' ');
+		} else {
+			key = action;
+			action = 'get';
+		}
+	}
 
-    let config = yuno.config;
+	let config = yuno.config;
 
-    if (action === "set") {
-        try {let temp = JSON.parse(value); value = temp;} catch(e) {}
-        config.set(key, value);
-        return say(yuno, author === 0, msg, "Value with the key " + "`" + key + "`" + " has been set with the value : " + "`" + value + "`")
-    } else if (action === "get") {
-        let r = config.get(key);
-        if (typeof r === "object")
-            try {r = JSON.stringify(r)} catch(e) {}
+	if (action === 'set') {
+		try {let temp = JSON.parse(value); value = temp;} catch(e) {}
+		config.set(key, value);
+		return say(yuno, author === 0, msg, 'Value with the key ' + '`' + key + '`' + ' has been set with the value : ' + '`' + value + '`');
+	} else if (action === 'get') {
+		let r = config.get(key);
+		if (typeof r === 'object')
+			try {r = JSON.stringify(r);} catch(e) {}
 
-        return say(yuno, author === 0, msg, new String(r).replace(new RegExp(Yuno.dC.token, "gi"), "[token]"));
-    }
-    return say(yuno, author === 0, msg, "Nothing to do.");
-}
+		return say(yuno, author === 0, msg, new String(r).replace(new RegExp(Yuno.dC.token, 'gi'), '[token]'));
+	}
+	return say(yuno, author === 0, msg, 'Nothing to do.');
+};
 
 module.exports.about = {
-    "command": "config",
-    "usage": "config < get | set > <key> [value]",
-    "description": "Gets & delete config values.",
-    "examples": ["config set key value", "config get key", "config key"],
-    "discord": true,
-    "terminal": true,
-    "list": true,
-    "listTerminal": true,
-    "onlyMasterUsers": true
-}
+	'command': 'config',
+	'usage': 'config < get | set > <key> [value]',
+	'description': 'Gets & delete config values.',
+	'examples': ['config set key value', 'config get key', 'config key'],
+	'discord': true,
+	'terminal': true,
+	'list': true,
+	'listTerminal': true,
+	'onlyMasterUsers': true
+};

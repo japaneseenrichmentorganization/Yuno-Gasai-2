@@ -17,20 +17,20 @@
 */
 
 module.exports.run = async function(yuno, author, args, msg) {
-    let reason = await yuno.hotreload();
+	let reason = await yuno.hotreload();
 
-    if (typeof reason === "string")
-        if (author !== 0)
-            msg.channel.send("Hot-reload is disabled, reason:\n```" + reason + "```");
-}
+	if (typeof reason === 'string')
+		if (author !== 0)
+			msg.channel.send('Hot-reload is disabled, reason:\n```' + reason + '```');
+};
 
 module.exports.about = {
-    "command": "hot-reload",
-    "description": "Hots reload every file (excepted core files)",
-    "discord": true,
-    "terminal": true,
-    "list": false,
-    "listTerminal": true,
-    "aliases": ["hr"],
-    "onlyMasterUsers": true
-}
+	'command': 'hot-reload',
+	'description': 'Hots reload every file (excepted core files)',
+	'discord': true,
+	'terminal': true,
+	'list': false,
+	'listTerminal': true,
+	'aliases': ['hr'],
+	'onlyMasterUsers': true
+};

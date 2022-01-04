@@ -20,79 +20,79 @@ const LINK_REGEX = /(ftp|http|https):\/\/(www\.)??[-a-zA-Z0-9@:%._\+~#=]{2,256}\
 const spamWarnings = new Set();
 const textInNoTextWarnings = new Set();
 
-module.exports.id = "447665600135823361";
+module.exports.id = '447665600135823361';
 
 module.exports.message = async function(content, msg) {
 
-        // Obtain the member if we don't have it
-        if(msg.guild && !msg.guild.members.cache.has(msg.author.id) && !msg.webhookID) {
-            msg.member = await msg.guild.members.fetch(msg.author);
-        }
-        // Obtain the member for the ClientUser if it doesn't already exist
-        if(msg.guild && !msg.guild.members.cache.has(Yuno.dC.user.id)) {
-            await msg.guild.members.fetch(Yuno.dC.user.id);
-        }
+	// Obtain the member if we don't have it
+	if(msg.guild && !msg.guild.members.cache.has(msg.author.id) && !msg.webhookID) {
+		msg.member = await msg.guild.members.fetch(msg.author);
+	}
+	// Obtain the member for the ClientUser if it doesn't already exist
+	if(msg.guild && !msg.guild.members.cache.has(Yuno.dC.user.id)) {
+		await msg.guild.members.fetch(Yuno.dC.user.id);
+	}
 
-        if (msg.member.hasPermission("MANAGE_MESSAGES"))
-            return;
+	if (msg.member.hasPermission('MANAGE_MESSAGES'))
+		return;
 
-    if (DISCORD_INVITE_REGEX.test(content))
-        return msg.member.ban({
-            days: 1,
-            reason: "Autobanned for invite link"
-        })
+	if (DISCORD_INVITE_REGEX.test(content))
+		return msg.member.ban({
+			days: 1,
+			reason: 'Autobanned for invite link'
+		});
 
-    if (msg.channel.name.toLowerCase().startsWith("nsfw_")) {
-        if (msg.content.toLowerCase().includes("http") || msg.attachments.first() || LINK_REGEX.test(content))
-            return;
+	if (msg.channel.name.toLowerCase().startsWith('nsfw_')) {
+		if (msg.content.toLowerCase().includes('http') || msg.attachments.first() || LINK_REGEX.test(content))
+			return;
 
-        if (textInNoTextWarnings.has(msg.author.id)) {
-            msg.member.ban({
-                days: 1,
-                reason: "Autobanned messages hentai channel"
-            })
-            textInNoTextWarnings.delete(msg.author.id);
-        } else {
-            msg.author.send("8. Text other than links is not allowed in hentai channels. If you wish to comment on something in a hentai channel, #media or #meme-machine do so in main chat and reference the channel youre commenting on.This is to prevent unnecessary clutter so people can easily see the content posted in the channels.")
-            textInNoTextWarnings.add(msg.author.id);
-            if (msg.deletable)
-                msg.delete();
-        }
-        return;
-    }
+		if (textInNoTextWarnings.has(msg.author.id)) {
+			msg.member.ban({
+				days: 1,
+				reason: 'Autobanned messages hentai channel'
+			});
+			textInNoTextWarnings.delete(msg.author.id);
+		} else {
+			msg.author.send('8. Text other than links is not allowed in hentai channels. If you wish to comment on something in a hentai channel, #media or #meme-machine do so in main chat and reference the channel youre commenting on.This is to prevent unnecessary clutter so people can easily see the content posted in the channels.');
+			textInNoTextWarnings.add(msg.author.id);
+			if (msg.deletable)
+				msg.delete();
+		}
+		return;
+	}
 
-    if (msg.content.indexOf("@everyone") > -1 || msg.content.indexOf("@here") > -1)
-        return msg.member.ban({
-            days: 1,
-            reason: "Autobanned by spam filter: usage of @everyone/@here"
-        })
+	if (msg.content.indexOf('@everyone') > -1 || msg.content.indexOf('@here') > -1)
+		return msg.member.ban({
+			days: 1,
+			reason: 'Autobanned by spam filter: usage of @everyone/@here'
+		});
 
-        if (LINK_REGEX.test(content) && msg.channel.name.toLowerCase().startsWith("main")) {
-            if (spamWarnings.has(msg.author.id)) {
-                msg.member.ban({
-                    days: 1,
-                    reason: "Autobanned for sending links"
-                })
-                spamWarnings.delete(msg.author.id);
-            } else {
-                msg.reply("Please do not send links. This is your one and only warning.\nFailure to comply will result in a ban.");
-                spamWarnings.add(msg.author.id);
-                if (msg.deletabe);
-                    msg.delete();
-            };
-        };
+	if (LINK_REGEX.test(content) && msg.channel.name.toLowerCase().startsWith('main')) {
+		if (spamWarnings.has(msg.author.id)) {
+			msg.member.ban({
+				days: 1,
+				reason: 'Autobanned for sending links'
+			});
+			spamWarnings.delete(msg.author.id);
+		} else {
+			msg.reply('Please do not send links. This is your one and only warning.\nFailure to comply will result in a ban.');
+			spamWarnings.add(msg.author.id);
+			if (msg.deletabe);
+			msg.delete();
+		};
+	};
 
-    let previousMessages = msg.channel.messages.cache.last(4);
+	let previousMessages = msg.channel.messages.cache.last(4);
     
-    if (previousMessages.length === 4 && msg.channel.name.toLowerCase().startsWith("main") && previousMessages.every(m=> m.author.id === msg.author.id))
-        if (spamWarnings.has(msg.author.id)) {
-            msg.member.ban({
-                days: 1,
-                reason: "Autobanned message limit"
-            })
-            spamWarnings.delete(msg.author.id)
-        } else {
-            msg.reply("Please keep your messages under 4 messages long. This is your one and only warning.\nFailure to comply will result in a ban.");
-            spamWarnings.add(msg.author.id);
-        }
-}
+	if (previousMessages.length === 4 && msg.channel.name.toLowerCase().startsWith('main') && previousMessages.every(m=> m.author.id === msg.author.id))
+		if (spamWarnings.has(msg.author.id)) {
+			msg.member.ban({
+				days: 1,
+				reason: 'Autobanned message limit'
+			});
+			spamWarnings.delete(msg.author.id);
+		} else {
+			msg.reply('Please keep your messages under 4 messages long. This is your one and only warning.\nFailure to comply will result in a ban.');
+			spamWarnings.add(msg.author.id);
+		}
+};

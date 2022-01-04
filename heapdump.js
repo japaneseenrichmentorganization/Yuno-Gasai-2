@@ -17,24 +17,24 @@
 */
 
 // Consoling (to be sure that the right file is being executed: debug)
-console.log("Starting Yuno-Gasai-2. Head-dumping every 10 seconds");
+console.log('Starting Yuno-Gasai-2. Head-dumping every 10 seconds');
 
-let heapdump = require("heapdump");
+let heapdump = require('heapdump');
 
 setInterval(function() {
-    console.log("\nDumping");
-    heapdump.writeSnapshot(function(err, filename) {
-        if (err)
-            console.log("Error while writing the dump", err);
-        else
-            console.log("Dump file written as", filename);
-    })
-}, 10000)
+	console.log('\nDumping');
+	heapdump.writeSnapshot(function(err, filename) {
+		if (err)
+			console.log('Error while writing the dump', err);
+		else
+			console.log('Dump file written as', filename);
+	});
+}, 10000);
 
-let Yuno = require("./src/Yuno"),
-    instance = new Yuno();
+let Yuno = require('./src/Yuno'),
+	instance = new Yuno();
 
 instance.parseArguments(process.argv);
 
-process.on("SIGTERM", () => instance.shutdown(-1))
-process.on("SIGINT", () => instance.shutdown(-1))
+process.on('SIGTERM', () => instance.shutdown(-1));
+process.on('SIGINT', () => instance.shutdown(-1));

@@ -16,18 +16,18 @@
     along with this program.  If not, see https://www.gnu.org/licenses/.
 */
 
-const quote = require('../data/quotes.json')
+const quote = require('../data/quotes.json');
 
 module.exports.run = async function(yuno, author, args, msg) {
-    msg.channel.send(quote[Math.floor(Math.random() * quote.length)])
+	msg.channel.send(quote[Math.floor(Math.random() * quote.length)]);
 };
 
 module.exports.about = {
-    "command": "quote",
-    "description": "Get a quote from Yuno Gasai",
-    "discord": true,
-    "terminal": false,
-    "list": true,
-    "listTerminal": false,
-    "onlyMasterUsers": false
+	'command': 'quote',
+	'description': 'Get a quote from Yuno Gasai',
+	'discord': true,
+	'terminal': false,
+	'list': true,
+	'listTerminal': false,
+	'onlyMasterUsers': false
 };
