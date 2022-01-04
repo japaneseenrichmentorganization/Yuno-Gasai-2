@@ -4,7 +4,7 @@ config.json
 #Ignore folders
 /node_modules/
 .vscode/
-
+/build/
 #Ignore specific file extensions
 *.zip
 *.db
