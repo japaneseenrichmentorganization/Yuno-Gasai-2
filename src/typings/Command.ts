@@ -32,8 +32,3 @@ export type CommandType = {
 	userPermissions?: PermissionResolvable[];
 	run: RunFunction;
 } & ChatInputApplicationCommandData;
-
-export interface Command {
-	commandOptions: CommandType;
-	constructor(commandOptions: CommandType): void;
-}
