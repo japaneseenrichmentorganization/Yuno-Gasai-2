@@ -3,6 +3,7 @@ import {
 	CommandInteraction,
 	CommandInteractionOptionResolver,
 	GuildMember,
+	Message,
 	PermissionResolvable,
 } from 'discord.js';
 import { ApplicationCommandTypes } from 'discord.js/typings/enums';
@@ -55,18 +56,21 @@ export interface ExtendedInteraction extends CommandInteraction {
 	member: GuildMember;
 }
 
-interface RunOptions {
+export interface RunOptions {
 	client: ExtendedClient;
-	interaction: ExtendedInteraction;
-	args: CommandInteractionOptionResolver;
+	interaction?: ExtendedInteraction;
+	interactionOptions?: CommandInteractionOptionResolver;
+	message?: Message;
+	params?: Array<string>;
 }
-
-type RunFunction = (options: RunOptions) => void | Promise<void>;
+type RunFunction = (options: RunOptions ) => void | Promise<void>;
 
 export type CommandType = {
 	name: string;
   description: string;
 	type: ApplicationCommandTypes
+	isSlash: boolean;
+	isAdminOnly: boolean;
 	required?: boolean;
 	userPermissions?: PermissionResolvable[];
   cooldown?: number;
@@ -74,7 +78,7 @@ export type CommandType = {
   aliases?: string[];
   usage?: string;
   isArgumentsRequired?: boolean;
-  requiredPermissions?: DiscordPermissionString[];
+  requiredPermissions?: PermissionResolvable[];
   requiredRoles?: string[];
 	run: RunFunction;
 }
