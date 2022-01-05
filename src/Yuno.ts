@@ -7,11 +7,11 @@ import {
 import glob from 'glob';
 import { promisify } from 'util';
 
-import { ExtendedClient, Settings } from './typings/Client';
+import { BotConfig, ExtendedClient, Settings } from './typings/Client';
 import { Event } from './lib/Event';
 import { CommandType } from './typings/Command';
 import { Connection, IDatabaseDriver, MikroORM } from '@mikro-orm/core';
-import config from './config/mikro-orm.config';
+import dbConfig from './config/mikro-orm.config';
 import { Guilds } from './entities';
 // Used for importing commands and events asyncly
 const globPromise = promisify(glob);
@@ -21,8 +21,11 @@ export class Yuno extends Client implements ExtendedClient {
 	public slashCommands: Array<ApplicationCommandDataResolvable>;
 	public cooldowns: Collection<string, Collection<string, number>>;
 	public guildID!: string;
+	// Settings from the database
 	public settings!: Settings;
 	public orm!: MikroORM<IDatabaseDriver<Connection>>;
+	// Settings from the config file needs to be reworked
+	public config!: BotConfig;
 	constructor() {
 		// All intents 32767
 		super({ intents: 32767 });
@@ -31,8 +34,9 @@ export class Yuno extends Client implements ExtendedClient {
 		this.cooldowns = new Collection<string, Collection<string, number>>();
 	}
 
-	async start(token: string, guildID: string) {
-		this.guildID = guildID;
+	async start(BOT_CONFIG: BotConfig) {
+		this.guildID = BOT_CONFIG.guildID;
+		this.config = BOT_CONFIG;
 		// Register modules, login afterwards and register the on
 		await this.registerModules();
 		//register all commands once the bot is ready
@@ -40,11 +44,13 @@ export class Yuno extends Client implements ExtendedClient {
 			await this.registerCommands();
 		});
 		// logs the bot in
-		await this.login(token);
+		await this.login(BOT_CONFIG.botToken);
 		// inits the orm db object
-		this.orm = await MikroORM.init(config);
+		// REWORK CONFIG
+		dbConfig.dbName = BOT_CONFIG.database;
+		this.orm = await MikroORM.init(dbConfig);
 		// parses the settings data from the db into settings property
-		await this._parseSettings();
+		this._parseSettings();
 	}
 
 	async importFile(filePath: string) {
@@ -105,7 +111,7 @@ export class Yuno extends Client implements ExtendedClient {
 			// These followering properties are just string so no casting needed
 			onJoinDMMsg: rawSetting[0].onJoinDMMsg ?? '',
 			onJoinDMMsgTitle: rawSetting[0].onJoinDMMsgTitle ?? '',
-			prefix: rawSetting[0].prefix ?? '',
+			prefix: rawSetting[0].prefix ?? this.config.commands.prefix,
 		};
 	}
 }
