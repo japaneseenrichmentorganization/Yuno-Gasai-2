@@ -18,24 +18,24 @@ const globPromise = promisify(glob);
 export class Yuno extends Client implements ExtendedClient {
 	public commands: Collection<string, CommandType>;
 	public slashCommands: Array<ApplicationCommandDataResolvable>;
-	public guildID: string;
+	public guildID: string | undefined;
 	orm: MikroORM<IDatabaseDriver<Connection>> | undefined;
-	constructor(guildID: string) {
+	constructor() {
 		// All intents 32767
 		super({ intents: 32767 });
-		this.guildID = guildID;
 		this.commands = new Collection<string, CommandType>();
 		this.slashCommands = new Array<ApplicationCommandDataResolvable>();
 	}
 
-	async start(token: string) {
+	async start(token: string, guildID: string) {
+		this.guildID = guildID;
 		// Register modules, login afterwards and register the on
 		await this.registerModules();
-		await this.login(token);
 		//register all commands once the bot is ready
 		this.on('ready', async () => {
 			await this.registerCommands();
 		});
+		await this.login(token);
 		this.orm = await MikroORM.init(config);
 	}
 
@@ -60,7 +60,7 @@ export class Yuno extends Client implements ExtendedClient {
 
 	async registerModules() {
 		// Commands
-		const commandFiles = await globPromise(`${__dirname}/commands/*/*.js`);
+		const commandFiles = await globPromise(`${__dirname}/commands/*.js`);
 		commandFiles.forEach(async (filePath) => {
 			const command: CommandType = await this.importFile(filePath);
 			if (!command.name) return;
@@ -69,7 +69,6 @@ export class Yuno extends Client implements ExtendedClient {
 			this.commands.set(command.name, command);
 			this.slashCommands.push(command);
 		});
-
 		// Event
 		const eventFiles = await globPromise(`${__dirname}/events/*.js`);
 		eventFiles.forEach(async (filePath) => {
