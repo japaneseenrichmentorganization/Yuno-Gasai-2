@@ -15,24 +15,28 @@
     You should have received a copy of the GNU Affero General Public License
     along with this program.  If not, see https://www.gnu.org/licenses/.
 */
-import { CommandInteractionOptionResolver } from "discord.js";
-import { Yuno } from "../Yuno";
-import { Event } from "../lib/Event";
-import { ExtendedInteraction } from "../typings/Command";
+import { CommandInteractionOptionResolver } from 'discord.js';
+import { Event } from '../lib/Event';
+import { ExtendedInteraction } from '../typings/Command';
+import { ExtendedClient } from '../typings/Client';
 
-export default new Event("interactionCreate", async (interaction) => {
-    // Chat Input Commands
-    console.log(interaction.member?.user.username);
-    if (interaction.isCommand()) {
-        await interaction.deferReply();
-        const command = (interaction.client as Yuno).commands.get(interaction.commandName);
-        if (!command)
-            return interaction.followUp("You have used a non existent command");
 
-        command.run({
-            args: interaction.options as CommandInteractionOptionResolver,
-            client: interaction.client as Yuno,
-            interaction: interaction as ExtendedInteraction
-        });
-    }
+// Slashcommands handling
+export default new Event('interactionCreate', async (interaction) => {
+	// Chat Input Commands
+	console.log(interaction.member?.user.username);
+	if (interaction.isCommand()) {
+		await interaction.deferReply();
+		const command = (interaction.client as ExtendedClient).commands.get(
+			interaction.commandName
+		);
+		if (!command)
+			return interaction.followUp('You have used a non existent command');
+
+		await command.run({
+			args: interaction.options as CommandInteractionOptionResolver,
+			client: interaction.client as ExtendedClient,
+			interaction: interaction as ExtendedInteraction,
+		});
+	}
 });
