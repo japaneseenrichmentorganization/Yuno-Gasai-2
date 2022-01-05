@@ -23,8 +23,7 @@ import { ExtendedClient } from '../typings/Client';
 
 // Slashcommands handling
 export default new Event('interactionCreate', async (interaction) => {
-	// Chat Input Commands
-	console.log(interaction.member?.user.username);
+	// Chat Input Commands TYPE: CHAT_INPUT
 	if (interaction.isCommand()) {
 		await interaction.deferReply();
 		const command = (interaction.client as ExtendedClient).commands.get(
@@ -40,3 +39,4 @@ export default new Event('interactionCreate', async (interaction) => {
 		});
 	}
 });
+
