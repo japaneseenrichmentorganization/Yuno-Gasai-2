@@ -1,3 +1,4 @@
+import { Connection, IDatabaseDriver, MikroORM } from '@mikro-orm/core';
 import {
 	ApplicationCommandDataResolvable,
 	Client,
@@ -11,7 +12,10 @@ export interface RegisterCommandsOptions {
 }
 export interface ExtendedClient extends Client {
 	commands: Collection<string, CommandType>;
-	start(token: string): void;
+	slashCommands: Array<ApplicationCommandDataResolvable>;
+	guildID: string | undefined;
+	orm: MikroORM<IDatabaseDriver<Connection>> | undefined;
+	start(token: string,guildID: string): void;
 	importFile(filePath: string): Promise<unknown>;
 	registerCommands(): Promise<void>;
 	registerModules(): Promise<void>;
