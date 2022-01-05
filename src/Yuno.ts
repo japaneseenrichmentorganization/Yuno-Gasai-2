@@ -78,10 +78,7 @@ export class Yuno extends Client implements ExtendedClient {
 		commandFiles.forEach(async (filePath) => {
 			const command: CommandType = await this.importFile(filePath);
 			if (!command.name) return;
-			console.log(command);
-
-			this.commands.set(command.name, command);
-			this.slashCommands.push(command);
+			command.isSlash? this.slashCommands.push(command) : this.commands.set(command.name, command) ;
 		});
 		// Event
 		const eventFiles = await globPromise(`${__dirname}/events/*.js`);
