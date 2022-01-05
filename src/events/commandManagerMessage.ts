@@ -1,34 +1,43 @@
 import { Event } from '../lib/Event';
 import { CommandType } from '../typings/Command';
 import { ExtendedClient } from '../typings/Client';
-import {
-	Collection,
-	CommandInteractionOptionResolver,
-	TextChannel,
-} from 'discord.js';
+import { Collection, TextChannel, UserResolvable } from 'discord.js';
 
 // Non slash commands
 export default new Event('messageCreate', async (message) => {
 	// Channel Input Commands TYPE: MESSAGE
+	// We don't need to waste execution time if its an interaction
+	if (message.interaction || message.author.bot) return;
 	const client: ExtendedClient = message.client as ExtendedClient;
+	// This evades the bot from being triggered by @everyone
+	const mentioned: boolean = message.content
+		.trim()
+		.startsWith('<@&927890124111495179>');
 	// Check if commands has prefix and its not another bot
 	if (
-		!message.content.trim().startsWith(client.settings.prefix) ||
-		message.author.bot
+		(message.content.trim().startsWith(client.settings.prefix) ==
+			mentioned) !==
+		(message.content.includes('@here') ||
+			message.content.includes('@everyone') ||
+			message.type == 'REPLY')
 	) {
 		return;
 	}
 	// Command args, command name and Command itself
-	const args = message.content
-		.slice(client.settings.prefix.length)
-		.split(/ +/);
+	const args = mentioned
+		? message.content.slice('<@&927890124111495179>'.length).split(/ +/)
+		: message.content.slice(client.settings.prefix.length).split(/ +/);
 	const commandName = args.shift()?.toLowerCase() || '';
 	const command: CommandType | undefined =
 		client.commands.get(commandName) ?? undefined;
 	// Needs to be checked early to prevent useles code excution
-	if (!command || (command.isAdminOnly && !client.config.commands.admins.includes(message.author.id))) {
+	if (
+		!command ||
+		(command.isAdminOnly &&
+			!client.config.commands.admins.includes(message.author.id))
+	) {
 		message.reply(
-			`There is no such command: \`${client.settings.prefix}${commandName}`
+			`There is no such command: \ ${client.settings.prefix}${commandName}`
 		);
 		return;
 	}
@@ -92,9 +101,9 @@ export default new Event('messageCreate', async (message) => {
 		if (now < expirationTime) {
 			const timeLeft = (expirationTime - now) / 1000;
 			message.reply(
-				`por favor espere ${timeLeft.toFixed(
+				` ${timeLeft.toFixed(
 					1
-				)} segundo(s) antes de reusar o comando \`${command.name}\``
+				)}\`${command.name}\``
 			);
 			return;
 		}
