@@ -1,21 +1,25 @@
 {
-    "discord.token": "<empty>",
-    "logging.hidden-groups": [],
-    "logging.show-time": true,
-    "logging.group-colors": {},
-    "commands.master-users": ["IDhere", "IDhere"],
-    "commands.default-prefix": ".",
-    "ban.default-image": "https://i.imgur.com/vrEDCui.gif",
-    "errors.dropon": {
-        "guild": "",
-        "channel": ""
-    },
-    "errors.mentionwhencrash": ["IDhere"],
-    "database": "yuno-2-database.db",
-    "debug.work-only-on-guild": "",
-    "chat.dm": "I'm just a bot :'(",
-    "chat.insufficient-permissions": ":negative_squared_cross_mark: ${author} You don't have enough permissions to execute this command",
-    "spam.max-warnings": 3,
-    "chat.exppermsg": 20,
-    "discord.presence": null
+	"botToken": "",
+	"commands": {
+		"admins": [""],
+		"prefix": "."
+	},
+	"ban":{
+		"defaultImage": "https://i.imgur.com/vrEDCui.gif"
+	},
+	"errors": {
+		"mentionwhencrash": ["IDhere"],
+		"channel": ""
+	},
+	"database": "yuno-2-database.db",
+	"guildID": "",
+	"chat": {
+		"xpPerMsg": 20,
+		"dmResponse": "I'm just a bot :'(",
+		"missingPermissions": ":negative_squared_cross_mark: ${author} You don't have enough permissions to execute this command"
+	},
+	"spam": {
+		"maxWarnings": 3
+	},
+	"discordPresence": null
 }
