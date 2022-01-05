@@ -10,7 +10,8 @@ import { promisify } from 'util';
 import { ExtendedClient } from './typings/Client';
 import { Event } from './lib/Event';
 import { CommandType } from './typings/Command';
-
+import { Connection, IDatabaseDriver, MikroORM } from '@mikro-orm/core';
+import config from './config/mikro-orm.config';
 // Used for importing commands and events asyncly
 const globPromise = promisify(glob);
 
@@ -18,6 +19,7 @@ export class Yuno extends Client implements ExtendedClient {
 	public commands: Collection<string, CommandType>;
 	public slashCommands: Array<ApplicationCommandDataResolvable>;
 	public guildID: string;
+	orm: MikroORM<IDatabaseDriver<Connection>> | undefined;
 	constructor(guildID: string) {
 		// All intents 32767
 		super({ intents: 32767 });
@@ -25,7 +27,7 @@ export class Yuno extends Client implements ExtendedClient {
 		this.commands = new Collection<string, CommandType>();
 		this.slashCommands = new Array<ApplicationCommandDataResolvable>();
 	}
-	
+
 	async start(token: string) {
 		// Register modules, login afterwards and register the on
 		await this.registerModules();
@@ -34,6 +36,7 @@ export class Yuno extends Client implements ExtendedClient {
 		this.on('ready', async () => {
 			await this.registerCommands();
 		});
+		this.orm = await MikroORM.init(config);
 	}
 
 	async importFile(filePath: string) {
