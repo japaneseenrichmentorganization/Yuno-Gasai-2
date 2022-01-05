@@ -5,7 +5,9 @@ export default new Command({
 	name: 'ping',
 	description: 'replies with pong',
 	type: ApplicationCommandTypes.CHAT_INPUT,
-	run: async ({ interaction }) => {
-		interaction.followUp(`Ping: ${interaction.client.ws.ping}ms`);
+	isSlash: true,
+	isAdminOnly: true,
+	run: async ({interaction }) => {
+		interaction!.followUp(`Ping: ${interaction!.client.ws.ping}ms`);
 	},
 });
