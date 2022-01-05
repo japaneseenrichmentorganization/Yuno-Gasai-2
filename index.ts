@@ -13,14 +13,14 @@
     along with this program.  If not, see https://www.gnu.org/licenses/.
 */
 import { Yuno } from './src/Yuno';
+import * as DEFAULT_CONFIG from './DEFAULT_CONFIG.json'
+import { BotConfig } from './src/typings/Client';
 (async () => {
 	try {
         console.log('Starting Yuno-Gasai-2');
         // Creates a new Yuno instance, a guild ID must be passed
-		const instance = new Yuno('');
-		await instance.start(
-			''
-		);
+		const instance = new Yuno();
+		await instance.start(DEFAULT_CONFIG);
         // Sets a listeners for easier debugging
         if (process.env.NODE_ENV !== 'production') {
             process.on('uncaughtException', (err) => {
