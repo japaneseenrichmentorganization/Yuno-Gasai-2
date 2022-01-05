@@ -21,8 +21,8 @@ export interface Settings{
 export interface ExtendedClient extends Client {
 	commands: Collection<string, CommandType>;
 	slashCommands: Array<ApplicationCommandDataResolvable>;
-	guildID: string | undefined;
-	orm: MikroORM<IDatabaseDriver<Connection>> | undefined;
+	guildID: string;
+	orm: MikroORM<IDatabaseDriver<Connection>>;
 	settings: Settings;
 	start(token: string,guildID: string): void;
 	importFile(filePath: string): Promise<unknown>;
