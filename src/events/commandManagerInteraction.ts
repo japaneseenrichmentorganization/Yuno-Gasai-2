@@ -17,9 +17,8 @@
 */
 import { CommandInteractionOptionResolver } from 'discord.js';
 import { Event } from '../lib/Event';
-import { ExtendedInteraction } from '../typings/Command';
+import { ExtendedInteraction, RunOptions } from '../typings/Command';
 import { ExtendedClient } from '../typings/Client';
-
 
 // Slashcommands handling
 export default new Event('interactionCreate', async (interaction) => {
@@ -31,12 +30,11 @@ export default new Event('interactionCreate', async (interaction) => {
 		);
 		if (!command)
 			return interaction.followUp('You have used a non existent command');
-
 		await command.run({
-			args: interaction.options as CommandInteractionOptionResolver,
+			interactionOptions:
+				interaction.options as CommandInteractionOptionResolver,
 			client: interaction.client as ExtendedClient,
 			interaction: interaction as ExtendedInteraction,
 		});
 	}
 });
-
