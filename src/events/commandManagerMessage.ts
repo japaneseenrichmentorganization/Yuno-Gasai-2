@@ -1,7 +1,7 @@
 import { Event } from '../lib/Event';
 import { CommandType } from '../typings/Command';
 import { ExtendedClient } from '../typings/Client';
-import { Collection, TextChannel, UserResolvable } from 'discord.js';
+import { Collection, PermissionResolvable, TextChannel } from 'discord.js';
 
 // Non slash commands
 export default new Event('messageCreate', async (message) => {
@@ -68,7 +68,7 @@ export default new Event('messageCreate', async (message) => {
 
 		if (
 			!authorPermissions ||
-			!authorPermissions.has(command.requiredPermissions)
+			!authorPermissions.has(command.requiredPermissions as PermissionResolvable[])
 		) {
 			message.reply('');
 			return;
