@@ -29,7 +29,7 @@ export interface BotConfig {
 	commands: {
 		admins: Array<string>;
 		prefix: string;
-		permission: Array<{
+		permissions: Array<{
 			name: string;
 			id: string;
 			type: string;
