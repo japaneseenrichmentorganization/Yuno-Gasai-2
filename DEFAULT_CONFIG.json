@@ -2,7 +2,15 @@
 	"botToken": "",
 	"commands": {
 		"admins": [""],
-		"prefix": "."
+		"prefix": ".",
+		"permissions": [
+			{
+				"name": "",
+				"id": "",
+				"type": "",
+				"permission": false
+			}
+		]
 	},
 	"ban":{
 		"defaultImage": "https://i.imgur.com/vrEDCui.gif"
