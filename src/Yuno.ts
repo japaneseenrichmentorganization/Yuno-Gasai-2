@@ -1,8 +1,5 @@
 import {
-	Application,
 	ApplicationCommandDataResolvable,
-	ApplicationCommandPermissionData,
-	ApplicationCommandPermissionType,
 	Client,
 	ClientEvents,
 	Collection,
