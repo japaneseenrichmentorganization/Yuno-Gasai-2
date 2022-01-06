@@ -1,5 +1,8 @@
 import {
+	Application,
 	ApplicationCommandDataResolvable,
+	ApplicationCommandPermissionData,
+	ApplicationCommandPermissionType,
 	Client,
 	ClientEvents,
 	Collection,
@@ -13,10 +16,12 @@ import { CommandType } from './typings/Command';
 import { Connection, IDatabaseDriver, MikroORM } from '@mikro-orm/core';
 import dbConfig from './config/mikro-orm.config';
 import { Guilds } from './entities';
+import { ApplicationCommandPermissionTypes } from 'discord.js/typings/enums';
 // Used for importing commands and events asyncly
 const globPromise = promisify(glob);
 
 export class Yuno extends Client implements ExtendedClient {
+	// properties
 	public commands: Collection<string, CommandType>;
 	public slashCommands: Array<ApplicationCommandDataResolvable>;
 	public cooldowns: Collection<string, Collection<string, number>>;
@@ -42,6 +47,7 @@ export class Yuno extends Client implements ExtendedClient {
 		//register all commands once the bot is ready
 		this.on('ready', async () => {
 			await this.registerCommands();
+			await this.setPermissions();
 		});
 		// logs the bot in
 		await this.login(BOT_CONFIG.botToken);
@@ -50,7 +56,7 @@ export class Yuno extends Client implements ExtendedClient {
 		dbConfig.dbName = BOT_CONFIG.database;
 		this.orm = await MikroORM.init(dbConfig);
 		// parses the settings data from the db into settings property
-		this._parseSettings();
+		await this._parseSettings();
 	}
 
 	async importFile(filePath: string) {
@@ -71,14 +77,35 @@ export class Yuno extends Client implements ExtendedClient {
 			});
 		}
 	}
-
+	async setPermissions() {
+		this.config.commands.permission.forEach((permission) => {
+			this.guilds.cache
+				.get(this.guildID)
+				?.commands.cache.map((command) => {
+					console.log(command);
+					if (command.name == permission.name) {
+						command.permissions.add({
+							permissions: [
+								{
+									id: permission.id,
+									type: permission.type as 'USER' | 'ROLE',
+									permission: permission.permission,
+								},
+							],
+						});
+					}
+				});
+		});
+	}
 	async registerModules() {
 		// Commands
 		const commandFiles = await globPromise(`${__dirname}/commands/*.js`);
 		commandFiles.forEach(async (filePath) => {
 			const command: CommandType = await this.importFile(filePath);
 			if (!command.name) return;
-			command.isSlash? this.slashCommands.push(command) : this.commands.set(command.name, command) ;
+			command.isSlash
+				? this.slashCommands.push(command)
+				: this.commands.set(command.name, command);
 		});
 		// Event
 		const eventFiles = await globPromise(`${__dirname}/events/*.js`);

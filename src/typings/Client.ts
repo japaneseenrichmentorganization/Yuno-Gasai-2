@@ -29,6 +29,12 @@ export interface BotConfig {
 	commands: {
 		admins: Array<string>;
 		prefix: string;
+		permission: Array<{
+			name: string;
+			id: string;
+			type: string;
+			permission: boolean;
+		}>
 	},
 	ban: {
 		defaultImage: string
