@@ -1,5 +1,4 @@
 import {
-	ChatInputApplicationCommandData,
 	CommandInteraction,
 	CommandInteractionOptionResolver,
 	GuildMember,
@@ -13,6 +12,7 @@ import { ExtendedClient } from './Client';
  * {
  *  name: "commandname",
  * description: "any description",
+ * ...
  * run: async({ interaction }) => {
  *
  * }
@@ -65,12 +65,12 @@ export interface RunOptions {
 }
 type RunFunction = (options: RunOptions ) => void | Promise<void>;
 
-export type CommandType = {
+export type CommandType  = {
 	name: string;
   description: string;
 	type: ApplicationCommandTypes
 	isSlash: boolean;
-	isAdminOnly: boolean;
+	isAdminOnly?: boolean;
 	required?: boolean;
 	userPermissions?: PermissionResolvable[];
   cooldown?: number;
@@ -78,7 +78,7 @@ export type CommandType = {
   aliases?: string[];
   usage?: string;
   isArgumentsRequired?: boolean;
-  requiredPermissions?: PermissionResolvable[];
+  requiredPermissions?: DiscordPermissionString[];
   requiredRoles?: string[];
 	run: RunFunction;
-}
+} ;
