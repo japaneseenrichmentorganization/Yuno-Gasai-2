@@ -43,8 +43,7 @@ export class Yuno extends Client implements ExtendedClient {
 		await this.registerModules();
 		//register all commands once the bot is ready
 		this.on('ready', async () => {
-			await this.registerCommands();
-			await this.setPermissions();
+			await this.registerCommands().then(() => this.setPermissions());
 		});
 		// logs the bot in
 		await this.login(BOT_CONFIG.botToken);
@@ -75,11 +74,9 @@ export class Yuno extends Client implements ExtendedClient {
 		}
 	}
 	async setPermissions() {
-		this.config.commands.permission.forEach((permission) => {
-			this.guilds.cache
-				.get(this.guildID)
-				?.commands.cache.map((command) => {
-					console.log(command);
+		const commands = await this.guilds.cache.get(this.guildID)?.commands.fetch();
+		this.config.commands.permissions.forEach((permission) => {
+		commands!.map((command) => {					
 					if (command.name == permission.name) {
 						command.permissions.add({
 							permissions: [
