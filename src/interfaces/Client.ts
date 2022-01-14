@@ -5,6 +5,7 @@ import {
 	ClientPresence,
 	Collection,
 } from 'discord.js';
+import { Job } from 'node-schedule';
 import { CommandType } from './Command';
 
 export interface RegisterCommandsOptions {
@@ -53,6 +54,7 @@ export interface BotConfig {
 export interface ExtendedClient extends Client {
 	commands: Collection<string, CommandType>;
 	slashCommands: Array<ApplicationCommandDataResolvable>;
+	channelsToClean: Collection<string, Job>;
 	cooldowns: Collection<string, Collection<string, number>>;
 	guildID: string;
 	orm: MikroORM<IDatabaseDriver<Connection>>;
