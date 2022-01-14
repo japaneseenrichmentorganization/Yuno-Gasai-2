@@ -1,6 +1,6 @@
 import { Event } from '../lib/Event';
-import { CommandType } from '../typings/Command';
-import { ExtendedClient } from '../typings/Client';
+import { CommandType } from '../interfaces/Command';
+import { ExtendedClient } from '../interfaces/Client';
 import { Collection, PermissionResolvable, TextChannel } from 'discord.js';
 
 // Non slash commands
@@ -37,7 +37,7 @@ export default new Event('messageCreate', async (message) => {
 			!client.config.commands.admins.includes(message.author.id))
 	) {
 		message.reply(
-			`There is no such command: \ ${client.settings.prefix}${commandName}`
+			`There is no such command: ${client.settings.prefix}${commandName}`
 		);
 		return;
 	}
@@ -68,7 +68,9 @@ export default new Event('messageCreate', async (message) => {
 
 		if (
 			!authorPermissions ||
-			!authorPermissions.has(command.requiredPermissions as PermissionResolvable[])
+			!authorPermissions.has(
+				command.requiredPermissions as PermissionResolvable[]
+			)
 		) {
 			message.reply('');
 			return;
@@ -100,11 +102,7 @@ export default new Event('messageCreate', async (message) => {
 
 		if (now < expirationTime) {
 			const timeLeft = (expirationTime - now) / 1000;
-			message.reply(
-				` ${timeLeft.toFixed(
-					1
-				)}\`${command.name}\``
-			);
+			message.reply(` ${timeLeft.toFixed(1)}\`${command.name}\``);
 			return;
 		}
 	}

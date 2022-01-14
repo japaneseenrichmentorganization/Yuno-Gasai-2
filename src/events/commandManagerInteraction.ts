@@ -17,8 +17,8 @@
 */
 import { CommandInteractionOptionResolver } from 'discord.js';
 import { Event } from '../lib/Event';
-import { CommandType, ExtendedInteraction } from '../typings/Command';
-import { ExtendedClient } from '../typings/Client';
+import { CommandType, ExtendedInteraction } from '../interfaces/Command';
+import { ExtendedClient } from '../interfaces/Client';
 
 // Slashcommands handling
 export default new Event('interactionCreate', async (interaction) => {
