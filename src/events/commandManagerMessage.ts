@@ -25,7 +25,7 @@ export default new Event('messageCreate', async (message) => {
 	}
 	// Command args, command name and Command itself
 	const args = mentioned
-		? message.content.slice('<@&927890124111495179>'.length).split(/ +/)
+		? message.content.slice(('<@&'+ client.user?.id+'>').length).split(/ +/) // if the bot itself is mentioned
 		: message.content.slice(client.settings.prefix.length).split(/ +/);
 	const commandName = args.shift()?.toLowerCase() || '';
 	const command: CommandType | undefined =
