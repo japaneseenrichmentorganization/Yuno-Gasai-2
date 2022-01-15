@@ -71,6 +71,7 @@ export default new Event('messageCreate', async (message) => {
 	if (command.isClass) {
 		if (command.subCmdsName?.includes(args[0])) {
 			runMethode = command[args[0]] as RunFunction;
+			args.shift();
 		} else {
 			message.reply(`Unknown subcommand ${args[0]} of command ${command.name}`);
 			return;
