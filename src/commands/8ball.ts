@@ -27,6 +27,7 @@ export default new Command({
 	usage: 'how is the weather today?',
 	type: ApplicationCommandTypes.MESSAGE,
 	isArgumentsRequired: true,
+	isClass: false,
 	guildOnly: true,
 	isSlash: false,
 	// The ? Operator makes the compiler happy, also message and params will never be undefined because its gets checked before the command is executed.
@@ -46,7 +47,7 @@ export default new Command({
 			});
 		} else {
 			options.message?.channel.send(
-				'Was that a question? Try asking again with a question mark at the end.'
+				'Was that a question? Try asking again with a question mark at the end.',
 			);
 		}
 	},
