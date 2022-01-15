@@ -1,7 +1,12 @@
 import { Event } from '../lib/Event';
-import { CommandType } from '../interfaces/Command';
+import { CommandType, RunFunction, RunOptions } from '../interfaces/Command';
 import { ExtendedClient } from '../interfaces/Client';
-import { Collection, PermissionResolvable, TextChannel } from 'discord.js';
+import {
+	Collection,
+	PermissionResolvable,
+	TextChannel,
+	Formatters,
+} from 'discord.js';
 
 // Non slash commands
 export default new Event('messageCreate', async (message) => {
@@ -15,8 +20,7 @@ export default new Event('messageCreate', async (message) => {
 		.startsWith('<@&927890124111495179>');
 	// Check if commands has prefix and its not another bot
 	if (
-		(message.content.trim().startsWith(client.settings.prefix) ==
-			mentioned) !==
+		(message.content.trim().startsWith(client.settings.prefix) == mentioned) !==
 		(message.content.includes('@here') ||
 			message.content.includes('@everyone') ||
 			message.type == 'REPLY')
@@ -25,33 +29,35 @@ export default new Event('messageCreate', async (message) => {
 	}
 	// Command args, command name and Command itself
 	const args = mentioned
-		? message.content.slice(('<@&'+ client.user?.id+'>').length).split(/ +/) // if the bot itself is mentioned
+		? message.content.slice(('<@&' + client.user?.id + '>').length).split(/ +/) // if the bot itself is mentioned
 		: message.content.slice(client.settings.prefix.length).split(/ +/);
 	const commandName = args.shift()?.toLowerCase() || '';
 	const command: CommandType | undefined =
 		client.commands.get(commandName) ?? undefined;
-	// Needs to be checked early to prevent useles code excution
+	// Needs to be checked early to prevent useless code execution
 	if (
 		!command ||
 		(command.isAdminOnly &&
-			!client.config.commands.admins.includes(message.author.id))
+			!client.config.commands.admins.includes(message.author.id)) // we pretend the command doesn't exist, this reduces the attack surface
 	) {
 		message.reply(
-			`There is no such command: ${client.settings.prefix}${commandName}`
+			`There is no such command: ${client.settings.prefix}${commandName}`,
 		);
 		return;
 	}
-	// Checks if the command is guild only and that it is a text channel or if command isSlash
-	if (
-		(command.guildOnly && message.channel.type == 'GUILD_TEXT') ||
-		command.isSlash
-	) {
-		message.reply('');
+	// Checks if the command is guild only and that it is a text channel
+	if (!(command.guildOnly && message.channel.type == 'GUILD_TEXT')) {
+		message.reply('Guild only');
 		return;
 	}
 	// check for args requirements and gives usage if usage is specified
 	if (command.isArgumentsRequired && !args.length) {
-		let reply = `@${message.author.username}#${message.author.tag} You have to give me something to work with!`;
+		let reply: string = Formatters.userMention(message.author.id) + ' ';
+		if (command.missingArgumentsResponse) {
+			reply += command.missingArgumentsResponse;
+		} else {
+			reply += ' You have to give me something to work with!';
+		}
 
 		if (command.usage) {
 			reply += `\nUsage: \`${client.settings.prefix}${command.name} ${command.usage}\``;
@@ -60,16 +66,26 @@ export default new Event('messageCreate', async (message) => {
 		message.reply(reply);
 		return;
 	}
+	// checks if the command is a class command and checks if the class has a function that maps to the first arg given
+	let runMethode: RunFunction = command.run;
+	if (command.isClass) {
+		if (command.subCmdsName?.includes(args[0])) {
+			runMethode = command[args[0]] as RunFunction;
+		} else {
+			message.reply(`Unknown subcommand ${args[0]} of command ${command.name}`);
+			return;
+		}
+	}
 	// commands that require certain discord permissions
 	if (command.requiredPermissions) {
-		const authorPermissions = (
-			message.channel as TextChannel
-		).permissionsFor(message.author);
+		const authorPermissions = (message.channel as TextChannel).permissionsFor(
+			message.author,
+		);
 
 		if (
 			!authorPermissions ||
 			!authorPermissions.has(
-				command.requiredPermissions as PermissionResolvable[]
+				command.requiredPermissions as PermissionResolvable[],
 			)
 		) {
 			message.reply('');
@@ -80,7 +96,7 @@ export default new Event('messageCreate', async (message) => {
 	if (command.requiredRoles) {
 		const { requiredRoles: commandUserRoles } = command;
 		const hasRole = message.member?.roles.cache.some((role) =>
-			commandUserRoles.includes(role.name)
+			commandUserRoles.includes(role.name),
 		);
 		if (!hasRole) {
 			message.reply(`${commandUserRoles.join(', ')}`);
@@ -109,10 +125,15 @@ export default new Event('messageCreate', async (message) => {
 	timestamps?.set(message.author.id, now);
 	setTimeout(() => timestamps?.delete(message.author.id), cooldownAmount);
 
-	// After that we can safely execute the command
-	await command.run({
-		client: client as ExtendedClient,
-		message: message,
-		params: args,
-	});
+	// After that we can safely try to execute the command
+	try {
+		runMethode.call(command, {
+			client: client as ExtendedClient,
+			message: message,
+			params: args,
+		} as RunOptions);
+	} catch (error) {
+		console.log(error);
+		message.reply(`An error occurred ${error}`);
+	}
 });
