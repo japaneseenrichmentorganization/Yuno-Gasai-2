@@ -31,9 +31,9 @@ export default new Command({
 	isClass: false,
 	guildOnly: true,
 	run: async function (options) {
-		// if (!options.message?.mentions.users.size) {
-		// 	return msg.channel.send('Who do you want me to praise?');
-		// }
+		if (!options.message?.mentions.users.size) {
+			return options.message?.channel.send('Who do you want me to praise?');
+		}
 		// Looks weird because all these things can be undefined but at this  point they can't due to various checks beforehand
 		options.message?.channel.send(
 			options.message?.mentions?.users?.first()?.toString() +
