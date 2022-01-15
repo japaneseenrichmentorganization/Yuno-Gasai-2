@@ -3,17 +3,19 @@ import {
 	Client,
 	ClientEvents,
 	Collection,
+	TextChannel,
 } from 'discord.js';
 import glob from 'glob';
 import { promisify } from 'util';
-
-import { BotConfig, ExtendedClient, Settings } from './typings/Client';
+import { BotConfig, ExtendedClient, Settings } from './interfaces/Client';
 import { Event } from './lib/Event';
-import { CommandType } from './typings/Command';
+import { CommandType } from './interfaces/Command';
 import { Connection, IDatabaseDriver, MikroORM } from '@mikro-orm/core';
 import dbConfig from './config/mikro-orm.config';
 import { Guilds } from './entities';
-import { ApplicationCommandPermissionTypes } from 'discord.js/typings/enums';
+import { Job } from 'node-schedule';
+import { Channelcleans } from './entities/Channelcleans';
+import util from './Util';
 // Used for importing commands and events asyncly
 const globPromise = promisify(glob);
 
@@ -21,6 +23,7 @@ export class Yuno extends Client implements ExtendedClient {
 	// properties
 	public commands: Collection<string, CommandType>;
 	public slashCommands: Array<ApplicationCommandDataResolvable>;
+	public channelsToClean: Collection<string, Job>;
 	public cooldowns: Collection<string, Collection<string, number>>;
 	public guildID!: string;
 	// Settings from the database
@@ -34,6 +37,7 @@ export class Yuno extends Client implements ExtendedClient {
 		this.commands = new Collection<string, CommandType>();
 		this.slashCommands = new Array<ApplicationCommandDataResolvable>();
 		this.cooldowns = new Collection<string, Collection<string, number>>();
+		this.channelsToClean = new Collection<string, Job>();
 	}
 
 	async start(BOT_CONFIG: BotConfig) {
@@ -44,6 +48,9 @@ export class Yuno extends Client implements ExtendedClient {
 		//register all commands once the bot is ready
 		this.on('ready', async () => {
 			await this.registerCommands().then(() => this.setPermissions());
+			await this.guilds
+				.fetch(this.guildID)
+				.then(() => this.registerCleaningJobs());
 		});
 		// logs the bot in
 		await this.login(BOT_CONFIG.botToken);
@@ -61,9 +68,7 @@ export class Yuno extends Client implements ExtendedClient {
 
 	async registerCommands() {
 		if (this.guildID) {
-			this.guilds.cache
-				.get(this.guildID)
-				?.commands.set(this.slashCommands);
+			this.guilds.cache.get(this.guildID)?.commands.set(this.slashCommands);
 			console.log(`Registering commands to ${this.guildID}`);
 		} else {
 			console.log('Registering global commands');
@@ -74,22 +79,68 @@ export class Yuno extends Client implements ExtendedClient {
 		}
 	}
 	async setPermissions() {
-		const commands = await this.guilds.cache.get(this.guildID)?.commands.fetch();
+		const commands = await this.guilds.cache
+			.get(this.guildID)
+			?.commands.fetch();
 		this.config.commands.permissions.forEach((permission) => {
-		commands!.map((command) => {					
-					if (command.name == permission.name) {
-						command.permissions.add({
-							permissions: [
-								{
-									id: permission.id,
-									type: permission.type as 'USER' | 'ROLE',
-									permission: permission.permission,
-								},
-							],
-						});
-					}
-				});
+			commands?.map((command) => {
+				if (command.name == permission.name) {
+					command.permissions.add({
+						permissions: [
+							{
+								id: permission.id,
+								type: permission.type as 'USER' | 'ROLE',
+								permission: permission.permission,
+							},
+						],
+					});
+				}
+			});
 		});
+	}
+	async registerCleaningJobs() {
+		(await this.orm.em.getRepository(Channelcleans).findAll()).forEach(
+			(ChannelToClean: Channelcleans) => {
+				console.log(ChannelToClean.cname);
+				const cleanTime = parseInt(ChannelToClean.cleantime);
+				const warnTime = parseInt(ChannelToClean.warningtime);
+				this.channelsToClean.set(
+					ChannelToClean.cname + '_warn',
+					util.produceWarnJob(
+						cleanTime,
+						warnTime,
+						ChannelToClean.cname,
+						async (_firedate: Date) => {
+							const chan: TextChannel | undefined = await util.getChannelByName(
+								this,
+								ChannelToClean.cname,
+							);
+							if (typeof chan === 'undefined') return;
+							util.warnChannel(
+								chan as TextChannel,
+								this,
+								parseInt(ChannelToClean.warningtime),
+							);
+						},
+					),
+				);
+				this.channelsToClean.set(
+					ChannelToClean.cname + '_clean',
+					util.produceCleanJob(
+						cleanTime,
+						ChannelToClean.cname,
+						async (_firedate: Date) => {
+							const chan: TextChannel | undefined = await util.getChannelByName(
+								this,
+								ChannelToClean.cname,
+							);
+							if (typeof chan === 'undefined') return;
+							util.clean(chan as TextChannel);
+						},
+					),
+				);
+			},
+		);
 	}
 	async registerModules() {
 		// Commands
@@ -97,6 +148,7 @@ export class Yuno extends Client implements ExtendedClient {
 		commandFiles.forEach(async (filePath) => {
 			const command: CommandType = await this.importFile(filePath);
 			if (!command.name) return;
+			console.log(command);
 			command.isSlash
 				? this.slashCommands.push(command)
 				: this.commands.set(command.name, command);
@@ -104,9 +156,7 @@ export class Yuno extends Client implements ExtendedClient {
 		// Event
 		const eventFiles = await globPromise(`${__dirname}/events/*.js`);
 		eventFiles.forEach(async (filePath) => {
-			const event: Event<keyof ClientEvents> = await this.importFile(
-				filePath
-			);
+			const event: Event<keyof ClientEvents> = await this.importFile(filePath);
 			this.on(event.event, event.run);
 		});
 	}
@@ -119,13 +169,10 @@ export class Yuno extends Client implements ExtendedClient {
 		// As the types are TEXT in the database casting like this is safe
 		this.settings = {
 			levelRoleMap:
-				(rawSetting[0].levelRoleMap as unknown as Map<
-					string,
-					string
-				>) ?? new Map<string, string>(),
+				(rawSetting[0].levelRoleMap as unknown as Map<string, string>) ??
+				new Map<string, string>(),
 			measureXP: (rawSetting[0].measureXP as unknown as boolean) ?? false,
-			spamFilter:
-				(rawSetting[0].spamFilter as unknown as boolean) ?? false,
+			spamFilter: (rawSetting[0].spamFilter as unknown as boolean) ?? false,
 			// These followering properties are just string so no casting needed
 			onJoinDMMsg: rawSetting[0].onJoinDMMsg ?? '',
 			onJoinDMMsgTitle: rawSetting[0].onJoinDMMsgTitle ?? '',
