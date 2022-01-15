@@ -64,4 +64,5 @@ export interface ExtendedClient extends Client {
 	importFile(filePath: string): Promise<unknown>;
 	registerCommands(): Promise<void>;
 	registerModules(): Promise<void>;
+	registerCleaningJobs(): Promise<void>;
 }
