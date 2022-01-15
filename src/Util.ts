@@ -101,7 +101,9 @@ function produceWarnJob(
 	callback: JobCallback,
 ): Job {
 	const rule: RecurrenceRule = new RecurrenceRule();
-	rule.second = minute;
+	rule.hour = hour == 0 ? 23 : hour - 1;
+	rule.minute = 60 - minute;
+	rule.tz = 'Etc/UTC';
 	return scheduleJob(name + '_warn', rule, callback);
 }
 function produceCleanJob(
@@ -110,7 +112,8 @@ function produceCleanJob(
 	callback: JobCallback,
 ): Job {
 	const rule: RecurrenceRule = new RecurrenceRule();
-	rule.second = hour;
+	rule.hour = hour == 24 ? 0 : hour;
+	rule.tz = 'Etc/UTC';
 	return scheduleJob(name + '_clean', rule, callback);
 }
 export default {
