@@ -82,7 +82,7 @@ class AutoClean extends Command {
 			options.message?.channel.send('Please mention a channel');
 		if (dbChannel == null)
 			return channel.send(
-				":negative_squared_cross_mark: This channel doesn't have any auto-clean set up",
+				':negative_squared_cross_mark: This channel doesn\'t have any auto-clean set up',
 			);
 		ChannelRepository.removeAndFlush(dbChannel);
 		options.client.channelsToClean.get(channel.name + '_warn')?.cancel();
@@ -108,7 +108,7 @@ class AutoClean extends Command {
 			return await channel.send(`${newWarningTime} is not a valid minute`);
 		if (dbChannel == null)
 			return channel.send(
-				":negative_squared_cross_mark: This channel doesn't have any auto-clean set up",
+				':negative_squared_cross_mark: This channel doesn\'t have any auto-clean set up',
 			);
 		ChannelRepository.persistAndFlush(
 			ChannelRepository.create({
@@ -133,7 +133,7 @@ class AutoClean extends Command {
 		if (options.params?.at(1) === undefined) {
 			if (dbChannel == null)
 				return channel.send(
-					":negative_squared_cross_mark: This channel doesn't have any auto-clean set up",
+					':negative_squared_cross_mark: This channel doesn\'t have any auto-clean set up',
 				); // Can't be null would have been caught above before executing this function
 			await channel.send({
 				embeds: [
