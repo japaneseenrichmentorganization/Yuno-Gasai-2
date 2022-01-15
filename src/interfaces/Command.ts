@@ -62,23 +62,24 @@ export interface RunOptions {
 	message?: Message;
 	params?: Array<string>;
 }
-type RunFunction = (options: RunOptions) => unknown | Promise<unknown>;
+export type RunFunction = (options: RunOptions) => unknown | Promise<unknown>;
 
 export type CommandType = {
 	name: string;
-	aliases?: string[];
+	aliases?: Array<string>;
 	description: string;
 	usage?: string;
 	missingArgumentsResponse?: string;
 	type: ApplicationCommandTypes;
 	isSlash: boolean;
+	isClass: boolean;
+	subCmdsName?: Array<string>;
 	isArgumentsRequired?: boolean;
-	guildOnly?: boolean;
+	guildOnly: boolean;
 	cooldown?: number;
-	userPermissions?: PermissionResolvable[];
+	userPermissions?: Array<PermissionResolvable>;
 	isAdminOnly?: boolean;
-	requiredPermissions?: DiscordPermissionString[];
-	requiredRoles?: string[];
-	required?: boolean;
+	requiredPermissions?: Array<DiscordPermissionString>;
+	requiredRoles?: Array<string>;
 	run: RunFunction;
-};
+} & Record<string, unknown>;
