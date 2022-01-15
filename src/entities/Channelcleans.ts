@@ -2,11 +2,9 @@ import { Entity, Property, PrimaryKey } from '@mikro-orm/core';
 
 @Entity()
 export class Channelcleans {
-	@PrimaryKey()
-		id!: number;
 	@Property({ columnType: 'TEXT', nullable: true })
 		gid!: string;
-
+	@PrimaryKey()
 	@Property({ columnType: 'TEXT', nullable: true })
 		cname!: string;
 
