@@ -1,12 +1,5 @@
-import {
-	Guild,
-	GuildManager,
-	GuildMember,
-	Message,
-	MessageEmbed,
-} from 'discord.js';
+import { Message, MessageEmbed } from 'discord.js';
 import { ApplicationCommandTypes } from 'discord.js/typings/enums';
-import { BanImages } from '../entities';
 import { Command } from '../lib/Command';
 
 export default new Command({
