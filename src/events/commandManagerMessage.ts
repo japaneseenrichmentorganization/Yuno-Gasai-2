@@ -15,7 +15,8 @@ export default new Event('messageCreate', async (message) => {
 	// Channel Input Commands TYPE: MESSAGE
 	// We don't need to waste execution time if its an interaction
 	if (message.interaction || message.author.bot) return;
-	const client: ExtendedClient = message.client as ExtendedClient;
+	const client: ExtendedClient = message.client as ExtendedClient; // shorthand for message.client
+	// Was the bot mentioned
 	const mentioned: boolean = message.content
 		.trim()
 		.startsWith('<@&' + client.user?.id + '>');
@@ -112,6 +113,7 @@ export default new Event('messageCreate', async (message) => {
 		client.cooldowns?.set(command.name, new Collection());
 	}
 	const now = Date.now();
+	// get cooldown(s) for current command can be null
 	const timestamps = client.cooldowns?.get(command.name);
 	const cooldownAmount = (command.cooldown || 3) * 1000;
 
