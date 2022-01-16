@@ -16,10 +16,10 @@ export default new Event('messageCreate', async (message) => {
 	// We don't need to waste execution time if its an interaction
 	if (message.interaction || message.author.bot) return;
 	const client: ExtendedClient = message.client as ExtendedClient;
-	// This evades the bot from being triggered by @everyone
 	const mentioned: boolean = message.content
 		.trim()
-		.startsWith('<@&927890124111495179>');
+		.startsWith('<@&' + client.user?.id + '>');
+	// This evades the bot from being triggered by @everyone
 	// Check if commands has prefix and its not another bot
 	if (
 		(message.content.trim().startsWith(client.settings.prefix) == mentioned) !==
