@@ -14,6 +14,7 @@ export default new Command({
 	isClass: false,
 	guildOnly: true,
 	isAdminOnly: true,
+	requiredPermissions: ['BAN_MEMBERS'],
 	isSlash: false,
 	// The ? Operator makes the compiler happy, also message and params will never be undefined because its gets checked before the command is executed.
 	// But doing the types like that makes it easier
