@@ -46,7 +46,7 @@ export default new Command({
 		}
 		const embed = new MessageEmbed()
 			.setColor('#43cc24')
-			.setTitle(':white_check_mark: Ban successful.')
+			.setTitle(':white_check_mark: Ban summery.')
 			.setDescription(
 				`:arrow_right: User${resArry.length > 1 ? 's' : ''}: ${resArry.join(
 					' ',
