@@ -1,5 +1,6 @@
 import { Message, MessageEmbed } from 'discord.js';
 import { ApplicationCommandTypes } from 'discord.js/typings/enums';
+import { BanImages } from '../entities';
 import { Command } from '../lib/Command';
 
 export default new Command({
@@ -49,22 +50,26 @@ export default new Command({
 				`:arrow_right: User${resArry.length > 1 ? 's' : ''}: ${resArry.join(
 					' ',
 				)}`,
+			)
+			.setImage(
+				(
+					await options.client.orm.em.getRepository(BanImages).findOne({
+						gid: options.client.guildID,
+						banner: options.message?.author.id,
+					})
+				)?.image || options.client.config.ban.defaultImage,
 			);
 		await options.message?.reply({
 			embeds: [embed],
 		});
-		console.log(resArry);
 	},
 });
 
 async function ban(message: Message, id: string): Promise<string> {
-	console.log('Executed');
 	try {
 		await message.guild?.bans.create(id);
-		console.log('successful');
 		return 'successfully banned.\n';
 	} catch (error) {
-		console.log(error);
 		return 'unsuccessfully banned.\n';
 	}
 }
