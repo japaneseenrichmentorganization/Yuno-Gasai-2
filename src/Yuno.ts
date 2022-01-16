@@ -173,9 +173,7 @@ export class Yuno extends Client implements ExtendedClient {
 		// Due to the database being setup in a weird way we need to do some cast magic
 		// As the types are TEXT in the database casting like this is safe
 		this.settings = {
-			levelRoleMap:
-				(rawSetting[0].levelRoleMap as unknown as Map<string, string>) ??
-				new Map<string, string>(),
+			levelRoleMap: JSON.parse(rawSetting[0].levelRoleMap),
 			measureXP: (rawSetting[0].measureXP as unknown as boolean) ?? false,
 			spamFilter: (rawSetting[0].spamFilter as unknown as boolean) ?? false,
 			// These followering properties are just string so no casting needed

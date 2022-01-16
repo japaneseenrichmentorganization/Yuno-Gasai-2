@@ -18,7 +18,7 @@ export interface Settings {
 	onJoinDMMsgTitle: string;
 	spamFilter: boolean;
 	measureXP: boolean;
-	levelRoleMap: Map<string, string>;
+	levelRoleMap: Record<string, string>;
 }
 export interface BotConfig {
 	chat: {
