@@ -10,6 +10,8 @@ import {
 
 // Non slash commands
 export default new Event('messageCreate', async (message) => {
+	// checks if the bot has booted(initialized)
+	if (!(message.client as ExtendedClient).booted) return;
 	// Channel Input Commands TYPE: MESSAGE
 	// We don't need to waste execution time if its an interaction
 	if (message.interaction || message.author.bot) return;

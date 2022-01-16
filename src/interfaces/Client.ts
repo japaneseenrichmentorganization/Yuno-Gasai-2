@@ -12,20 +12,20 @@ export interface RegisterCommandsOptions {
 	guildId?: string;
 	commands: ApplicationCommandDataResolvable[];
 }
-export interface Settings{
+export interface Settings {
 	prefix: string;
 	onJoinDMMsg: string;
 	onJoinDMMsgTitle: string;
 	spamFilter: boolean;
 	measureXP: boolean;
-	levelRoleMap: Map<string,string>;
+	levelRoleMap: Map<string, string>;
 }
 export interface BotConfig {
 	chat: {
-		xpPerMsg: number,
-		dmResponse: string,
-		missingPermissions: string
-	}
+		xpPerMsg: number;
+		dmResponse: string;
+		missingPermissions: string;
+	};
 	botToken: string;
 	commands: {
 		admins: Array<string>;
@@ -35,20 +35,20 @@ export interface BotConfig {
 			id: string;
 			type: string;
 			permission: boolean;
-		}>
-	},
+		}>;
+	};
 	ban: {
-		defaultImage: string
-	},
+		defaultImage: string;
+	};
 	errors: {
-		mentionwhencrash: Array<string>,
+		mentionwhencrash: Array<string>;
 		channel: string;
-	},
+	};
 	database: string;
 	guildID: string;
 	spam: {
 		maxWarnings: number;
-	},
+	};
 	discordPresence: ClientPresence | null;
 }
 export interface ExtendedClient extends Client {
@@ -60,6 +60,7 @@ export interface ExtendedClient extends Client {
 	orm: MikroORM<IDatabaseDriver<Connection>>;
 	settings: Settings;
 	config: BotConfig;
+	booted: boolean;
 	start(BOT_CONFIG: BotConfig): void;
 	importFile(filePath: string): Promise<unknown>;
 	registerCommands(): Promise<void>;

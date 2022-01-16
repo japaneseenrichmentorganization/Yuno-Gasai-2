@@ -22,14 +22,16 @@ import { ExtendedClient } from '../interfaces/Client';
 
 // Slashcommands handling
 export default new Event('interactionCreate', async (interaction) => {
+	// checks if the bot has booted(initialized)
+	if (!(interaction.client as ExtendedClient).booted) return;
 	// Chat Input Commands TYPE: CHAT_INPUT
 	if (interaction.isCommand()) {
 		await interaction.deferReply();
-		const command = (
-			interaction.client as ExtendedClient
-		).slashCommands.find((cmd) => {
-			return cmd.name == interaction.command?.name;
-		}) as CommandType;
+		const command = (interaction.client as ExtendedClient).slashCommands.find(
+			(cmd) => {
+				return cmd.name == interaction.command?.name;
+			},
+		) as CommandType;
 		if (!command)
 			return interaction.followUp('You have used a non existent command');
 		await command.run({

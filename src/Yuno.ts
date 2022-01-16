@@ -31,6 +31,7 @@ export class Yuno extends Client implements ExtendedClient {
 	public orm!: MikroORM<IDatabaseDriver<Connection>>;
 	// Settings from the config file needs to be reworked
 	public config!: BotConfig;
+	public booted: boolean; // prevents the bot from taking in commands before everything has been initialized
 	constructor() {
 		// All intents 32767
 		super({ intents: 32767 });
@@ -38,6 +39,7 @@ export class Yuno extends Client implements ExtendedClient {
 		this.slashCommands = new Array<ApplicationCommandDataResolvable>();
 		this.cooldowns = new Collection<string, Collection<string, number>>();
 		this.channelsToClean = new Collection<string, Job>();
+		this.booted = false;
 	}
 
 	async start(BOT_CONFIG: BotConfig) {
@@ -51,6 +53,8 @@ export class Yuno extends Client implements ExtendedClient {
 			await this.guilds
 				.fetch(this.guildID)
 				.then(() => this.registerCleaningJobs());
+			this.booted = true;
+			console.log('Booted');
 		});
 		// logs the bot in
 		await this.login(BOT_CONFIG.botToken);
@@ -99,6 +103,7 @@ export class Yuno extends Client implements ExtendedClient {
 		});
 	}
 	async registerCleaningJobs() {
+		this.channelsToClean = new Collection();
 		(await this.orm.em.getRepository(Channelcleans).findAll()).forEach(
 			(ChannelToClean: Channelcleans) => {
 				console.log(ChannelToClean.cname);
