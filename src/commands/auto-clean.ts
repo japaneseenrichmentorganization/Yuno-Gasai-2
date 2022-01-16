@@ -96,8 +96,7 @@ class AutoClean extends Command {
 		await this.add(options);
 	}
 	async edit(options: RunOptions) {
-		const { dbChannel, ChannelRepository, mentionedChannel, channel } =
-			await getArgs(options);
+		const { dbChannel, ChannelRepository, channel } = await getArgs(options);
 		const newTimeBetweenCleaning = parseInt(options.params?.at(1) as string);
 		const newWarningTime = parseInt(options.params?.at(2) as string);
 		if (newTimeBetweenCleaning > 24 || newTimeBetweenCleaning < 0)
@@ -128,8 +127,7 @@ class AutoClean extends Command {
 		);
 	}
 	async list(options: RunOptions) {
-		const { dbChannel, ChannelRepository, mentionedChannel, channel } =
-			await getArgs(options);
+		const { dbChannel, ChannelRepository, channel } = await getArgs(options);
 		if (options.params?.at(1) === undefined) {
 			if (dbChannel == null)
 				return channel.send(
