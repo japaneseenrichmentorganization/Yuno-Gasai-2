@@ -68,7 +68,9 @@ export default new Command({
 
 async function ban(message: Message, id: string): Promise<string> {
 	try {
-		await message.guild?.bans.create(id);
+		await message.guild?.bans.create(id, {
+			reason: `Banned by ${message.author.tag}`,
+		});
 		return 'successfully banned.\n';
 	} catch (error) {
 		return 'unsuccessfully banned.\n';
