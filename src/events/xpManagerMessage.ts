@@ -1,4 +1,3 @@
-import { Role, TextChannel } from 'discord.js';
 import { Experiences } from '../entities';
 import { ExtendedClient } from '../interfaces/Client';
 import { CommandType } from '../interfaces/Command';
@@ -32,7 +31,7 @@ export default new Event('messageCreate', async (message) => {
 	if (command) return;
 	const rolemap = client.settings.levelRoleMap;
 	const xpPerMsg = client.config.chat.xpPerMsg || 1;
-	const xpRepository = await client.orm.em.getRepository(Experiences);
+	const xpRepository = client.orm.em.getRepository(Experiences);
 	// Now we can add xp to the author
 	const xpForUser = await xpRepository.findOne({
 		guildID: message.guildId,
@@ -58,7 +57,6 @@ export default new Event('messageCreate', async (message) => {
 		xpForUser.level += 1;
 		xpForUser.exp -= neededXP;
 	}
-	console.log(xpForUser.exp);
 	await xpRepository.persistAndFlush(xpForUser);
 	if (rolemap[xpForUser.level] !== 'string')
 		return console.log('ROle not there');
