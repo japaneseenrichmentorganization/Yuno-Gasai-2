@@ -27,8 +27,10 @@ import { CommandType, RunOptions } from '../interfaces/Command';
 interface dataObj {
 	ChannelRepository: EntityRepository<Channelcleans>;
 	mentionedChannel: TextChannel | undefined;
-	channel: TextChannel;
 	dbChannel: Channelcleans | null;
+	timeBetweenCleaning: number;
+	warningTime: number;
+	msg?: string;
 }
 class AutoClean extends Command {
 	constructor(commandOptions: CommandType) {
@@ -36,27 +38,17 @@ class AutoClean extends Command {
 	}
 	//Add channel to cleaning list
 	async add(options: RunOptions) {
-		const { dbChannel, ChannelRepository, mentionedChannel, channel } =
-			await getArgs(options);
-		const timeBetweenCleaning = parseInt(options.params?.at(1) as string);
-		const warningTime = parseInt(options.params?.at(2) as string);
-		if (mentionedChannel == undefined)
-			return await options.message?.channel.send('Please mention a channel');
-		if (
-			timeBetweenCleaning > 24 ||
-			timeBetweenCleaning < 0 ||
-			isNaN(timeBetweenCleaning)
-		)
-			return await channel.send(`${timeBetweenCleaning} is not a valid hour`);
-		if (warningTime > 60 || warningTime < 0 || isNaN(warningTime))
-			return await channel.send(`${warningTime} is not a valid minute`);
-		if (dbChannel !== null)
-			return await channel.send(
-				':negative_squared_cross_mark: The channel you asked to add an auto-clean already has an auto-clean.\nPlease use `auto-clean edit`.',
-			);
+		const {
+			ChannelRepository,
+			mentionedChannel,
+			timeBetweenCleaning,
+			warningTime,
+			msg,
+		} = await getArgs(options);
+		if (msg) return await options.message?.reply(msg);
 		ChannelRepository.persist(
 			ChannelRepository.create({
-				gid: channel.guildId,
+				gid: options.message?.guildId,
 				cname: (mentionedChannel as TextChannel).name,
 				cleantime: timeBetweenCleaning.toString(),
 				warningtime: warningTime.toString(),
@@ -64,30 +56,34 @@ class AutoClean extends Command {
 			}),
 		);
 		await ChannelRepository.flush().then(async () => {
-			await (channel.client as ExtendedClient).registerCleaningJobs();
+			await (options.client as ExtendedClient).registerCleaningJobs();
 		});
-		await channel.send(
+		await options.message?.channel.send(
 			buildReturnMessageAddEdited(
-				mentionedChannel.id,
+				(mentionedChannel as TextChannel).id,
 				timeBetweenCleaning,
 				warningTime,
 			),
 		);
 		return;
 	}
+	// removes a channel from the cleaning list
 	async remove(options: RunOptions) {
-		const { dbChannel, ChannelRepository, mentionedChannel, channel } =
+		const { dbChannel, ChannelRepository, mentionedChannel, msg } =
 			await getArgs(options);
-		if (mentionedChannel == undefined)
-			options.message?.channel.send('Please mention a channel');
+		if (msg) return await options.message?.reply(msg);
 		if (dbChannel == null)
-			return channel.send(
+			return options.message?.channel.send(
 				':negative_squared_cross_mark: This channel doesn\'t have any auto-clean set up',
 			);
 		ChannelRepository.removeAndFlush(dbChannel);
-		options.client.channelsToClean.get(channel.name + '_warn')?.cancel();
-		options.client.channelsToClean.get(channel.name + '_clean')?.cancel();
-		return await channel.send(
+		options.client.channelsToClean
+			.get((options.message?.channel as TextChannel).name + '_warn')
+			?.cancel();
+		options.client.channelsToClean
+			.get((options.message?.channel as TextChannel).name + '_clean')
+			?.cancel();
+		return await options.message?.channel.send(
 			':white_check_mark: The auto-clean has been removed.',
 		);
 	}
@@ -96,48 +92,51 @@ class AutoClean extends Command {
 		await this.add(options);
 	}
 	async edit(options: RunOptions) {
-		const { dbChannel, ChannelRepository, channel } = await getArgs(options);
-		const newTimeBetweenCleaning = parseInt(options.params?.at(1) as string);
-		const newWarningTime = parseInt(options.params?.at(2) as string);
-		if (newTimeBetweenCleaning > 24 || newTimeBetweenCleaning < 0)
-			return await channel.send(
-				`${newTimeBetweenCleaning} is not a valid hour`,
-			);
-		if (newWarningTime > 60 || newWarningTime < 0)
-			return await channel.send(`${newWarningTime} is not a valid minute`);
+		const {
+			dbChannel,
+			ChannelRepository,
+			timeBetweenCleaning,
+			warningTime,
+			msg,
+		} = await getArgs(options);
+		if (msg) return await options.message?.reply(msg);
 		if (dbChannel == null)
-			return channel.send(
+			return options.message?.channel.send(
 				':negative_squared_cross_mark: This channel doesn\'t have any auto-clean set up',
 			);
 		ChannelRepository.persistAndFlush(
 			ChannelRepository.create({
 				gid: dbChannel.gid,
 				cname: dbChannel.cname,
-				cleantime: newTimeBetweenCleaning.toString(),
-				warningtime: newWarningTime.toString(),
+				cleantime: timeBetweenCleaning.toString(),
+				warningtime: warningTime.toString(),
 				remainingtime: 0,
 			}),
 		);
-		return await channel.send(
+		return await options.message?.channel.send(
 			buildReturnMessageAddEdited(
-				channel.id,
-				newTimeBetweenCleaning,
-				newWarningTime,
+				(options.message?.channel as TextChannel).id,
+				timeBetweenCleaning,
+				warningTime,
 			),
 		);
 	}
 	async list(options: RunOptions) {
-		const { dbChannel, ChannelRepository, channel } = await getArgs(options);
+		const { dbChannel, ChannelRepository } = await getArgs(options);
 		if (options.params?.at(1) === undefined) {
 			if (dbChannel == null)
-				return channel.send(
+				return (options.message?.channel as TextChannel).send(
 					':negative_squared_cross_mark: This channel doesn\'t have any auto-clean set up',
 				); // Can't be null would have been caught above before executing this function
-			await channel.send({
+			await (options.message?.channel as TextChannel).send({
 				embeds: [
 					new MessageEmbed()
 						.setColor('#ff51ff')
-						.setTitle('#' + channel.name + ' auto-clean configuration.')
+						.setTitle(
+							'#' +
+								(options.message?.channel as TextChannel).name +
+								' auto-clean configuration.',
+						)
 						.addField(
 							'Time between each clean',
 							parseInt(dbChannel.cleantime) + 'h',
@@ -152,7 +151,7 @@ class AutoClean extends Command {
 			});
 		} else {
 			const chan = await ChannelRepository.findAll();
-			return await channel.send({
+			return await (options.message?.channel as TextChannel).send({
 				embeds: [
 					new MessageEmbed()
 						.setColor('#ff51ff')
@@ -188,6 +187,7 @@ export default new AutoClean({
 	},
 });
 async function getArgs(options: RunOptions): Promise<dataObj> {
+	let msg;
 	const ChannelRepository = options.client.orm.em.getRepository(Channelcleans);
 	const mentionedChannel = options.message?.mentions.channels.first();
 	const channel = options.message?.channel as TextChannel;
@@ -195,11 +195,24 @@ async function getArgs(options: RunOptions): Promise<dataObj> {
 		cname: (mentionedChannel as TextChannel).name,
 		gid: channel.guild.id,
 	});
+	const timeBetweenCleaning = parseInt(options.params?.at(1) as string);
+	const warningTime = parseInt(options.params?.at(2) as string);
+	if (mentionedChannel == undefined) msg = 'Please mention a channel';
+	if (
+		timeBetweenCleaning > 24 ||
+		timeBetweenCleaning < 0 ||
+		isNaN(timeBetweenCleaning)
+	)
+		msg = `${timeBetweenCleaning} is not a valid hour`;
+	if (warningTime > 60 || warningTime < 0 || isNaN(warningTime))
+		msg = `${warningTime} is not a valid minute`;
 	return {
-		ChannelRepository: ChannelRepository,
+		ChannelRepository,
 		mentionedChannel: mentionedChannel as TextChannel,
-		channel: channel,
-		dbChannel: dbChannel,
+		dbChannel,
+		timeBetweenCleaning,
+		warningTime,
+		msg,
 	};
 }
 
