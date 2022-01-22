@@ -33,7 +33,7 @@ export default new Command({
 	// The ? Operator makes the compiler happy, also message and params will never be undefined because its gets checked before the command is executed.
 	// But doing the types like that makes it easier
 	run: async (options) => {
-		if (options.message?.content.endsWith('?')) {
+		if (options.params?.at(-1)?.endsWith('?')) {
 			const result = `${
 				ballResponse[Math.floor(Math.random() * ballResponse.length)]
 			}`;
