@@ -16,24 +16,37 @@ export default new Event('messageCreate', async (message) => {
 	// We don't need to waste execution time if its an interaction
 	if (message.interaction || message.author.bot) return;
 	const client: ExtendedClient = message.client as ExtendedClient; // shorthand for message.client
+	const mentionString = '@' + client.user?.username;
+	const cleanContent = message.cleanContent;
 	// Was the bot mentioned
-	const mentioned: boolean = message.content
+	const mentioned: boolean = cleanContent
 		.trim()
-		.startsWith('<@&' + client.user?.id + '>');
-	// This evades the bot from being triggered by @everyone
-	// Check if commands has prefix and its not another bot
-	if (
-		(message.content.trim().startsWith(client.settings.prefix) == mentioned) !==
-		(message.content.includes('@here') ||
-			message.content.includes('@everyone') ||
-			message.type == 'REPLY')
-	) {
+		.includes('@' + client.user?.username);
+	if (!mentioned && !message.content.startsWith(client.settings.prefix)) {
+		console.log(
+			!mentioned && !message.content.startsWith(client.settings.prefix),
+		);
 		return;
 	}
+	const mentionedAtStart: string[] | undefined = cleanContent
+		.trim()
+		.startsWith(mentionString)
+		? cleanContent.slice(mentionString.length).trim().split(/ +/)
+		: undefined;
+	const mentionedAtEnd: string[] | undefined = cleanContent
+		.trim()
+		.endsWith(mentionString)
+		? cleanContent
+			.slice(0, cleanContent.length - mentionString.length)
+			.trim()
+			.split(/ +/)
+		: undefined;
 	// Command args, command name and Command itself
-	const args = mentioned
-		? message.content.slice(('<@&' + client.user?.id + '>').length).split(/ +/) // if the bot itself is mentioned
-		: message.content.slice(client.settings.prefix.length).split(/ +/);
+	const args =
+		mentionedAtStart ||
+		mentionedAtEnd ||
+		message.content.slice(client.settings.prefix.length).split(/ +/);
+	console.log(args);
 	const commandName = args.shift()?.toLowerCase() || '';
 	const command: CommandType | undefined =
 		client.commands.get(commandName) ?? undefined;
