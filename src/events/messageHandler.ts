@@ -10,17 +10,29 @@ export default new Event('messageCreate', async (message) => {
 	if (message.interaction || message.author.bot) return;
 	const client: ExtendedClient = message.client as ExtendedClient; // shorthand for message.client
 	// Command checking
-	const mentionString = '@' + client.user?.username;
+	const mentionString = client.user?.username;
 	const cleanContent = message.cleanContent;
-	const splitContent = cleanContent.trim().split(/ +/);
+	// We need to do some regex magic because sometimes for what ever reason there can be an unknown character in the mention string WTF DISCORD(JS)
+	const splitContent = cleanContent
+		.trim()
+		.replace(/[^a-zA-Z ]/g, '')
+		.split(/ +/);
 	let isCommand = false;
 	// Was the bot mentioned
 	const mentioned: boolean =
-		splitContent.filter((e) => e == mentionString).length == 1;
-	if (mentioned || message.content.startsWith(client.settings.prefix, 0)) {
-		const args = mentioned
-			? splitContent.filter((e) => e !== mentionString)
-			: cleanContent.slice(client.settings.prefix.length).trim().split(/ +/);
+		splitContent.at(0) == mentionString || splitContent.at(-1) == mentionString;
+	// the content without any "special" character meaning nothing but letters and spaces
+	const cleanedContent = splitContent
+		.filter((e) => e !== mentionString)
+		.join(' ');
+	if (
+		splitContent.at(0) == mentionString ||
+		message.content.startsWith(client.settings.prefix, 0)
+	) {
+		const args =
+			splitContent.at(0) == mentionString
+				? cleanedContent.split(/ +/)
+				: cleanContent.slice(client.settings.prefix.length).trim().split(/ +/);
 		// Command args, command name and Command itself
 		const commandName = args.shift()?.toLowerCase() || '';
 		const command: CommandType | undefined =
@@ -41,8 +53,11 @@ export default new Event('messageCreate', async (message) => {
 	client.messageProcessors.forEach((messageProcessor) => {
 		try {
 			if (isCommand) {
-				if (!messageProcessor.ignoreCommands) messageProcessor.process(message);
-			} else messageProcessor.process(message);
+				if (!messageProcessor.ignoreCommands)
+					messageProcessor.process(message, cleanedContent, mentioned);
+			} else if (!isCommand && messageProcessor.ignoreCommands) {
+				messageProcessor.process(message, cleanedContent, mentioned);
+			}
 		} catch (error) {
 			console.log(error);
 		}
