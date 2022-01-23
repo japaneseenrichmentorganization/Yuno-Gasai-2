@@ -69,8 +69,7 @@ class AutoClean extends Command {
 	}
 	// removes a channel from the cleaning list
 	async remove(options: RunOptions) {
-		const { dbChannel, ChannelRepository, mentionedChannel, msg } =
-			await getArgs(options);
+		const { dbChannel, ChannelRepository, msg } = await getArgs(options);
 		if (msg) return await options.message?.reply(msg);
 		if (dbChannel == null)
 			return options.message?.channel.send(
@@ -122,8 +121,8 @@ class AutoClean extends Command {
 		);
 	}
 	async list(options: RunOptions) {
-		const { dbChannel, ChannelRepository } = await getArgs(options);
-		if (options.params?.at(1) === undefined) {
+		if (options.params?.at(0) === undefined) {
+			const { dbChannel } = await getArgs(options);
 			if (dbChannel == null)
 				return (options.message?.channel as TextChannel).send(
 					':negative_squared_cross_mark: This channel doesn\'t have any auto-clean set up',
@@ -137,27 +136,27 @@ class AutoClean extends Command {
 								(options.message?.channel as TextChannel).name +
 								' auto-clean configuration.',
 						)
+						.addField('Cleaned at hour:', dbChannel.cleantime, true)
 						.addField(
-							'Time between each clean',
-							parseInt(dbChannel.cleantime) + 'h',
-							true,
-						)
-						.addField(
-							'Warning thrown at',
-							parseInt(dbChannel.warningtime) + 'remaining',
+							'Warning thrown',
+							dbChannel.warningtime + ' minutes before clean',
 							true,
 						),
 				],
 			});
 		} else {
-			const chan = await ChannelRepository.findAll();
+			const chan = await options.client.orm.em
+				.getRepository(Channelcleans)
+				.findAll()
+				.then((chan) => chan.map((channel) => channel.cname));
+
 			return await (options.message?.channel as TextChannel).send({
 				embeds: [
 					new MessageEmbed()
 						.setColor('#ff51ff')
 						.setTitle('Channels having an auto-clean:')
 						.setDescription(
-							chan.length ? '``` ' + chan.join(', ') + ' ```' : 'None.',
+							chan.length ? '``` ' + chan.join(',') + ' ```' : 'None.',
 						),
 				],
 			});
