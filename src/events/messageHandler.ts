@@ -24,9 +24,12 @@ export default new Event('messageCreate', async (message) => {
 		// Command args, command name and Command itself
 		const commandName = args.shift()?.toLowerCase() || '';
 		const command: CommandType | undefined =
-			client.commands.get(commandName) ?? undefined;
+			client.commands.get(commandName) ??
+			client.commands.find((command) =>
+				command.aliases?.includes(commandName) ? true : false,
+			);
 		if (!command)
-			message.reply(
+			await message.reply(
 				`There is no such command: ${client.settings.prefix}${commandName}`,
 			);
 		else {
