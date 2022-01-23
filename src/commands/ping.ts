@@ -9,6 +9,6 @@ export default new Command({
 	guildOnly: true,
 	isClass: false,
 	run: async ({ interaction }) => {
-		interaction?.followUp(`Ping: ${interaction?.client.ws.ping}ms`);
+		interaction?.followUp(`Ping: ${interaction?.client.ws.ping * 2}ms`);
 	},
 });
