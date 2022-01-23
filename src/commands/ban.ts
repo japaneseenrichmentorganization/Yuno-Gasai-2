@@ -21,7 +21,11 @@ export default new Command({
 	run: async (options) => {
 		const resArry = new Array<string>();
 		const ids = Array<string>();
-		options.params?.forEach(async (mention) => {
+		const image = await options.client.orm.em.getRepository(BanImages).findOne({
+			gid: options.client.guildID,
+			banner: options.message?.author.id,
+		});
+		options.params?.forEach((mention) => {
 			if (
 				mention.startsWith('<@') &&
 				mention.endsWith('>') &&
@@ -52,14 +56,11 @@ export default new Command({
 					' ',
 				)}`,
 			)
-			.setImage(
-				(
-					await options.client.orm.em.getRepository(BanImages).findOne({
-						gid: options.client.guildID,
-						banner: options.message?.author.id,
-					})
-				)?.image || options.client.config.ban.defaultImage,
-			);
+			.setFooter({
+				text: `Requested by${options.message?.author.tag}`,
+				iconURL: options.message?.author.avatarURL() || '',
+			})
+			.setImage(image?.image || options.client.config.ban.defaultImage);
 		await options.message?.reply({
 			embeds: [embed],
 		});
