@@ -13,7 +13,7 @@ export async function processCommands(
 	command: CommandType,
 	args: Array<string>,
 	client: ExtendedClient,
-) {
+): Promise<unknown | undefined> {
 	if (
 		command.isAdminOnly &&
 		!client.config.commands.admins.includes(message.author.id) // we pretend the command doesn't exist, this reduces the attack surface
@@ -113,7 +113,6 @@ export async function processCommands(
 			params: args,
 		} as RunOptions);
 	} catch (error) {
-		console.log(error);
-		message.reply(`An error occurred ${error}`);
+		client.emit('error', error as Error);
 	}
 }

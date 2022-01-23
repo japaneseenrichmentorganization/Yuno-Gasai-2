@@ -40,13 +40,20 @@ export default new Event('messageCreate', async (message) => {
 			client.commands.find((command) =>
 				command.aliases?.includes(commandName) ? true : false,
 			);
-		if (!command)
+		if (!command) {
 			await message.reply(
 				`There is no such command: ${client.settings.prefix}${commandName}`,
 			);
-		else {
 			isCommand = true;
-			await processCommands(message, command as CommandType, args, client);
+		} else {
+			isCommand = true;
+			const error: unknown | undefined = await processCommands(
+				message,
+				command as CommandType,
+				args,
+				client,
+			);
+			if (error) client.emit('error', error as Error);
 		}
 	}
 	// Execute every messageProcessor that ignores commands
@@ -59,7 +66,7 @@ export default new Event('messageCreate', async (message) => {
 				messageProcessor.process(message, cleanedContent, mentioned);
 			}
 		} catch (error) {
-			console.log(error);
+			client.emit('error', error as Error);
 		}
 	});
 });

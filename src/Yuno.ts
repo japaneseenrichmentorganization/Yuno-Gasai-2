@@ -3,6 +3,7 @@ import {
 	Client,
 	ClientEvents,
 	Collection,
+	MessageEmbed,
 	TextChannel,
 } from 'discord.js';
 import glob from 'glob';
@@ -43,6 +44,8 @@ export class Yuno extends Client implements ExtendedClient {
 		this.messageProcessors = new Collection<string, MessageProcessorType>();
 		this.channelsToClean = new Collection<string, Job>();
 		this.booted = false;
+		// setup listeners
+		this.on('error', this.onError);
 	}
 
 	async start(BOT_CONFIG: BotConfig) {
@@ -195,5 +198,24 @@ export class Yuno extends Client implements ExtendedClient {
 			onJoinDMMsgTitle: rawSetting[0].onJoinDMMsgTitle ?? '',
 			prefix: rawSetting[0].prefix ?? this.config.commands.prefix,
 		};
+	}
+	async onError(error: Error) {
+		if (!this.config.errors.channel.length) return;
+		const channel = await this.guilds.cache
+			.get(this.guildID)
+			?.channels.fetch(this.config.errors.channel);
+		if (typeof channel === 'undefined' || null) {
+			this.guilds.cache.get(this.guildID)?.systemChannel?.send({
+				embeds: [
+					new MessageEmbed().setTitle(error.name).setDescription(error.message),
+				],
+			});
+			return;
+		}
+		(channel as TextChannel).send({
+			embeds: [
+				new MessageEmbed().setTitle(error.name).setDescription(error.message),
+			],
+		});
 	}
 }
