@@ -1,63 +1,25 @@
-import { Event } from '../lib/Event';
-import { CommandType, RunFunction, RunOptions } from '../interfaces/Command';
-import { ExtendedClient } from '../interfaces/Client';
 import {
 	Collection,
+	Formatters,
+	Message,
 	PermissionResolvable,
 	TextChannel,
-	Formatters,
 } from 'discord.js';
+import { ExtendedClient } from '../interfaces/Client';
+import { CommandType, RunFunction, RunOptions } from '../interfaces/Command';
 
-// Non slash commands
-export default new Event('messageCreate', async (message) => {
-	// checks if the bot has booted(initialized)
-	if (!(message.client as ExtendedClient).booted) return;
-	// Channel Input Commands TYPE: MESSAGE
-	// We don't need to waste execution time if its an interaction
-	if (message.interaction || message.author.bot) return;
-	const client: ExtendedClient = message.client as ExtendedClient; // shorthand for message.client
-	const mentionString = '@' + client.user?.username;
-	const cleanContent = message.cleanContent;
-	// Was the bot mentioned
-	const mentioned: boolean = cleanContent
-		.trim()
-		.includes('@' + client.user?.username);
-	if (!mentioned && !message.content.startsWith(client.settings.prefix)) {
-		console.log(
-			!mentioned && !message.content.startsWith(client.settings.prefix),
-		);
-		return;
-	}
-	const mentionedAtStart: string[] | undefined = cleanContent
-		.trim()
-		.startsWith(mentionString)
-		? cleanContent.slice(mentionString.length).trim().split(/ +/)
-		: undefined;
-	const mentionedAtEnd: string[] | undefined = cleanContent
-		.trim()
-		.endsWith(mentionString)
-		? cleanContent
-			.slice(0, cleanContent.length - mentionString.length)
-			.trim()
-			.split(/ +/)
-		: undefined;
-	// Command args, command name and Command itself
-	const args =
-		mentionedAtStart ||
-		mentionedAtEnd ||
-		message.content.slice(client.settings.prefix.length).split(/ +/);
-	console.log(args);
-	const commandName = args.shift()?.toLowerCase() || '';
-	const command: CommandType | undefined =
-		client.commands.get(commandName) ?? undefined;
-	// Needs to be checked early to prevent useless code execution
+export async function processCommands(
+	message: Message,
+	command: CommandType,
+	args: Array<string>,
+	client: ExtendedClient,
+) {
 	if (
-		!command ||
-		(command.isAdminOnly &&
-			!client.config.commands.admins.includes(message.author.id)) // we pretend the command doesn't exist, this reduces the attack surface
+		command.isAdminOnly &&
+		!client.config.commands.admins.includes(message.author.id) // we pretend the command doesn't exist, this reduces the attack surface
 	) {
 		message.reply(
-			`There is no such command: ${client.settings.prefix}${commandName}`,
+			`There is no such command: ${client.settings.prefix}${command.name}`,
 		);
 		return;
 	}
@@ -154,4 +116,4 @@ export default new Event('messageCreate', async (message) => {
 		console.log(error);
 		message.reply(`An error occurred ${error}`);
 	}
-});
+}
