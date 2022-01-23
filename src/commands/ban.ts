@@ -2,6 +2,7 @@ import { Message, MessageEmbed } from 'discord.js';
 import { ApplicationCommandTypes } from 'discord.js/typings/enums';
 import { BanImages } from '../entities';
 import { Command } from '../lib/Command';
+import util from '../Util';
 
 export default new Command({
 	name: 'ban',
@@ -45,7 +46,7 @@ export default new Command({
 				'<@!' +
 					id +
 					'> has been ' +
-					(await ban(options.message as Message, id)),
+					(await util.ban(options.message as Message, id, undefined)),
 			);
 		}
 		const embed = new MessageEmbed()
@@ -66,14 +67,3 @@ export default new Command({
 		});
 	},
 });
-
-async function ban(message: Message, id: string): Promise<string> {
-	try {
-		await message.guild?.bans.create(id, {
-			reason: `Banned by ${message.author.tag}`,
-		});
-		return 'successfully banned.\n';
-	} catch (error) {
-		return 'unsuccessfully banned.\n';
-	}
-}
