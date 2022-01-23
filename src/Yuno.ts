@@ -16,6 +16,7 @@ import { Guilds } from './entities';
 import { Job } from 'node-schedule';
 import { Channelcleans } from './entities/Channelcleans';
 import util from './Util';
+import { MessageProcessorType } from './interfaces/messageProcessor';
 // Used for importing commands and events asyncly
 const globPromise = promisify(glob);
 
@@ -25,6 +26,7 @@ export class Yuno extends Client implements ExtendedClient {
 	public slashCommands: Array<ApplicationCommandDataResolvable>;
 	public channelsToClean: Collection<string, Job>;
 	public cooldowns: Collection<string, Collection<string, number>>;
+	public messageProcessors: Collection<string, MessageProcessorType>;
 	public guildID!: string;
 	// Settings from the database
 	public settings!: Settings;
@@ -38,6 +40,7 @@ export class Yuno extends Client implements ExtendedClient {
 		this.commands = new Collection<string, CommandType>();
 		this.slashCommands = new Array<ApplicationCommandDataResolvable>();
 		this.cooldowns = new Collection<string, Collection<string, number>>();
+		this.messageProcessors = new Collection<string, MessageProcessorType>();
 		this.channelsToClean = new Collection<string, Job>();
 		this.booted = false;
 	}
@@ -153,21 +156,32 @@ export class Yuno extends Client implements ExtendedClient {
 		commandFiles.forEach(async (filePath) => {
 			const command: CommandType = await this.importFile(filePath);
 			if (!command.name) return;
-			console.log(command);
 			command.isSlash
 				? this.slashCommands.push(command)
 				: this.commands.set(command.name, command);
 		});
-		// Event
+		// Events
 		const eventFiles = await globPromise(`${__dirname}/events/*.js`);
 		eventFiles.forEach(async (filePath) => {
 			const event: Event<keyof ClientEvents> = await this.importFile(filePath);
 			this.on(event.event, event.run);
 		});
+		//message processors
+		const messageProcessorFiles = await globPromise(
+			`${__dirname}/messageprocessors/*.js`,
+		);
+
+		messageProcessorFiles.forEach(async (filepath) => {
+			const messageProcessor: MessageProcessorType = await this.importFile(
+				filepath,
+			);
+			if (!messageProcessor.name) return;
+			this.messageProcessors.set(messageProcessor.name, messageProcessor);
+		});
 	}
 	async _parseSettings() {
 		// Parses the data from the db into the settings type object,
-		// if a value isnt set a default value the for given type is set, e.g false for boolean.
+		// if a value isn't set a default value the for given type is set, e.g false for boolean.
 		// Needs to be called after connecting to the database, get all guilds but we only one so using index 0 is safe
 		const rawSetting = await this.orm.em.getRepository(Guilds).findAll();
 		// Due to the database being setup in a weird way we need to do some cast magic

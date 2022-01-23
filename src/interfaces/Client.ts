@@ -7,6 +7,7 @@ import {
 } from 'discord.js';
 import { Job } from 'node-schedule';
 import { CommandType } from './Command';
+import { MessageProcessorType } from './messageProcessor';
 
 export interface RegisterCommandsOptions {
 	guildId?: string;
@@ -56,6 +57,7 @@ export interface ExtendedClient extends Client {
 	slashCommands: Array<ApplicationCommandDataResolvable>;
 	channelsToClean: Collection<string, Job>;
 	cooldowns: Collection<string, Collection<string, number>>;
+	messageProcessors: Collection<string, MessageProcessorType>;
 	guildID: string;
 	orm: MikroORM<IDatabaseDriver<Connection>>;
 	settings: Settings;
