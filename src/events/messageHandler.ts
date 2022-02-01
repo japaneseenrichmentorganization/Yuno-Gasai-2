@@ -21,9 +21,9 @@ export default new Event('messageCreate', async (message) => {
 	// Was the bot mentioned
 	const mentioned: boolean =
 		splitContent.at(0) == mentionString || splitContent.at(-1) == mentionString;
-	// the content without any "special" character meaning nothing but letters and spaces
-	const cleanedContent = splitContent
-		.filter((e) => e !== mentionString)
+	const cleanedContent = cleanContent
+		.split(/ +/)
+		.filter((e) => e.replace(/[^a-zA-Z ]/g, '') !== mentionString)
 		.join(' ');
 	if (
 		splitContent.at(0) == mentionString ||
