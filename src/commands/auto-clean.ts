@@ -73,7 +73,7 @@ class AutoClean extends Command {
 		if (msg) return await options.message?.reply(msg);
 		if (dbChannel == null)
 			return options.message?.channel.send(
-				':negative_squared_cross_mark: This channel doesn\'t have any auto-clean set up',
+				":negative_squared_cross_mark: This channel doesn't have any auto-clean set up",
 			);
 		ChannelRepository.removeAndFlush(dbChannel);
 		options.client.channelsToClean
@@ -101,7 +101,7 @@ class AutoClean extends Command {
 		if (msg) return await options.message?.reply(msg);
 		if (dbChannel == null)
 			return options.message?.channel.send(
-				':negative_squared_cross_mark: This channel doesn\'t have any auto-clean set up',
+				":negative_squared_cross_mark: This channel doesn't have any auto-clean set up",
 			);
 		ChannelRepository.persistAndFlush(
 			ChannelRepository.create({
@@ -125,7 +125,7 @@ class AutoClean extends Command {
 			const { dbChannel } = await getArgs(options);
 			if (dbChannel == null)
 				return (options.message?.channel as TextChannel).send(
-					':negative_squared_cross_mark: This channel doesn\'t have any auto-clean set up',
+					":negative_squared_cross_mark: This channel doesn't have any auto-clean set up",
 				); // Can't be null would have been caught above before executing this function
 			await (options.message?.channel as TextChannel).send({
 				embeds: [
@@ -190,10 +190,15 @@ async function getArgs(options: RunOptions): Promise<dataObj> {
 	const ChannelRepository = options.client.orm.em.getRepository(Channelcleans);
 	const mentionedChannel = options.message?.mentions.channels.first();
 	const channel = options.message?.channel as TextChannel;
-	const dbChannel = await ChannelRepository.findOne({
+	const dbChannel = await ChannelRepository.findOneOrFail({
 		cname: (mentionedChannel as TextChannel).name,
 		gid: channel.guild.id,
+	}).catch((err) => {
+		options.client.emit('error', err as Error);
+		msg = (err as Error).message + '\n';
+		return null;
 	});
+
 	const timeBetweenCleaning = parseInt(options.params?.at(1) as string);
 	const warningTime = parseInt(options.params?.at(2) as string);
 	if (mentionedChannel == undefined) msg = 'Please mention a channel';
@@ -202,9 +207,9 @@ async function getArgs(options: RunOptions): Promise<dataObj> {
 		timeBetweenCleaning < 0 ||
 		isNaN(timeBetweenCleaning)
 	)
-		msg = `${timeBetweenCleaning} is not a valid hour`;
+		msg += `${timeBetweenCleaning} is not a valid hour\n`;
 	if (warningTime > 60 || warningTime < 0 || isNaN(warningTime))
-		msg = `${warningTime} is not a valid minute`;
+		msg = `${warningTime} is not a valid minute\n`;
 	return {
 		ChannelRepository,
 		mentionedChannel: mentionedChannel as TextChannel,
