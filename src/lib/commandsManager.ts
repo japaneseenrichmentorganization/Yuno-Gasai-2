@@ -48,7 +48,7 @@ export async function processCommands(
 	let runMethode: RunFunction = command.run;
 	if (command.isClass) {
 		if (command.subCmdsName?.includes(args[0])) {
-			runMethode = command[args[0]] as RunFunction;
+			runMethode = command[args[0].replace('-', '')] as RunFunction;
 			args.shift();
 		} else {
 			message.reply(`Unknown subcommand ${args[0]} of command ${command.name}`);
