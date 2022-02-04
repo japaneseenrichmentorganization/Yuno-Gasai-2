@@ -4,7 +4,9 @@
 	"description": "The remade of Yuno Gasai, flawless & bugless",
 	"main": "build/index.js",
 	"scripts": {
-		"start": "rm -r ./build && tsc && node ./build/index.js",
+		"dev": "rm -r ./build && tsc && node ./build/index.js",
+		"build": "tsc",
+		"start": "node ./build/index.js",
 		"generate-doc": "jsdoc .\\src -r -p -d docs -t node_modules/docdash",
 		"generate-doc-notheme": "jsdoc .\\src -r -p -d docs",
 		"lint": "eslint --ext .ts ."
