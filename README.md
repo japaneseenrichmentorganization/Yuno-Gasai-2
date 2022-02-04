@@ -1,32 +1,30 @@
 # Yuno Gasai 2.
+
 ##Channel cleaning, auto-moderation/moderation, anime bot
+
 ### developped by Maeeen (maeeennn@gmail.com) and Oxdeception
+
+### Rewritten and maintained by [11tuvork28](https://github.com/11tuvork28)
 
 This is licensed under the GNU Affero General Public License. See the `LICENSE` file for more details.
 
-Installation 
+Installation
 
-LINUX
+currently the bot has only Linux support,
+but it should work in theory on windows without any problems.
 
 Prerequisites
-Node 12.x, node-gyp, make/build-essential, sqlite3, git, tmux (if you wish to use the interactive shell)
+Node 17 git
 
 Use your package manager to install these and/or the script provided by nodejs
 
-Then do a git clone https://github.com/blubaustin/Yuno-Gasai-2.git
+git clone https://github.com/blubaustin/Yuno-Gasai-2.git
 
 cd Yuno-Gasai-2
 
 npm install
 
-Ensure sqlite3 is installed
+Customize the DEFAULT_CONFIG.json to your needs
 
-npm install sqlite3
-
-
-Edit the config.json and DEFAULT_CONFIG.json to the bots and your needs
-
-tmux
-
-NODE_ENV=production node index.json          to start the bot
-remove the NODE_ENV=production to use full stack tracing.
+npm run build
+npm run start
