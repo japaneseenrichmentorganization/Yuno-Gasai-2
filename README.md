@@ -1,10 +1,10 @@
 # Yuno Gasai 2.
 
-##Channel cleaning, auto-moderation/moderation, anime bot
+## Channel cleaning, auto-moderation/moderation, anime bot
 
 ### developped by Maeeen (maeeennn@gmail.com) and Oxdeception
 
-### Rewritten and maintained by [11tuvork28](https://github.com/11tuvork28)
+### Now rewritten and maintained by [11tuvork28](https://github.com/11tuvork28)
 
 This is licensed under the GNU Affero General Public License. See the `LICENSE` file for more details.
 
@@ -13,8 +13,9 @@ Installation
 currently the bot has only Linux support,
 but it should work in theory on windows without any problems.
 
-Prerequisites
-Node 17 git
+Prerequisites:
+- Node 17
+- git
 
 Use your package manager to install these and/or the script provided by nodejs
 
