@@ -22,7 +22,7 @@
     "he": "^1.2.0",
     "i": "^0.3.7",
     "longjohn": "^0.2.12",
-    "moment": "^2.26.0",
+    "moment": "^2.29.4",
     "moment-duration-format": "^2.3.2",
     "npm": "^8.11.0",
     "snekfetch": "^4.0.4",
