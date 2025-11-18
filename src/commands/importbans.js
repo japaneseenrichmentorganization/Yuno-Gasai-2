@@ -26,30 +26,39 @@ module.exports.run = async function(yuno, author, args, msg) {
 
     fs.readFile("./BANS-" + guid + ".txt", async (err, data) => {
         if (err)
-            msg.channel.send("Error while retrieving bans : ", err.code);
-        else {
-            console.log("[BanMSystem] Applying bans...");
-            try {
-                let bans = JSON.parse(data);
-                let successCount = 0;
-                let failCount = 0;
+            return msg.channel.send("Error while retrieving bans: " + err.code);
 
-                for (const userId of bans) {
-                    try {
-                        await msg.guild.members.ban(userId, {
-                            reason: "Ban import from saved banlist"
-                        });
-                        successCount++;
-                    } catch(e) {
-                        failCount++;
-                        console.log("Skipped: " + userId + " error: " + e.message);
-                    }
-                }
-                msg.channel.send(`Ban import complete. Successfully banned: ${successCount}, Failed: ${failCount}`);
-            } catch(e) {
-                console.log("[BanMSystem] Bans weren't saved as JSON. Error: " + e.message);
-                msg.channel.send("Bans aren't in JSON. Error.");
+        console.log("[BanMSystem] Applying bans...");
+        try {
+            const bans = JSON.parse(data);
+
+            if (!Array.isArray(bans) || bans.length === 0) {
+                return msg.channel.send("No bans found in the file or invalid format.");
             }
+
+            // Use bulk ban API with rate limiting support
+            const result = await msg.guild.bans.bulkCreate(bans, {
+                deleteMessageSeconds: 0, // Don't delete any messages
+                reason: "Ban import from saved banlist"
+            });
+
+            console.log(`[BanMSystem] Bulk ban complete. Banned: ${result.bannedUsers.length}, Failed: ${result.failedUsers.length}`);
+
+            // Send detailed result to the channel
+            msg.channel.send(
+                `Ban import complete!\n` +
+                `:white_check_mark: Successfully banned: **${result.bannedUsers.length}**\n` +
+                `:negative_squared_cross_mark: Failed/Already banned: **${result.failedUsers.length}**`
+            );
+
+            // Log failed users if any
+            if (result.failedUsers.length > 0) {
+                console.log("[BanMSystem] Failed user IDs:", result.failedUsers.join(", "));
+            }
+
+        } catch(e) {
+            console.log("[BanMSystem] Bans weren't saved as JSON or bulk ban failed. Error: " + e.message);
+            msg.channel.send("Error during ban import: " + e.message);
         }
     })
 };

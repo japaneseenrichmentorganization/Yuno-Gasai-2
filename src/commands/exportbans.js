@@ -24,23 +24,27 @@ module.exports.run = async function(yuno, author, args, msg) {
 
     let guid = msg.guild.id;
 
-    msg.guild.bans.fetch().then(bans => {
-        let arr = Array.from(bans.values()),
-        json = [];
+    try {
+        // Fetch all bans using the bulk fetch API
+        const bans = await msg.guild.bans.fetch();
 
-    arr.forEach((el, ind, arr) => {
-        json.push(el.user.id);
-    });
+        // Extract user IDs from the ban collection
+        const bannedUserIds = Array.from(bans.values()).map(ban => ban.user.id);
 
-    let banstr = JSON.stringify(json);
+        // Convert to JSON string
+        const banstr = JSON.stringify(bannedUserIds);
 
-    fs.writeFile("./BANS-" + guid + ".txt", banstr, (err) => {
-        if (err)
-            msg.channel.send("Error while saving bans :( :" + err.code);
-        else
-            msg.channel.send("Bans saved with the Guild ID (use it to re-apply bans) : " + guid);
-        })
-    })
+        // Write to file
+        fs.writeFile("./BANS-" + guid + ".txt", banstr, (err) => {
+            if (err)
+                msg.channel.send("Error while saving bans :( :" + err.code);
+            else
+                msg.channel.send(`Bans exported successfully! **${bannedUserIds.length}** bans saved with Guild ID: ${guid}`);
+        });
+    } catch(e) {
+        msg.channel.send("Error while fetching bans: " + e.message);
+        console.error("Export bans error:", e);
+    }
 }
 
 module.exports.about = {
