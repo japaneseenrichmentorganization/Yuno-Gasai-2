@@ -19,7 +19,7 @@
 // hot-reload
 delete require.cache[require.resolve("../Util")]
 
-const {MessageEmbed} = require("discord.js"),
+const {EmbedBuilder} = require("discord.js"),
     Util = require("util"),
     DiscordUtil = require("../Util");
 
@@ -27,20 +27,20 @@ const {MessageEmbed} = require("discord.js"),
 /**
  * Embed Command Response (a nice way to return response from command)
  * @param {Object} data Data to set in the rich embed
- * @extends {MessageEmbed}
+ * @extends {EmbedBuilder}
  */
 let EmbedCmdResponse = function(data) {
-    Object.getPrototypeOf(MessageEmbed.prototype).constructor.call(this, data);
+    Object.getPrototypeOf(EmbedBuilder.prototype).constructor.call(this, data);
 }
 
 EmbedCmdResponse.setCMDRequester = function(embed, user) {
     let username = user.nickname ? user.nickname : user.user.tag;
-    
-    embed.setFooter("Requested by " + username, DiscordUtil.getAvatarURL(user.user))
+
+    embed.setFooter({text: "Requested by " + username, iconURL: DiscordUtil.getAvatarURL(user.user)})
     return embed;
 }
 
-Util.inherits(EmbedCmdResponse, MessageEmbed);
+Util.inherits(EmbedCmdResponse, EmbedBuilder);
 
 /**
  * Sets the command requester at the footer.
@@ -50,8 +50,8 @@ Util.inherits(EmbedCmdResponse, MessageEmbed);
  */
 EmbedCmdResponse.prototype.setCMDRequester = function(user) {
     let username = user.nickname ? user.nickname : user.user.tag;
-    
-    this.setFooter("Requested by " + username, DiscordUtil.getAvatarURL(user.user))
+
+    this.setFooter({text: "Requested by " + username, iconURL: DiscordUtil.getAvatarURL(user.user)})
     return this;
 }
 
@@ -69,7 +69,7 @@ EmbedCmdResponse.prototype.setDescription = function() {
 
     description.substring(0, -1);
 
-    MessageEmbed.prototype.setDescription.call(this, description);
+    EmbedBuilder.prototype.setDescription.call(this, description);
     return this;
 }
 

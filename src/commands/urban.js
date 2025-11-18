@@ -13,7 +13,7 @@
     along with this program.  If not, see https://www.gnu.org/licenses/.
 */
 
-const {MessageEmbed} = require("discord.js");
+const {EmbedBuilder} = require("discord.js");
 const urban = require("urban");
 
 module.exports.run = async function(yuno, author, args, msg) {
@@ -26,16 +26,18 @@ module.exports.run = async function(yuno, author, args, msg) {
 
     urban(uInput).first(search => {
         if (!search) return msg.channel.send(`No results found for ${uInput}`);
-         msg.channel.send(new MessageEmbed()
+         msg.channel.send({embeds: [new EmbedBuilder()
             .setTitle(search.word)
             .setThumbnail("https://cdn.discordapp.com/attachments/446842126005829632/449800259468525568/urban_dictionary.png")
-            .addField(":notebook_with_decorative_cover:Definition", `\`${search.definition}\``)
-            .addField(":bookmark_tabs:Example", `\`${search.example}\``)
-            .addField(":small_red_triangle:Upvotes", `\`${search.thumbs_up}\``, true)
-            .addField(":small_red_triangle_down:Downvotes", `\`${search.thumbs_down}\``, true)
-            .addField(":link:URL", `[${search.word}](${url})`)
-            .setFooter(`Author - ${search.author}`)
-            .setColor(0x9eddf1));
+            .addFields([
+                { name: ":notebook_with_decorative_cover:Definition", value: `\`${search.definition}\`` },
+                { name: ":bookmark_tabs:Example", value: `\`${search.example}\`` },
+                { name: ":small_red_triangle:Upvotes", value: `\`${search.thumbs_up}\``, inline: true },
+                { name: ":small_red_triangle_down:Downvotes", value: `\`${search.thumbs_down}\``, inline: true },
+                { name: ":link:URL", value: `[${search.word}](${url})` }
+            ])
+            .setFooter({text: `Author - ${search.author}`})
+            .setColor(0x9eddf1)]});
         });
     }
 

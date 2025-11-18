@@ -15,7 +15,7 @@
 
 module.exports.messageProcName = "spam-filter"
 
-const {MessageEmbed} = require("discord.js"),
+const {EmbedBuilder} = require("discord.js"),
     fs = require("fs"),
     prompt = (require("../lib/prompt")).init();
 
@@ -49,9 +49,9 @@ let ban = function(msg, banreason, warningmsg) {
         warnings[msg.author.id] += 1;
 
     if (warnings[msg.author.id] >= maxWarnings) {
-        msg.author.send((new MessageEmbed()).setTitle("And here you go. You got banned!")
+        msg.author.send({embeds: [(new EmbedBuilder()).setTitle("And here you go. You got banned!")
             .setDescription("Reason: " + warningmsg)
-            .setColor("#ff0000"));
+            .setColor("#ff0000")]});
         return msg.member.ban({
             "days": 1,
             "reason": banreason + " Used all his warnings."
@@ -59,8 +59,8 @@ let ban = function(msg, banreason, warningmsg) {
     }
 
     warningmsg += "\nYou have " + warnings[msg.author.id] + " warning(s). Don't forget that you'll be banned from the server when you'll reach " + maxWarnings + " warning(s)."
-    msg.author.send((new MessageEmbed()).setTitle("Be careful! You're getting banned!")
-        .setDescription(warningmsg));
+    msg.author.send({embeds: [(new EmbedBuilder()).setTitle("Be careful! You're getting banned!")
+        .setDescription(warningmsg)]});
 }
 
 

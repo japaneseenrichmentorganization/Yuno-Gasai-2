@@ -9,7 +9,7 @@ Installation
 LINUX
 
 Prerequisites
-Node 12.x, node-gyp, make/build-essential, sqlite3, git, tmux (if you wish to use the interactive shell)
+Node 18.x or higher, node-gyp, make/build-essential, sqlite3, git, tmux (if you wish to use the interactive shell)
 
 Use your package manager to install these and/or the script provided by nodejs
 

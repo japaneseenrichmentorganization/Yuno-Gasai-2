@@ -16,7 +16,7 @@
     along with this program.  If not, see https://www.gnu.org/licenses/.
 */
 const { ReactionCollector } = require('discord.js');
-const {MessageEmbed} = require("discord.js");
+const {EmbedBuilder} = require("discord.js");
 const he = require('he');
 
 module.exports.run = async function(yuno, author, args, msg) {
@@ -26,12 +26,12 @@ module.exports.run = async function(yuno, author, args, msg) {
         return msg.channel.send(`No manga result found for \`${args.join(' ')}\`. Did you perhaps mean the \`anime\` command?`);
     }
 
-    res = await Promise.all(res.map(async item => { return {
-        MessageEmbed: {
-            color: 0xe983b9,
-            title: 'Information',
-            url: `https://myanimelist.net/manga/${item.id}`,
-            fields: [
+    res = await Promise.all(res.map(async item => {
+        const embed = new EmbedBuilder()
+            .setColor(0xe983b9)
+            .setTitle('Information')
+            .setURL(`https://myanimelist.net/manga/${item.id}`)
+            .addFields([
                 { name: 'Title', value: `${item.title} ${item.english ? `(English: ${item.english})` : ''}` },
                 { name: 'Type', value: item.type, inline: true },
                 { name: 'Status', value: item.status, inline: true },
@@ -40,14 +40,14 @@ module.exports.run = async function(yuno, author, args, msg) {
                 { name: 'Chapters', value: item.chapters === 0 ? 'TBD' : item.volumes, inline: true },
                 { name: 'Volumes', value: item.episodes === 0 ? 'TBD' : item.volumes, inline: true },
                 { name: 'Score', value: `${item.score}`, inline: true }
-            ],
-            description: Yuno.Util.cleanSynopsis(he.decode(item.synopsis), item.id, 'manga'),
-            thumbnail: { url: item.image },
-            footer: { text: `Use the reaction to browse | Page1${res.length}`}
-        }
-    }}));
+            ])
+            .setDescription(Yuno.Util.cleanSynopsis(he.decode(item.synopsis), item.id, 'manga'))
+            .setThumbnail(item.image)
+            .setFooter({ text: `Use the reaction to browse | Page1${res.length}`});
+        return embed;
+    }));
     let currentPage = 0;
-    const pageMsg = await msg.channel.send(res[0]);
+    const pageMsg = await msg.channel.send({embeds: [res[0]]});
     await pageMsg.react('◀');
     await pageMsg.react('▶');
     pageMsg.React('X');
@@ -59,8 +59,8 @@ module.exports.run = async function(yuno, author, args, msg) {
             currentPage = direction === '◀' ?
                 currentPage === 0 ? res.length - 1 : currentPage - 1 :
                 currentPage === res.length - 1 ? 0 : currentPage + 1;
-            res[currentPage].embed.footer = { text: `Use the reactions to browse | Page ${currentPage + 1}/${res.length}` };
-            pageMsg.edit(res[currentPage]);
+            res[currentPage].setFooter({ text: `Use the reactions to browse | Page ${currentPage + 1}/${res.length}` });
+            pageMsg.edit({embeds: [res[currentPage]]});
         } else if (direction === '❌') {
             RC.stop();
             pageMsg.delete();

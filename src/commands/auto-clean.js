@@ -16,7 +16,7 @@
     along with this program.  If not, see https://www.gnu.org/licenses/.
 */
 
-const {TextChannel, MessageMentions, MessageEmbed} = require("discord.js")
+const {TextChannel, MessageMentions, EmbedBuilder} = require("discord.js")
 
 module.exports.run = async function(yuno, author, args, msg) {
     if (args.length === 0)
@@ -62,12 +62,14 @@ module.exports.run = async function(yuno, author, args, msg) {
                 let clean = await yuno.dbCommands.getClean(yuno.database, ch.guild.id, ch.name);
                 if (clean === null)
                     return msg.channel.send(":negative_squared_cross_mark: The auto-clean doesn't exists.");
-                return msg.channel.send(new MessageEmbed()
+                return msg.channel.send({embeds: [new EmbedBuilder()
                     .setColor("#ff51ff")
                     .setTitle("#" + ch.name + " auto-clean configuration.")
-                    .addField("Time between each clean", ("00" + clean.timeFEachClean).slice(-2) + "h", true)
-                    .addField("Warning thrown at", yuno.UTIL.formatDuration(clean.timeBeforeClean * 60) + "remaining", true)
-                    .addField("Remaining time before clean", yuno.UTIL.formatDuration(clean.remainingTime * 60) + "", true))
+                    .addFields([
+                        {name: "Time between each clean", value: ("00" + clean.timeFEachClean).slice(-2) + "h", inline: true},
+                        {name: "Warning thrown at", value: yuno.UTIL.formatDuration(clean.timeBeforeClean * 60) + "remaining", inline: true},
+                        {name: "Remaining time before clean", value: yuno.UTIL.formatDuration(clean.remainingTime * 60) + "", inline: true}
+                    ])]})
             } else {
                 let channels = [];
                 
@@ -85,10 +87,10 @@ module.exports.run = async function(yuno, author, args, msg) {
                 else
                     message = "``` " + channels.join(", ") + " ```"
 
-                return msg.channel.send(new MessageEmbed()
+                return msg.channel.send({embeds: [new EmbedBuilder()
                     .setColor("#ff51ff")
                     .setTitle("Channels having an auto-clean:")
-                    .setDescription(message))
+                    .setDescription(message)]})
             }
             break;
 

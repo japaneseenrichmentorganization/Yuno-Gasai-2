@@ -39,6 +39,6 @@
     "_comment": "Number of experience given per msg",
     "chat.exppermsg": 20,
 
-    "_comment": "Object describing presence (https://discord.js.org/#/docs/main/master/typedef/PresenceData). JSON not supported.",
+    "_comment": "Object describing presence (https://discord.js.org/docs/packages/discord.js/14.24.2/ClientPresence). JSON not supported.",
     "discord.presence": null
 }

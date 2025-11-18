@@ -16,7 +16,7 @@
     along with this program.  If not, see https://www.gnu.org/licenses/.
 */
 
-const {MessageEmbed} = require("discord.js");
+const {EmbedBuilder} = require("discord.js");
 
 module.exports.run = async function(yuno, author, args, msg) {
     if (!msg.mentions.channels.size)
@@ -25,16 +25,16 @@ module.exports.run = async function(yuno, author, args, msg) {
     let ch = msg.mentions.channels.first();
 
     if (args[0] === "--force") {
-        let confirmmsg = await msg.channel.send(new MessageEmbed().setColor("#42d7f4").setTitle("Confirm channel clear.").setDescription("This will **instantly** clean this channel, __without any warning__.\n\nConfirm by sending `yes`. You have 10s to answer.\nSending any other message will cancel the clean")),
+        let confirmmsg = await msg.channel.send({embeds: [new EmbedBuilder().setColor("#42d7f4").setTitle("Confirm channel clear.").setDescription("This will **instantly** clean this channel, __without any warning__.\n\nConfirm by sending `yes`. You have 10s to answer.\nSending any other message will cancel the clean")]}),
             coll = msg.channel.createMessageCollector(m => msg.author.id === m.author.id, { time: 10000 })
-        
+
         coll.on("collect", async(m) => {
             if (m.content.toLowerCase() === "yes") {
                 try {
-                    (await yuno.UTIL.clean(ch)).send(new MessageEmbed()
+                    (await yuno.UTIL.clean(ch)).send({embeds: [new EmbedBuilder()
                     .setImage("https://vignette3.wikia.nocookie.net/futurediary/images/9/94/Mirai_Nikki_-_06_-_Large_05.jpg")
-                    .setAuthor("Yuno is done cleaning.", yuno.UTIL.getAvatarURL(yuno.dC.user))
-                    .setColor("#ff51ff"));
+                    .setAuthor({name: "Yuno is done cleaning.", iconURL: yuno.UTIL.getAvatarURL(yuno.dC.user)})
+                    .setColor("#ff51ff")]});
                 } catch(e) {
                     msg.author.send("Cleaning failed: ```" + e.message + "```" + "```" + e.stack + "```");
                 }

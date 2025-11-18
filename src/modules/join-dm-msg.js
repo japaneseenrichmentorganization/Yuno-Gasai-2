@@ -16,7 +16,7 @@
     along with this program.  If not, see https://www.gnu.org/licenses/.
 */
 
-let {MessageEmbed} = require("discord.js"),
+let {EmbedBuilder} = require("discord.js"),
     embedColor = "#ff7ab3";
 
 let DISCORD_EVENTED = false,
@@ -48,7 +48,7 @@ let eventDiscord = function() {
             msgt = jdmmsgt[guildId];
 
         let send = false,
-            embed = new MessageEmbed().setColor(embedColor);
+            embed = new EmbedBuilder().setColor(embedColor);
 
         if (typeof msgt === "string" && msgt !== "null") {
             embed.setTitle(msgt);
@@ -61,7 +61,7 @@ let eventDiscord = function() {
         }
 
         if (send)
-            member.send(embed).catch(error => {
+            member.send({embeds: [embed]}).catch(error => {
     if (error.code == 50007) {
         console.error('Failed to send message:', error);
     }

@@ -16,7 +16,7 @@
     along with this program.  If not, see https://www.gnu.org/licenses/.
 */
 
-const {MessageEmbed} = require("discord.js");
+const {EmbedBuilder} = require("discord.js");
 
 module.exports.run = async function(yuno, author, args, msg) {
     if (args.length === 0)
@@ -45,12 +45,14 @@ module.exports.run = async function(yuno, author, args, msg) {
 
     yuno._refreshMod("join-dm-msg");
 
-    msg.channel.send(new MessageEmbed()
+    msg.channel.send({embeds: [new EmbedBuilder()
         .setTitle(":white_check_mark:")
-        .addField("DM Message's title", typeof title === "string" ? title : "none", true)
-        .addField("DM Message's description", desc, true)
-        .setFooter("Changes may take some time to appear.")
-        .setColor("#43cc24"))
+        .addFields([
+            {name: "DM Message's title", value: typeof title === "string" ? title : "none", inline: true},
+            {name: "DM Message's description", value: desc, inline: true}
+        ])
+        .setFooter({text: "Changes may take some time to appear."})
+        .setColor("#43cc24")]})
 }
 
 module.exports.about = {

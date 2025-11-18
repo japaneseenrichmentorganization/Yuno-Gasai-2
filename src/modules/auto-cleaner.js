@@ -16,7 +16,7 @@
     along with this program.  If not, see https://www.gnu.org/licenses/.
 */
 
-const {Guild, Channel, MessageEmbed} = require("discord.js");
+const {Guild, Channel, EmbedBuilder} = require("discord.js");
 
 let intervalManager = null;
 
@@ -47,14 +47,14 @@ let setupCleaners = async function(Yuno) {
                 }
 
                 if (actualClean.remainingTime === actualClean.timeBeforeClean)
-                    ch.send(new MessageEmbed()
-                        .setAuthor("Yuno is going to clean this channel in " + actualClean.timeBeforeClean + " minutes. Speak now or forever hold your peace."))
+                    ch.send({embeds: [new EmbedBuilder()
+                        .setAuthor({name: "Yuno is going to clean this channel in " + actualClean.timeBeforeClean + " minutes. Speak now or forever hold your peace."})]})
 
                 if (actualClean.remainingTime <= 0) {
-                    (await Yuno.UTIL.clean(ch)).send(new MessageEmbed()
+                    (await Yuno.UTIL.clean(ch)).send({embeds: [new EmbedBuilder()
                         .setImage("https://vignette3.wikia.nocookie.net/futurediary/images/9/94/Mirai_Nikki_-_06_-_Large_05.jpg")
-                        .setAuthor("Auto-clean: Yuno is done cleaning.", Yuno.dC.avatarURL)
-                        .setColor("#ff51ff"));
+                        .setAuthor({name: "Auto-clean: Yuno is done cleaning.", iconURL: Yuno.dC.user.avatarURL()})
+                        .setColor("#ff51ff")]});
                     actualClean.remainingTime = actualClean.timeFEachClean * 60;
                 } else {
                     actualClean.remainingTime = actualClean.remainingTime - 1;

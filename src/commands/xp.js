@@ -18,7 +18,7 @@ const {EmbedBuilder} = require("discord.js");
 let whereExpIsEnabled = [];
 
 let getAvatarURL = function(user) {
-    return user.avatarURL ? user.avatarURL : user.defaultAvatarURL
+    return user.displayAvatarURL({extension: 'png', size: 256});
 }
 
 module.exports.run = async function(yuno, author, args, msg) {
