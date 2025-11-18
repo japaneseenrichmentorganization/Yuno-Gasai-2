@@ -26,7 +26,7 @@ module.exports.run = async function(yuno, author, args, msg) {
 
     if (args[0] === "--force") {
         let confirmmsg = await msg.channel.send({embeds: [new EmbedBuilder().setColor("#42d7f4").setTitle("Confirm channel clear.").setDescription("This will **instantly** clean this channel, __without any warning__.\n\nConfirm by sending `yes`. You have 10s to answer.\nSending any other message will cancel the clean")]}),
-            coll = msg.channel.createMessageCollector(m => msg.author.id === m.author.id, { time: 10000 })
+            coll = msg.channel.createMessageCollector({ filter: m => msg.author.id === m.author.id, time: 10000 })
 
         coll.on("collect", async(m) => {
             if (m.content.toLowerCase() === "yes") {
