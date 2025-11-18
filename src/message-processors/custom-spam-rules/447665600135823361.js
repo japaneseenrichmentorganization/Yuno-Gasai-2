@@ -27,11 +27,20 @@ module.exports.message = async function(content, msg) {
 
         // Obtain the member if we don't have it
         if(msg.guild && !msg.guild.members.cache.has(msg.author.id) && !msg.webhookID) {
-            msg.member = await msg.guild.members.fetch(msg.author.id);
+            try {
+                msg.member = await msg.guild.members.fetch(msg.author.id);
+            } catch(e) {
+                // User is not in guild, cannot process spam rules
+                return;
+            }
         }
         // Obtain the member for the ClientUser if it doesn't already exist
         if(msg.guild && !msg.guild.members.cache.has(Yuno.dC.user.id)) {
-            await msg.guild.members.fetch(Yuno.dC.user.id);
+            try {
+                await msg.guild.members.fetch(Yuno.dC.user.id);
+            } catch(e) {
+                // Bot not in guild cache, skip
+            }
         }
 
         if (msg.member.permissions.has(PermissionsBitField.Flags.ManageMessages))
