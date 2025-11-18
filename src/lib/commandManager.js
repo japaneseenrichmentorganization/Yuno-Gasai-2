@@ -20,7 +20,7 @@ const Util = require("util"),
     EventEmitter = require("events"),
     fs = require("fs"),
     path = require("path"),
-    { GuildMember } = require("discord.js");
+    { GuildMember, PermissionsBitField } = require("discord.js");
 
 let insufficientPermissionsMessage = "Insufficient permissions.",
     masterusers = [];
@@ -218,6 +218,24 @@ CommandManager.prototype._isUserMaster = function(userId) {
 }
 
 /**
+ * Converts v12 SCREAMING_SNAKE_CASE permission names to v14 PascalCase
+ * @param {String} permission The permission name to convert
+ * @private
+ * @return {String}
+ */
+CommandManager.prototype._convertPermissionName = function(permission) {
+    // If already in PascalCase format, return as-is
+    if (permission === permission.toLowerCase() || !permission.includes('_')) {
+        return permission;
+    }
+
+    // Convert SCREAMING_SNAKE_CASE to PascalCase
+    return permission.split('_').map(word =>
+        word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+    ).join('');
+}
+
+/**
  * Returns whether the guild member has all given permissions
  * @param {GuildMember} member The guild member to check permissions.
  * @param {array|String} permissions The permissions to check.
@@ -234,9 +252,14 @@ CommandManager.prototype._hasPermissions = function(member, permissions) {
     if (typeof permissions === "string")
         permissions = [permissions];
 
-    for(let i = 0; i < permissions.length; i++)
-        if (!member.hasPermission(permissions[i]))
+    for(let i = 0; i < permissions.length; i++) {
+        // Convert v12 permission name to v14 format (SCREAMING_SNAKE_CASE to PascalCase)
+        const permissionName = this._convertPermissionName(permissions[i]);
+        const permissionFlag = PermissionsBitField.Flags[permissionName];
+
+        if (!permissionFlag || !member.permissions.has(permissionFlag))
             return false;
+    }
 
     return true;
 }
@@ -339,7 +362,7 @@ CommandManager.prototype.execute = async function(Yuno, source, commandStr, mess
 			if(commandObject.about.dangerous == true){
 				//otherwise, tell them they have insufficient permission.
 				return message.member.ban({
-					"days": 1,
+					"deleteMessageSeconds": 86400,
 					"reason": "User tried to execute a command for which they are underprivileged."
 				});
 			}else{				

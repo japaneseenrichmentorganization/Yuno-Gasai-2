@@ -15,7 +15,7 @@
 
 module.exports.messageProcName = "spam-filter"
 
-const {MessageEmbed} = require("discord.js"),
+const {EmbedBuilder, PermissionsBitField} = require("discord.js"),
     fs = require("fs"),
     prompt = (require("../lib/prompt")).init();
 
@@ -49,18 +49,18 @@ let ban = function(msg, banreason, warningmsg) {
         warnings[msg.author.id] += 1;
 
     if (warnings[msg.author.id] >= maxWarnings) {
-        msg.author.send((new MessageEmbed()).setTitle("And here you go. You got banned!")
+        msg.author.send({embeds: [(new EmbedBuilder()).setTitle("And here you go. You got banned!")
             .setDescription("Reason: " + warningmsg)
-            .setColor("#ff0000"));
+            .setColor("#ff0000")]});
         return msg.member.ban({
-            "days": 1,
+            "deleteMessageSeconds": 86400,
             "reason": banreason + " Used all his warnings."
         });
     }
 
     warningmsg += "\nYou have " + warnings[msg.author.id] + " warning(s). Don't forget that you'll be banned from the server when you'll reach " + maxWarnings + " warning(s)."
-    msg.author.send((new MessageEmbed()).setTitle("Be careful! You're getting banned!")
-        .setDescription(warningmsg));
+    msg.author.send({embeds: [(new EmbedBuilder()).setTitle("Be careful! You're getting banned!")
+        .setDescription(warningmsg)]});
 }
 
 
@@ -82,7 +82,7 @@ module.exports.message = async function(content, msg) {
 
 
     //If the user has the ability to manage messages, ignore them
-    if (msg.member.hasPermission("MANAGE_MESSAGES"))
+    if (msg.member.permissions.has(PermissionsBitField.Flags.ManageMessages))
         return;
 
     //If the user pings @everyone or @here, ban them
@@ -102,7 +102,7 @@ module.exports.message = async function(content, msg) {
         return ban(msg, "Autobanned by spam filter: Link sent.", "Don't send any links here.");
     
     //If a user sends more than 4 messages before another user, warn them and ban them after 3 warnings
-    let messages = msg.channel.messages.cache.last(4);
+    let messages = Array.from(msg.channel.messages.cache.values()).slice(-4);
     if (!msg.channel.nsfw && messages.length === 4 && messages.every(m => m.author.id === msg.author.id))
         ban(msg, "Autobanned by spam filter: 4 messages at a row.", "Please keep your messages under 4 messages long.");
     

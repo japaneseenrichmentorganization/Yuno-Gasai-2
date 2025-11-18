@@ -16,25 +16,42 @@
     along with this program.  If not, see https://www.gnu.org/licenses/.
 */
 
-const {MessageEmbed} = require("discord.js");
+const {EmbedBuilder, PermissionsBitField} = require("discord.js");
 
 module.exports.run = async function(yuno, author, args, msg) {
+    // Check if bot has necessary permissions in the current channel
+    const botPermissions = msg.channel.permissionsFor(msg.guild.members.me);
+    if (!botPermissions.has([PermissionsBitField.Flags.SendMessages, PermissionsBitField.Flags.EmbedLinks])) {
+        try {
+            return msg.author.send("I don't have permission to send embeds in that channel. Please ensure I have the **Send Messages** and **Embed Links** permissions.");
+        } catch(e) {
+            // If we can't DM the user, we can't do anything
+            return;
+        }
+    }
+
     if (!msg.mentions.channels.size)
         return msg.channel.send("Please mention a channel.");
 
     let ch = msg.mentions.channels.first();
 
+    // Check if bot has ManageMessages permission in the target channel
+    const targetPermissions = ch.permissionsFor(msg.guild.members.me);
+    if (!targetPermissions.has(PermissionsBitField.Flags.ManageMessages)) {
+        return msg.channel.send(`I don't have the **Manage Messages** permission in ${ch}. I need this permission to clean the channel.`);
+    }
+
     if (args[0] === "--force") {
-        let confirmmsg = await msg.channel.send(new MessageEmbed().setColor("#42d7f4").setTitle("Confirm channel clear.").setDescription("This will **instantly** clean this channel, __without any warning__.\n\nConfirm by sending `yes`. You have 10s to answer.\nSending any other message will cancel the clean")),
-            coll = msg.channel.createMessageCollector(m => msg.author.id === m.author.id, { time: 10000 })
-        
+        let confirmmsg = await msg.channel.send({embeds: [new EmbedBuilder().setColor("#42d7f4").setTitle("Confirm channel clear.").setDescription("This will **instantly** clean this channel, __without any warning__.\n\nConfirm by sending `yes`. You have 10s to answer.\nSending any other message will cancel the clean")]}),
+            coll = msg.channel.createMessageCollector({ filter: m => msg.author.id === m.author.id, time: 10000 })
+
         coll.on("collect", async(m) => {
             if (m.content.toLowerCase() === "yes") {
                 try {
-                    (await yuno.UTIL.clean(ch)).send(new MessageEmbed()
+                    (await yuno.UTIL.clean(ch)).send({embeds: [new EmbedBuilder()
                     .setImage("https://vignette3.wikia.nocookie.net/futurediary/images/9/94/Mirai_Nikki_-_06_-_Large_05.jpg")
-                    .setAuthor("Yuno is done cleaning.", yuno.UTIL.getAvatarURL(yuno.dC.user))
-                    .setColor("#ff51ff"));
+                    .setAuthor({name: "Yuno is done cleaning.", iconURL: yuno.UTIL.getAvatarURL(yuno.dC.user)})
+                    .setColor("#ff51ff")]});
                 } catch(e) {
                     msg.author.send("Cleaning failed: ```" + e.message + "```" + "```" + e.stack + "```");
                 }

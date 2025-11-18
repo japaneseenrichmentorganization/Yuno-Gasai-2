@@ -17,26 +17,53 @@
 */
 
 module.exports.run = async function(yuno, author, args, msg) {
-    if (args.length === 0)
-        return msg.channel.send(":negative_squared_cross_mark: Not enough arguments.");
+    if (args.length < 2)
+        return msg.channel.send(":negative_squared_cross_mark: Not enough arguments. Usage: `set-levelrolemap <level> <@role>`");
 
-    let thing = args.join(" ");
-
-    try {
-        thing = JSON.parse(thing);
-    } catch(e) {
-        return msg.channel.send(":negative_squared_cross_mark: Not a valid json object.\nRemember, they should have as key the level and as value the role id!");
+    // Parse the level number
+    let level = parseInt(args[0]);
+    if (isNaN(level) || level < 0) {
+        return msg.channel.send(":negative_squared_cross_mark: Level must be a positive number.");
     }
 
-    await yuno.dbCommands.setLevelRoleMap(yuno.database, msg.guild.id, thing);
+    // Get the role from mentions or by ID
+    let role = msg.mentions.roles.first();
+    if (!role) {
+        // Try to parse as role ID
+        try {
+            role = await msg.guild.roles.fetch(args[1]);
+        } catch(e) {
+            return msg.channel.send(":negative_squared_cross_mark: Invalid role. Please mention a role or provide a valid role ID.");
+        }
+    }
+
+    if (!role) {
+        return msg.channel.send(":negative_squared_cross_mark: Role not found. Please mention a role or provide a valid role ID.");
+    }
+
+    // Get current level role map
+    let levelRoleMap = await yuno.dbCommands.getLevelRoleMap(yuno.database, msg.guild.id);
+
+    // If null, initialize empty object
+    if (levelRoleMap === null) {
+        levelRoleMap = {};
+    }
+
+    // Add/update the mapping
+    levelRoleMap[level] = role.id;
+
+    // Save back to database
+    await yuno.dbCommands.setLevelRoleMap(yuno.database, msg.guild.id, levelRoleMap);
     yuno._refreshMod("message-processors");
-    msg.channel.send("Updated!");
+
+    msg.channel.send(`:white_check_mark: Level role map updated! Users who reach level **${level}** will receive the **${role.name}** role.`);
 }
 
 module.exports.about = {
     "command": "set-levelrolemap",
-    "description": "Defines the level role map for this guild.",
-    "examples": ["set-levelrolemap [some nice json object right here]"],
+    "description": "Maps a level to a role. When users reach that level, they automatically get the role.",
+    "usage": "set-levelrolemap <level> <@role>",
+    "examples": ["set-levelrolemap 5 @Member", "set-levelrolemap 10 @Active", "set-levelrolemap 25 @Veteran"],
     "discord": true,
     "terminal": false,
     "list": true,

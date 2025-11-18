@@ -16,7 +16,7 @@
     along with this program.  If not, see https://www.gnu.org/licenses/.
 */
 
-const {GuildMember, MessageEmbed} = require("discord.js");
+const {GuildMember, EmbedBuilder} = require("discord.js");
 
 module.exports.run = async function(yuno, author, args, msg) {
     let g = msg.guild,

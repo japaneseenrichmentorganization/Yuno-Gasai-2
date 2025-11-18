@@ -5,7 +5,7 @@ module.exports = {
      * @return {String} The url.
      */
     "getAvatarURL": function(user) {
-        return typeof user.avatar === "string" ? "https://cdn.discordapp.com/avatars/" + user.id + "/" + user.avatar + ".png" : "https://cdn.discordapp.com/embed/avatars/" + (parseInt(user.discriminator) % 5) + ".png"; 
+        return user.displayAvatarURL({extension: 'png', size: 256});
     },
 
     /**
@@ -18,13 +18,22 @@ module.exports = {
         let nsfw = channel.nsfw,
             pos = channel.position;
 
+        // Clone the channel
         let n = await channel.clone({
-            "nsfw": nsfw,
             "reason": "Cleaning by Yuno."
         });
 
+        // Delete the old channel
         await channel.delete();
+
+        // Restore position
         await n.setPosition(pos);
+
+        // Restore NSFW/age-restricted setting using setNSFW method (Discord.js v14)
+        // This ensures both NSFW and age-restricted flags are properly carried over
+        if (nsfw) {
+            await n.setNSFW(true, "Restoring NSFW setting after channel clean");
+        }
 
         return n;
     },

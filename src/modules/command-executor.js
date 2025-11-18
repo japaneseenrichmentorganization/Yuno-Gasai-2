@@ -71,7 +71,7 @@ let discordConnected = async function(yuno) {
         workOnlyOnGuild = workOnlyOnGuild_
 
     if (!ONE_TIME_EVENT)
-        discClient.on("message", msgEvent)
+        discClient.on("messageCreate", msgEvent)
 
     ONE_TIME_EVENT = true;
 }

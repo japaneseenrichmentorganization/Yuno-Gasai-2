@@ -1,13 +1,13 @@
 module.exports.messageProcName = "mention-responses"
 
-const {MessageEmbed} = require("discord.js");
+const {EmbedBuilder} = require("discord.js");
 
 let mentionResponses = [];
 
 module.exports.message = async function(content, msg) {
     for (const mentionResponse of mentionResponses) {
         if (msg.guild.id === mentionResponse.guildId && msg.content.toLowerCase().replace(msg.client.user.toString(), '').trim().includes(mentionResponse.trigger.trim()) && msg.mentions.members.has(msg.client.user.id)) {
-            let embed = new MessageEmbed()
+            let embed = new EmbedBuilder()
                     .setDescription(mentionResponse.response.replace(new RegExp("[$]{author}", "gi"), msg.author.username))
                     .setColor("#ff51ff"),
                 image;
@@ -15,7 +15,7 @@ module.exports.message = async function(content, msg) {
             if (mentionResponse.image !== "null")
                 embed.setImage(mentionResponse.image);
 
-            msg.channel.send(embed)
+            msg.channel.send({embeds: [embed]})
             break;
         }
     }

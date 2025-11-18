@@ -15,8 +15,7 @@
     You should have received a copy of the GNU Affero General Public License
     along with this program.  If not, see https://www.gnu.org/licenses/.
 */
-const {MessageEmbed} = require('discord.js');
-const snekfetch = require('snekfetch');
+const {EmbedBuilder} = require('discord.js');
 
 module.exports.run = async function(yuno, author, args, msg) {
     let url = 'https://nekos.life/api';
@@ -30,10 +29,12 @@ module.exports.run = async function(yuno, author, args, msg) {
         url += '/neko';
     }
 
-    const res = await snekfetch.get(url);
-    msg.channel.send(new MessageEmbed()
-        .setImage(res.body.neko)
-        .setFooter(`Requested by ${msg.author.tag}`))
+    const res = await fetch(url);
+    const data = await res.json();
+    msg.channel.send({embeds: [new EmbedBuilder()
+        .setImage(data.neko)
+        .setFooter({text: `Requested by ${msg.author.tag}`})
+    ]})
 }
 
 module.exports.about = {

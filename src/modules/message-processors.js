@@ -69,18 +69,18 @@ let discordConnected = async function(Yuno) {
     if (!DISCORD_EVENT) {
         DISCORD_EVENT = true;
 
-        discClient.on("message", (function(msg) {
+        discClient.on("messageCreate", (function(msg) {
             if (msg.author.id === discClient.user.id)
                 return;
-    
+
             if (!msg.guild)
                 return;
-    
+
             if (typeof workOnlyOnGuild !== "undefined" && workOnlyOnGuild !== null && workOnlyOnGuild.id !== msg.guild.id)
                 return;
-    
+
             let content = msg.content;
-    
+
             for(proces of messageProcsors) {
                 try {
                     proces.message(content, msg);

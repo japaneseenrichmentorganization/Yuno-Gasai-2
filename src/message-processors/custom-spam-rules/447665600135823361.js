@@ -13,6 +13,7 @@
     along with this program.  If not, see https://www.gnu.org/licenses/.
 */
 
+const {PermissionsBitField} = require("discord.js");
 
 const DISCORD_INVITE_REGEX = /(https)*(http)*:*(\/\/)*discord(.gg|app.com\/invite)\/[a-zA-Z0-9]{1,}/i;
 const LINK_REGEX = /(ftp|http|https):\/\/(www\.)??[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}\b([-a-zA-Z0-9@:%_\+.~#?&//=]*)/ig;
@@ -26,19 +27,28 @@ module.exports.message = async function(content, msg) {
 
         // Obtain the member if we don't have it
         if(msg.guild && !msg.guild.members.cache.has(msg.author.id) && !msg.webhookID) {
-            msg.member = await msg.guild.members.fetch(msg.author);
+            try {
+                msg.member = await msg.guild.members.fetch(msg.author.id);
+            } catch(e) {
+                // User is not in guild, cannot process spam rules
+                return;
+            }
         }
         // Obtain the member for the ClientUser if it doesn't already exist
         if(msg.guild && !msg.guild.members.cache.has(Yuno.dC.user.id)) {
-            await msg.guild.members.fetch(Yuno.dC.user.id);
+            try {
+                await msg.guild.members.fetch(Yuno.dC.user.id);
+            } catch(e) {
+                // Bot not in guild cache, skip
+            }
         }
 
-        if (msg.member.hasPermission("MANAGE_MESSAGES"))
+        if (msg.member.permissions.has(PermissionsBitField.Flags.ManageMessages))
             return;
 
     if (DISCORD_INVITE_REGEX.test(content))
         return msg.member.ban({
-            days: 1,
+            deleteMessageSeconds: 86400,
             reason: "Autobanned for invite link"
         })
 
@@ -48,7 +58,7 @@ module.exports.message = async function(content, msg) {
 
         if (textInNoTextWarnings.has(msg.author.id)) {
             msg.member.ban({
-                days: 1,
+                deleteMessageSeconds: 86400,
                 reason: "Autobanned messages hentai channel"
             })
             textInNoTextWarnings.delete(msg.author.id);
@@ -63,14 +73,14 @@ module.exports.message = async function(content, msg) {
 
     if (msg.content.indexOf("@everyone") > -1 || msg.content.indexOf("@here") > -1)
         return msg.member.ban({
-            days: 1,
+            deleteMessageSeconds: 86400,
             reason: "Autobanned by spam filter: usage of @everyone/@here"
         })
 
         if (LINK_REGEX.test(content) && msg.channel.name.toLowerCase().startsWith("main")) {
             if (spamWarnings.has(msg.author.id)) {
                 msg.member.ban({
-                    days: 1,
+                    deleteMessageSeconds: 86400,
                     reason: "Autobanned for sending links"
                 })
                 spamWarnings.delete(msg.author.id);
@@ -82,12 +92,12 @@ module.exports.message = async function(content, msg) {
             };
         };
 
-    let previousMessages = msg.channel.messages.cache.last(4);
-    
+    let previousMessages = Array.from(msg.channel.messages.cache.values()).slice(-4);
+
     if (previousMessages.length === 4 && msg.channel.name.toLowerCase().startsWith("main") && previousMessages.every(m=> m.author.id === msg.author.id))
         if (spamWarnings.has(msg.author.id)) {
             msg.member.ban({
-                days: 1,
+                deleteMessageSeconds: 86400,
                 reason: "Autobanned message limit"
             })
             spamWarnings.delete(msg.author.id)

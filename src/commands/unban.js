@@ -24,7 +24,7 @@ delete require.cache[require.resolve("../lib/EmbedCmdResponse")];
 
 let EmbedCmdResponse = require("../lib/EmbedCmdResponse");
 
-const {GuildMember, MessageMentions} = require("discord.js");
+const {GuildMember} = require("discord.js");
 
 module.exports.run = async function(yuno, author, args, msg) {
     args = args.join(" ");
@@ -43,19 +43,20 @@ module.exports.run = async function(yuno, author, args, msg) {
     let toBanThings = args.split(" ")
 
     toBanThings.forEach(function(e) {
-        if (!MessageMentions.USERS_PATTERN.test(e)) {
+        // Skip empty strings and user mentions (starts with <@)
+        if (e.trim() !== "" && !e.startsWith("<@")) {
             msg.guild.members.unban(e, reason).then(function() {
-                msg.channel.send(new EmbedCmdResponse()
+                msg.channel.send({embeds: [new EmbedCmdResponse()
                     .setColor(SUCCESS_COLOR)
                     .setTitle(":white_check_mark: Unban successful.")
                     .setDescription(":arrow_right: User with id", e, "has been successfully unbanned.")
-                    .setCMDRequester(msg.member));
+                    .setCMDRequester(msg.member)]});
             }).catch(function(err) {
-                msg.channel.send(new EmbedCmdResponse()
+                msg.channel.send({embeds: [new EmbedCmdResponse()
                     .setColor(FAIL_COLOR)
                     .setTitle(":negative_squared_cross_mark: Unban failed.")
                     .setDescription(":arrow_right: Failed to unban", e, ":", err.message)
-                    .setCMDRequester(msg.member));
+                    .setCMDRequester(msg.member)]});
             })
         }
     })

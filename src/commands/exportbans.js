@@ -15,31 +15,73 @@
     You should have received a copy of the GNU Affero General Public License
     along with this program.  If not, see https://www.gnu.org/licenses/.
 */
-let fs = require("fs");
+const fs = require("fs");
+const {PermissionsBitField} = require("discord.js");
 
 module.exports.run = async function(yuno, author, args, msg) {
-    if (!msg.member.hasPermission("BAN_MEMBERS"))
+    if (!msg.member.permissions.has(PermissionsBitField.Flags.BanMembers))
         return msg.channel.send('No permission to');
 
     let guid = msg.guild.id;
 
-    msg.guild.fetchBans().then(bans => {
-        let arr = Array.from(bans.values()),
-        json = [];
+    try {
+        const statusMsg = await msg.channel.send(':hourglass: Fetching bans... This may take a while for large ban lists.');
 
-    arr.forEach((el, ind, arr) => {
-        json.push(el.user.id);
-    });
+        // Fetch all bans with pagination
+        const allBannedUserIds = [];
+        let lastBanId = null;
+        let totalFetched = 0;
+        const batchSize = 1000; // Discord API limit
 
-    let banstr = JSON.stringify(json);
+        while (true) {
+            // Fetch a batch of bans
+            const fetchOptions = { limit: batchSize };
+            if (lastBanId) {
+                fetchOptions.after = lastBanId;
+            }
 
-    fs.writeFile("./BANS-" + guid + ".txt", banstr, (err) => {
-        if (err)
-            msg.channel.send("Error while saving bans :( :" + err.code);
-        else
-            msg.channel.send("Bans saved with the Guild ID (use it to re-apply bans) : " + guid);
-        })
-    })
+            const bans = await msg.guild.bans.fetch(fetchOptions);
+
+            if (bans.size === 0) {
+                break; // No more bans to fetch
+            }
+
+            // Extract user IDs from this batch
+            const batchUserIds = Array.from(bans.values()).map(ban => ban.user.id);
+            allBannedUserIds.push(...batchUserIds);
+            totalFetched += bans.size;
+
+            // Update status message every 10k bans
+            if (totalFetched % 10000 === 0 || totalFetched === bans.size) {
+                await statusMsg.edit(`:hourglass: Fetching bans... ${totalFetched} fetched so far...`);
+            }
+
+            // Get the last ban ID for pagination
+            lastBanId = batchUserIds[batchUserIds.length - 1];
+
+            // If we got fewer than the batch size, we've reached the end
+            if (bans.size < batchSize) {
+                break;
+            }
+        }
+
+        console.log(`[ExportBans] Fetched ${allBannedUserIds.length} total bans for guild ${guid}`);
+
+        // Convert to JSON string
+        const banstr = JSON.stringify(allBannedUserIds);
+
+        // Write to file
+        fs.writeFile("./BANS-" + guid + ".txt", banstr, async (err) => {
+            if (err) {
+                await statusMsg.edit("Error while saving bans :( :" + err.code);
+            } else {
+                await statusMsg.edit(`Bans exported successfully! **${allBannedUserIds.length}** bans saved with Guild ID: ${guid}`);
+            }
+        });
+    } catch(e) {
+        msg.channel.send("Error while fetching bans: " + e.message);
+        console.error("Export bans error:", e);
+    }
 }
 
 module.exports.about = {

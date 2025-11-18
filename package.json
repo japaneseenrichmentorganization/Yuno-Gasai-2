@@ -1,32 +1,29 @@
 {
   "name": "yuno-gasai-2",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "The remade of Yuno Gasai, flawless & bugless",
   "main": "index.js",
   "scripts": {
+    "start": "node index.js",
+    "dev": "node index.js --hot-reload",
     "test": "echo No test defined.",
     "generate-doc": "jsdoc .\\src -r -p -d docs -t node_modules/docdash",
     "generate-doc-notheme": "jsdoc .\\src -r -p -d docs"
   },
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "devDependencies": {
-    "docdash": "^0.4.0",
-    "eslint": "^7.0.0",
-    "heapdump": ">=0.3.15",
+    "docdash": "^2.0.2",
     "stack-trace": "0.0.10"
   },
   "dependencies": {
-    "acord": ">=0.3.0",
-    "ansi-regex": "^6.0.1",
     "bluebird": "^3.7.2",
-    "discord.js": "^12.5.3",
-    "he": "^1.2.0",
-    "i": "^0.3.7",
+    "discord.js": "^14.24.2",
     "longjohn": "^0.2.12",
-    "moment": "^2.26.0",
+    "moment": "^2.30.1",
     "moment-duration-format": "^2.3.2",
-    "npm": "^8.11.0",
-    "snekfetch": "^4.0.4",
-    "sqlite3": "github:blubaustin/node-sqlite3",
+    "sqlite3": "^5.1.7",
     "urban": "^0.3.2"
   }
 }

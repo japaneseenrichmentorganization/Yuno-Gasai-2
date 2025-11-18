@@ -17,7 +17,7 @@
 */
 
 const EmbedCmdResponse = require("../lib/EmbedCmdResponse"),
-    {MessageEmbed} = require("discord.js");
+    {EmbedBuilder} = require("discord.js");
 
 let listMainCommands = function(yuno, isTerminal, member) {
     let cmdman = yuno.commandMan,
@@ -151,9 +151,9 @@ let helpOnACommand = function(command, yuno, msg) {
         lines.forEach(el => yuno.prompt.info(el));
         return;
     } else {
-        let response = new MessageEmbed()
+        let response = new EmbedBuilder()
             .setColor("#42d1f4")
-            .addField("Command name", commandName, true)
+            .addFields([{name: "Command name", value: commandName, inline: true}])
 
         EmbedCmdResponse.setCMDRequester(response, msg.member);
         
@@ -161,26 +161,26 @@ let helpOnACommand = function(command, yuno, msg) {
             if (aliases.length === 1)
                 aliases = aliases[0];
             else
-                response.addField("Aliases", aliases.join(", "), true)
+                response.addFields([{name: "Aliases", value: aliases.join(", "), inline: true}])
 
         if (typeof aliases === "string")
-            response.addField("Alias", aliases, true);
+            response.addFields([{name: "Alias", value: aliases, inline: true}]);
 
         if (typeof usage === "string")
-            response.addField("Usage", usage, true);
+            response.addFields([{name: "Usage", value: usage, inline: true}]);
 
         if (typeof description === "string")
-            response.addField("Description", description);
+            response.addFields([{name: "Description", value: description}]);
 
         if (examples instanceof Array)
             if (examples.length === 1)
                 examples = examples[0];
             else
-                response.addField("Examples", examples.join(", "), true)
+                response.addFields([{name: "Examples", value: examples.join(", "), inline: true}])
         if (typeof examples === "string")
-            response.addField("Example", examples, true);
+            response.addFields([{name: "Example", value: examples, inline: true}]);
 
-        return msg.channel.send(response);
+        return msg.channel.send({embeds: [response]});
     }
 }
 
@@ -195,7 +195,7 @@ module.exports.run = async function(yuno, author, args, msg) {
                 .setTitle("Little help about the commands.")
                 .setDescription("`" + listMainCommands(yuno, false, msg.member) + "`")
                 .setCMDRequester(msg.member);
-            msg.channel.send(response);
+            msg.channel.send({embeds: [response]});
         } else
             return yuno.prompt.info("The available commands are :\n    " + listMainCommands(yuno, true))
     else

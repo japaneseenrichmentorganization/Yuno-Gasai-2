@@ -16,7 +16,7 @@
     along with this program.  If not, see https://www.gnu.org/licenses/.
 */
 
-const {MessageEmbed} = require("discord.js");
+const {EmbedBuilder} = require("discord.js");
 
 module.exports.run = async function(yuno, author, args, msg) {
     if (args.length <= 1)
@@ -36,12 +36,14 @@ module.exports.run = async function(yuno, author, args, msg) {
 
     let r = await yuno.dbCommands.addMentionResponses(yuno.database, msg.guild.id, trigger, response, image);
     yuno._refreshMod("message-processors");
-    msg.channel.send(new MessageEmbed()
+    msg.channel.send({embeds: [new EmbedBuilder()
         .setTitle(":white_check_mark: Mention response added.")
-        .addField("Trigger", trigger, true)
-        .addField("Response", response, true)
-        .addField("Image", typeof image === "string" ? image : "None.", true)
-        .setColor("#43cc24"));
+        .addFields([
+            {name: "Trigger", value: trigger, inline: true},
+            {name: "Response", value: response, inline: true},
+            {name: "Image", value: typeof image === "string" ? image : "None.", inline: true}
+        ])
+        .setColor("#43cc24")]});
 }
 
 module.exports.about = {

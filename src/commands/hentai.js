@@ -30,8 +30,6 @@ function getRandomsFromArray(sourceArray, neededElements) {
     return result;
 }
 
-const snekfetch = require('snekfetch');
-
 var bannedSearch = ["loli", "gore", "guro", "scat", "small_breast", "vore", "underage", "shota"]
 
 module.exports.run = async function(yuno, author, args, msg) {
@@ -58,7 +56,9 @@ module.exports.run = async function(yuno, author, args, msg) {
     }
     let res;
     try {
-        res = JSON.parse((await snekfetch.get(url)).body.toString());
+        const response = await fetch(url);
+        const text = await response.text();
+        res = JSON.parse(text);
     } catch (e) {
         return msg.channel.send(`No search results found for \`${args[0]}\`. Please try a different query.`)
     }
