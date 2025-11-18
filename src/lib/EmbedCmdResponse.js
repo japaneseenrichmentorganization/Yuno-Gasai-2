@@ -20,7 +20,6 @@
 delete require.cache[require.resolve("../Util")]
 
 const {EmbedBuilder} = require("discord.js"),
-    Util = require("util"),
     DiscordUtil = require("../Util");
 
 
@@ -29,48 +28,54 @@ const {EmbedBuilder} = require("discord.js"),
  * @param {Object} data Data to set in the rich embed
  * @extends {EmbedBuilder}
  */
-let EmbedCmdResponse = function(data) {
-    Object.getPrototypeOf(EmbedBuilder.prototype).constructor.call(this, data);
-}
+class EmbedCmdResponse extends EmbedBuilder {
+    constructor(data) {
+        super(data);
+    }
 
-EmbedCmdResponse.setCMDRequester = function(embed, user) {
-    let username = user.nickname ? user.nickname : user.user.tag;
+    /**
+     * Sets the command requester at the footer (static method)
+     * @param {EmbedBuilder} embed
+     * @param {GuildMember} user
+     * @return {EmbedBuilder} the embed
+     */
+    static setCMDRequester(embed, user) {
+        let username = user.nickname ? user.nickname : user.user.tag;
 
-    embed.setFooter({text: "Requested by " + username, iconURL: DiscordUtil.getAvatarURL(user.user)})
-    return embed;
-}
+        embed.setFooter({text: "Requested by " + username, iconURL: DiscordUtil.getAvatarURL(user.user)})
+        return embed;
+    }
 
-Util.inherits(EmbedCmdResponse, EmbedBuilder);
+    /**
+     * Sets the command requester at the footer.
+     * @param {GuildMember} user
+     * @return {EmbedCmdResponse} itself.
+     * @deprecated
+     */
+    setCMDRequester(user) {
+        let username = user.nickname ? user.nickname : user.user.tag;
 
-/**
- * Sets the command requester at the footer.
- * @param {GuildMember} user
- * @return {EmbedCmdResponse} itself.
- * @deprecated
- */
-EmbedCmdResponse.prototype.setCMDRequester = function(user) {
-    let username = user.nickname ? user.nickname : user.user.tag;
+        this.setFooter({text: "Requested by " + username, iconURL: DiscordUtil.getAvatarURL(user.user)})
+        return this;
+    }
 
-    this.setFooter({text: "Requested by " + username, iconURL: DiscordUtil.getAvatarURL(user.user)})
-    return this;
-}
+    /**
+     * Sets the description of the footer, but joins the arguments
+     * @param {String} description...
+     * @return {EmbedCmdResponse} itself.
+     * @deprecated
+     */
+    setDescription() {
+        let things = Array.from(arguments),
+            description = "";
 
-/**
- * Sets the description of the footer, but joins the arguments
- * @param {String} description...
- * @return {EmbedCmdResponse} itself.
- * @deprecated
- */
-EmbedCmdResponse.prototype.setDescription = function() {
-    let things = Array.from(arguments),
-        description = "";
+        things.forEach(el => description += el + " ");
 
-    things.forEach(el => description += el + " ");
+        description.substring(0, -1);
 
-    description.substring(0, -1);
-
-    EmbedBuilder.prototype.setDescription.call(this, description);
-    return this;
+        super.setDescription(description);
+        return this;
+    }
 }
 
 module.exports = EmbedCmdResponse;
