@@ -1,6 +1,6 @@
 # Yuno Gasai 2.
 ##Channel cleaning, auto-moderation/moderation, anime bot
-### developped by Maeeen (maeeennn@gmail.com) and Oxdeception
+### developped by Maeeen (maeeennn@gmail.com), Oxdeception fuzzymanboobs
 
 This is licensed under the GNU Affero General Public License. See the `LICENSE` file for more details.
 
@@ -9,7 +9,7 @@ Installation
 LINUX
 
 Prerequisites
-Node 18.x or higher, node-gyp, make/build-essential, sqlite3, git, tmux (if you wish to use the interactive shell)
+Node 20.x or higher, node-gyp, make/build-essential, sqlite3, git, tmux (if you wish to use the interactive shell)
 
 Use your package manager to install these and/or the script provided by nodejs
 
