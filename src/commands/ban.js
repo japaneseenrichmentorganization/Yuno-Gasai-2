@@ -41,7 +41,7 @@ module.exports.run = async function(yuno, author, args, msg) {
     }
 
     let toBanThings = args.split(" "),
-        userMentions = msg.mentions.users.array();
+        userMentions = Array.from(msg.mentions.users.values());
 
     for(let i = 0; i < toBanThings.length; i++) {
         let e = toBanThings[i];
@@ -51,11 +51,11 @@ module.exports.run = async function(yuno, author, args, msg) {
             if (wantedUser)
                 userMentions.push(wantedUser) && console.log("pushing");
             else
-                msg.channel.send(new EmbedCmdResponse()
+                msg.channel.send({embeds: [new EmbedCmdResponse()
                     .setColor(FAIL_COLOR)
                     .setTitle(":negative_squared_cross_mark: Ban failed.")
                     .setDescription(":arrow_right: Failed to ban user with id", e, ": User with this ID wasn't found in the server.")
-                    .setCMDRequester(msg.member));
+                    .setCMDRequester(msg.member)]});
         }
     }
 
@@ -74,11 +74,11 @@ module.exports.run = async function(yuno, author, args, msg) {
             */
             
              if (yuno.commandMan._isUserMaster(target))
-                 return msg.channel.send(new EmbedCmdResponse()
+                 return msg.channel.send({embeds: [new EmbedCmdResponse()
                      .setColor(FAIL_COLOR)
                      .setTitle(":negative_squared_cross_mark: Ban failed.")
                      .setDescription(":arrow_right: Failed to ban user " + target.user.tag + ". The user is on the master list.")
-                     .setCMDRequester(msg.member));
+                     .setCMDRequester(msg.member)]});
 
             let successfulEmbed = (new EmbedCmdResponse()
                     .setColor(SUCCESS_COLOR)
@@ -94,16 +94,16 @@ module.exports.run = async function(yuno, author, args, msg) {
                 successfulEmbed.setImage(banImage);
 
             msg.guild.members.ban(u.id, {
-                "days": 1,
+                "deleteMessageSeconds": 86400,
                 "reason": reason
             }).then(function() {
-                msg.channel.send(successfulEmbed);
+                msg.channel.send({embeds: [successfulEmbed]});
             }).catch(function(err) {
-                msg.channel.send(new EmbedCmdResponse()
+                msg.channel.send({embeds: [new EmbedCmdResponse()
                     .setColor(FAIL_COLOR)
                     .setTitle(":negative_squared_cross_mark: Ban failed.")
                     .setDescription(":arrow_right: Failed to ban", target.user.tag, ":", err.message)
-                    .setCMDRequester(msg.member));
+                    .setCMDRequester(msg.member)]});
             })
         })
     else
