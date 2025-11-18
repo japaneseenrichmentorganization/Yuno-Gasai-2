@@ -26,77 +26,100 @@ module.exports.run = async function(yuno, author, args, msg) {
         return msg.channel.send(":negative_squared_cross_mark: No level role map configured for this guild. Use `set-levelrolemap` to configure it first.");
     }
 
-    // Determine the target user
-    let user = msg.mentions.members.first();
-
-    if (!user && args.length > 0) {
-        // Try to fetch by ID
-        try {
-            user = await msg.guild.members.fetch(args[0]);
-        } catch(e) {
-            return msg.channel.send(":negative_squared_cross_mark: Invalid user. Please mention a user or provide a valid user ID.");
-        }
+    if (args.length === 0) {
+        return msg.channel.send(":negative_squared_cross_mark: Not enough arguments. Usage: `sync-levelroles <level>`");
     }
 
-    // If no user specified, use the command executor
-    if (!user) {
-        user = msg.member;
+    // Parse the level number
+    let targetLevel = parseInt(args[0]);
+    if (isNaN(targetLevel) || targetLevel < 0) {
+        return msg.channel.send(":negative_squared_cross_mark: Level must be a positive number.");
     }
 
-    // Get user's XP data
-    let xpData = await yuno.dbCommands.getXPData(yuno.database, msg.guild.id, user.id);
+    const processingMsg = await msg.channel.send(`:hourglass: Processing... Fetching all guild members and checking XP data for level **${targetLevel}**...`);
 
-    if (!xpData || xpData.level === 0) {
-        return msg.channel.send(`:negative_squared_cross_mark: **${user.displayName}** has no XP data or is at level 0.`);
-    }
+    try {
+        // Fetch all guild members
+        await msg.guild.members.fetch();
 
-    // Find all roles that should be assigned (level <= user's level)
-    let rolesToAssign = [];
-    let roleNames = [];
+        // Get all members and check their XP data
+        let usersAtLevel = [];
+        for (const [memberId, member] of msg.guild.members.cache) {
+            if (member.user.bot) continue;
 
-    for (let [level, roleId] of Object.entries(levelRoleMap)) {
-        let levelNum = parseInt(level);
-        if (levelNum <= xpData.level) {
-            try {
-                let role = await msg.guild.roles.fetch(roleId);
-                if (role && !user.roles.cache.has(roleId)) {
-                    rolesToAssign.push(role);
-                    roleNames.push(`${role.name} (Level ${levelNum})`);
-                }
-            } catch(e) {
-                console.error(`Failed to fetch role ${roleId} for level ${level}:`, e);
+            let xpData = await yuno.dbCommands.getXPData(yuno.database, msg.guild.id, memberId);
+            if (xpData && xpData.level === targetLevel) {
+                usersAtLevel.push(member);
             }
         }
-    }
 
-    if (rolesToAssign.length === 0) {
-        return msg.channel.send(`:white_check_mark: **${user.displayName}** already has all roles for their level (${xpData.level}).`);
-    }
+        if (usersAtLevel.length === 0) {
+            return processingMsg.edit(`:negative_squared_cross_mark: No users found at level **${targetLevel}**.`);
+        }
 
-    // Assign all the roles
-    try {
-        await user.roles.add(rolesToAssign);
+        await processingMsg.edit(`:hourglass: Found **${usersAtLevel.length}** users at level **${targetLevel}**. Syncing roles...`);
 
-        msg.channel.send({embeds: [new EmbedBuilder()
+        let successCount = 0;
+        let failCount = 0;
+        let skippedCount = 0;
+
+        // Process each user
+        for (const user of usersAtLevel) {
+            // Find all roles that should be assigned (level <= user's level)
+            let rolesToAssign = [];
+
+            for (let [level, roleId] of Object.entries(levelRoleMap)) {
+                let levelNum = parseInt(level);
+                if (levelNum <= targetLevel) {
+                    try {
+                        let role = await msg.guild.roles.fetch(roleId);
+                        if (role && !user.roles.cache.has(roleId)) {
+                            rolesToAssign.push(role);
+                        }
+                    } catch(e) {
+                        console.error(`Failed to fetch role ${roleId} for level ${level}:`, e);
+                    }
+                }
+            }
+
+            if (rolesToAssign.length === 0) {
+                skippedCount++;
+                continue;
+            }
+
+            // Assign all the roles
+            try {
+                await user.roles.add(rolesToAssign);
+                successCount++;
+            } catch(e) {
+                failCount++;
+                console.error(`Failed to assign roles to ${user.user.tag}:`, e);
+            }
+        }
+
+        await processingMsg.edit({embeds: [new EmbedBuilder()
             .setColor("#43cc24")
             .setTitle(":white_check_mark: Level roles synced!")
-            .setDescription(`**${user.displayName}** is level **${xpData.level}** and received the following roles:`)
-            .addFields({
-                name: "Roles Added",
-                value: roleNames.join('\n') || 'None'
-            })
+            .setDescription(`Synced roles for all users at level **${targetLevel}**`)
+            .addFields(
+                {name: "Users processed", value: usersAtLevel.length.toString(), inline: true},
+                {name: "Roles assigned", value: successCount.toString(), inline: true},
+                {name: "Already had roles", value: skippedCount.toString(), inline: true},
+                {name: "Failed", value: failCount.toString(), inline: true}
+            )
         ]});
+
     } catch(e) {
-        msg.channel.send(`:negative_squared_cross_mark: Failed to assign roles: ${e.message}`);
-        console.error("Failed to assign level roles:", e);
+        await processingMsg.edit(`:negative_squared_cross_mark: An error occurred: ${e.message}`);
+        console.error("Sync level roles error:", e);
     }
 }
 
 module.exports.about = {
     "command": "sync-levelroles",
-    "description": "Assigns all level roles at or below a user's current level. If no user specified, applies to yourself.",
-    "usage": "sync-levelroles [@user|userID]",
-    "examples": ["sync-levelroles", "sync-levelroles @User", "sync-levelroles 123456789"],
+    "description": "Assigns all level roles to ALL users at a specific level.",
+    "usage": "sync-levelroles <level>",
+    "examples": ["sync-levelroles 5", "sync-levelroles 10"],
     "discord": true,
     "terminal": false,
     "list": true,
