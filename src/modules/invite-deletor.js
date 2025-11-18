@@ -23,11 +23,21 @@ let DISCORD_EVENTED = false;
 let discordConnected = async function(Yuno) {
     if (!DISCORD_EVENTED)
         Yuno.dC.on("guildMemberRemove", async function(member) {
-            (await member.guild.fetchInvites()).filter(invite => {
-                if (!invite.inviter)
-                    return [];
-                return invite.inviter.id === member.id
-            }).forEach(async el => await el.delete());
+            try {
+                const invites = await member.guild.invites.fetch();
+                const userInvites = invites.filter(invite => {
+                    if (!invite.inviter)
+                        return false;
+                    return invite.inviter.id === member.id;
+                });
+
+                for (const invite of userInvites.values()) {
+                    await invite.delete();
+                }
+            } catch(e) {
+                // Bot might not have permission to manage invites
+                console.error("Failed to delete invites:", e.message);
+            }
         })
 
     DISCORD_EVENTED = true;
