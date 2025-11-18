@@ -24,7 +24,7 @@ module.exports.run = async function(yuno, author, args, msg) {
 
     let guid = msg.guild.id;
 
-    msg.guild.fetchBans().then(bans => {
+    msg.guild.bans.fetch().then(bans => {
         let arr = Array.from(bans.values()),
         json = [];
 

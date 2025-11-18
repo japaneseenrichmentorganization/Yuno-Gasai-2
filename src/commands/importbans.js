@@ -24,24 +24,30 @@ module.exports.run = async function(yuno, author, args, msg) {
 
     let guid = args[0];
 
-    fs.readFile("./BANS-" + guid + ".txt", (err, data) => {
+    fs.readFile("./BANS-" + guid + ".txt", async (err, data) => {
         if (err)
             msg.channel.send("Error while retrieving bans : ", err.code);
         else {
             console.log("[BanMSystem] Applying bans...");
             try {
                 let bans = JSON.parse(data);
-                bans.forEach((el, ind, arr) => {
+                let successCount = 0;
+                let failCount = 0;
+
+                for (const userId of bans) {
                     try {
-                        let getMember = msg.guild.members.fetch(el);
-                        msg.guild.ban(getMember)
+                        await msg.guild.members.ban(userId, {
+                            reason: "Ban import from saved banlist"
+                        });
+                        successCount++;
                     } catch(e) {
-                        console.log("Skipped: " + el + "error:" + e);
+                        failCount++;
+                        console.log("Skipped: " + userId + " error: " + e.message);
                     }
-                })
-                msg.channel.send("Ban successful");
+                }
+                msg.channel.send(`Ban import complete. Successfully banned: ${successCount}, Failed: ${failCount}`);
             } catch(e) {
-                console.log("[BanMSystem] Bans we're not saved as JSON. Error :((((");
+                console.log("[BanMSystem] Bans weren't saved as JSON. Error: " + e.message);
                 msg.channel.send("Bans aren't in JSON. Error.");
             }
         }
