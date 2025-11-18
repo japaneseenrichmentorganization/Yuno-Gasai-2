@@ -15,10 +15,11 @@
     You should have received a copy of the GNU Affero General Public License
     along with this program.  If not, see https://www.gnu.org/licenses/.
 */
-let fs = require("fs");
+const fs = require("fs");
+const {PermissionsBitField} = require("discord.js");
 
 module.exports.run = async function(yuno, author, args, msg) {
-    if (!msg.member.hasPermission("BAN_MEMBERS"))
+    if (!msg.member.permissions.has(PermissionsBitField.Flags.BanMembers))
         return msg.channel.send('No permission to');
 
     let guid = msg.guild.id;

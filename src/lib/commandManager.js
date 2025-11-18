@@ -20,7 +20,7 @@ const Util = require("util"),
     EventEmitter = require("events"),
     fs = require("fs"),
     path = require("path"),
-    { GuildMember } = require("discord.js");
+    { GuildMember, PermissionsBitField } = require("discord.js");
 
 let insufficientPermissionsMessage = "Insufficient permissions.",
     masterusers = [];
@@ -234,9 +234,12 @@ CommandManager.prototype._hasPermissions = function(member, permissions) {
     if (typeof permissions === "string")
         permissions = [permissions];
 
-    for(let i = 0; i < permissions.length; i++)
-        if (!member.hasPermission(permissions[i]))
+    for(let i = 0; i < permissions.length; i++) {
+        // Convert string permission to PermissionsBitField flag
+        const permissionFlag = PermissionsBitField.Flags[permissions[i]];
+        if (!permissionFlag || !member.permissions.has(permissionFlag))
             return false;
+    }
 
     return true;
 }
@@ -339,7 +342,7 @@ CommandManager.prototype.execute = async function(Yuno, source, commandStr, mess
 			if(commandObject.about.dangerous == true){
 				//otherwise, tell them they have insufficient permission.
 				return message.member.ban({
-					"days": 1,
+					"deleteMessageSeconds": 86400,
 					"reason": "User tried to execute a command for which they are underprivileged."
 				});
 			}else{				
