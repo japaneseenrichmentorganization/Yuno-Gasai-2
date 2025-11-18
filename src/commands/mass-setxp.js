@@ -18,7 +18,7 @@
 
 module.exports.run = async function(yuno, author, args, msg) {
     if (args.length < 2)
-        return msg.channel.send(":negative_squared_cross_mark: Not enough arguments. Usage: `mass-setxp <level> <xp> <@role>`");
+        return msg.channel.send(":negative_squared_cross_mark: Not enough arguments. Usage: `mass-setxp <level> <@role>`");
 
     // Parse the level number
     let level = parseInt(args[0]);
@@ -26,18 +26,12 @@ module.exports.run = async function(yuno, author, args, msg) {
         return msg.channel.send(":negative_squared_cross_mark: Level must be a positive number.");
     }
 
-    // Parse the XP number
-    let xp = parseInt(args[1]);
-    if (isNaN(xp) || xp < 0) {
-        return msg.channel.send(":negative_squared_cross_mark: XP must be a positive number.");
-    }
-
     // Get the role from mentions or by ID
     let role = msg.mentions.roles.first();
     if (!role) {
         // Try to parse as role ID
         try {
-            role = await msg.guild.roles.fetch(args[2]);
+            role = await msg.guild.roles.fetch(args[1]);
         } catch(e) {
             return msg.channel.send(":negative_squared_cross_mark: Invalid role. Please mention a role or provide a valid role ID.");
         }
@@ -61,10 +55,14 @@ module.exports.run = async function(yuno, author, args, msg) {
             return processingMsg.edit(`:negative_squared_cross_mark: No members found with the role **${role.name}**.`);
         }
 
-        await processingMsg.edit(`:hourglass: Found **${membersWithRole.size}** members with role **${role.name}**. Updating XP data...`);
+        await processingMsg.edit(`:hourglass: Found **${membersWithRole.size}** members with role **${role.name}**. Setting them to level **${level}**...`);
 
         let successCount = 0;
         let failCount = 0;
+
+        // Set XP to 0 for the target level (fresh at that level)
+        // Users will be at the specified level with 0 XP toward the next level
+        const xp = 0;
 
         // Update XP for each member
         for (const [memberId, member] of membersWithRole) {
@@ -85,7 +83,7 @@ module.exports.run = async function(yuno, author, args, msg) {
         // Refresh the experience message processor to pick up changes
         yuno._refreshMod("message-processors");
 
-        await processingMsg.edit(`:white_check_mark: Mass XP update complete!\n\n**Role:** ${role.name}\n**Level set:** ${level}\n**XP set:** ${xp}\n**Successfully updated:** ${successCount} members\n**Failed:** ${failCount} members\n**Skipped bots:** ${membersWithRole.size - successCount - failCount}`);
+        await processingMsg.edit(`:white_check_mark: Mass XP update complete!\n\n**Role:** ${role.name}\n**Level set:** ${level}\n**XP set:** ${xp} (fresh at level)\n**Successfully updated:** ${successCount} members\n**Failed:** ${failCount} members\n**Skipped bots:** ${membersWithRole.size - successCount - failCount}`);
 
     } catch(e) {
         await processingMsg.edit(`:negative_squared_cross_mark: An error occurred while processing: ${e.message}`);
@@ -95,9 +93,9 @@ module.exports.run = async function(yuno, author, args, msg) {
 
 module.exports.about = {
     "command": "mass-setxp",
-    "description": "Sets XP and level for all members with a specific role.",
-    "usage": "mass-setxp <level> <xp> <@role>",
-    "examples": ["mass-setxp 5 100 @Member", "mass-setxp 10 500 @Active"],
+    "description": "Sets all members with a specific role to a target level (with 0 XP at that level).",
+    "usage": "mass-setxp <level> <@role>",
+    "examples": ["mass-setxp 5 @Member", "mass-setxp 10 @Active"],
     "discord": true,
     "terminal": false,
     "list": true,
