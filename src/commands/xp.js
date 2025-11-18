@@ -13,7 +13,7 @@
     along with this program.  If not, see https://www.gnu.org/licenses/.
 */
 
-const {MessageEmbed} = require("discord.js");
+const {EmbedBuilder} = require("discord.js");
 
 let whereExpIsEnabled = [];
 
@@ -30,8 +30,8 @@ module.exports.run = async function(yuno, author, args, msg) {
         msg.member = await msg.guild.members.fetch(msg.author);
     }
     // Obtain the member for the ClientUser if it doesn't already exist
-    if(msg.guild && !msg.guild.members.cache.has(Yuno.dC.user.id)) {
-        await msg.guild.members.fetch(Yuno.dC.user.id);
+    if(msg.guild && !msg.guild.members.cache.has(yuno.dC.user.id)) {
+        await msg.guild.members.fetch(yuno.dC.user.id);
     }
     
     if (!whereExpIsEnabled.includes(msg.guild.id))
@@ -71,12 +71,15 @@ module.exports.run = async function(yuno, author, args, msg) {
     let xpdata = await yuno.dbCommands.getXPData(yuno.database, msg.guild.id, user.id),
         neededExp = 5 * Math.pow(xpdata.level, 2) + 50 * xpdata.level + 100;
 
-    msg.channel.send(new MessageEmbed()
-        .setAuthor(user.displayName + "'s experience card" , yuno.UTIL.getAvatarURL(user.user))
+    msg.channel.send({embeds: [new EmbedBuilder()
+        .setAuthor({name: user.displayName + "'s experience card", iconURL: yuno.UTIL.getAvatarURL(user.user)})
         .setColor("#ff51ff")
-        .addField("Current level", xpdata.level, true)
-        .addField("Current exp", xpdata.xp, true)
-        .addField("Exp needed until next level (" + (xpdata.level + 1) + ")", neededExp - xpdata.xp));
+        .addFields(
+            {name: "Current level", value: xpdata.level.toString(), inline: true},
+            {name: "Current exp", value: xpdata.xp.toString(), inline: true},
+            {name: "Exp needed until next level (" + (xpdata.level + 1) + ")", value: (neededExp - xpdata.xp).toString()}
+        )
+    ]});
 }
 
 

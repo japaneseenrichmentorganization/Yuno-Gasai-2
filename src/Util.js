@@ -5,7 +5,7 @@ module.exports = {
      * @return {String} The url.
      */
     "getAvatarURL": function(user) {
-        return typeof user.avatar === "string" ? "https://cdn.discordapp.com/avatars/" + user.id + "/" + user.avatar + ".png" : "https://cdn.discordapp.com/embed/avatars/" + (parseInt(user.discriminator) % 5) + ".png"; 
+        return user.displayAvatarURL({extension: 'png', size: 256});
     },
 
     /**

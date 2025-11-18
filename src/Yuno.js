@@ -29,7 +29,7 @@ const Util = require("util"),
     fs = require("fs"),
     path = require("path"),
     EventEmitter = require("events"),
-    {Client} = require("discord.js");
+    {Client, GatewayIntentBits} = require("discord.js");
 
 let ModuleExporter = (require("./ModuleExporter.js")).init(),
     InteractiveTerminal = null,
@@ -78,7 +78,16 @@ let Yuno = function() {
 
     this.commandMan = ModuleExporter.instancePreset(this, "commandManager", "commandMan", null);
 
-    this.discordClient = new Client();
+    this.discordClient = new Client({
+        intents: [
+            GatewayIntentBits.Guilds,
+            GatewayIntentBits.GuildMembers,
+            GatewayIntentBits.GuildMessages,
+            GatewayIntentBits.MessageContent,
+            GatewayIntentBits.DirectMessages,
+            GatewayIntentBits.GuildBans
+        ]
+    });
     this.dC = this.discordClient;
 
     this.configMan = ModuleExporter.singletonPreset(this, "configManager", "configMan");
