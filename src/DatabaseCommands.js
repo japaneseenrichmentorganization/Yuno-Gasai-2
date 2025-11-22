@@ -384,7 +384,7 @@ module.exports = self = {
      * @async
      */
     "setXPData": async function(database, guildid, userid, xp, level) {
-        return await database.runPromise("UPDATE experiences SET level = ?, exp = ? WHERE guildID = ? AND userID = ?",
+        return await database.runPromise("UPDATE experiences SET level = ?, exp = ? WHERE guildid = ? AND userid = ?",
             [level, xp, guildid, userid])
     },
 
