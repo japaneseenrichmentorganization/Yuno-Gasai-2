@@ -33,19 +33,45 @@ let getMentions = function() {
     return str;
 }
 
-let discordConnected = function(Yuno) {
+let discordConnected = async function(Yuno) {
     let dC = Yuno.dC,
         guilds = dC.guilds;
 
     guild = guilds.cache.get(guildId);
 
-    if (typeof guild === "undefined")
+    if (!guild)
         return Yuno.prompt.error("Cannot log bot errors into a channel: GuildID: " + guildId + " is invalid. Try putting a guild ID instead")
 
-    channel = guild.channels.cache.find(name =>name.channelName === 'name');
+    // Fetch all channels to ensure cache is populated
+    try {
+        await guild.channels.fetch();
+    } catch (e) {
+        Yuno.prompt.error("Failed to fetch guild channels: " + e.message);
+    }
 
-    if (typeof channel === "undefined")
-        return Yuno.prompt.error("Cannot log bot errors into a channel: ChannelName: " + channelName + " is invalid. Try putting a channel name instead")
+    // Try to find channel by ID first (if channelName looks like an ID)
+    if (/^\d+$/.test(channelName)) {
+        channel = guild.channels.cache.get(channelName);
+        if (!channel) {
+            // Try fetching directly
+            try {
+                channel = await guild.channels.fetch(channelName);
+            } catch (e) {
+                Yuno.prompt.warn("Could not fetch channel by ID: " + e.message);
+            }
+        }
+    }
+    
+    // If not found by ID, try by name
+    if (!channel) {
+        channel = guild.channels.cache.find(ch => ch.name === channelName);
+    }
+
+    if (!channel) {
+        Yuno.prompt.error("Cannot log bot errors into a channel: ChannelName/ID: " + channelName + " is invalid.");
+        Yuno.prompt.info("Available channels in guild: " + Array.from(guild.channels.cache.values()).map(ch => ch.name + " (" + ch.id + ")").join(", "));
+        return;
+    }
 
     if (guild && channel)
         Yuno.prompt.info("Errors logged on the guild " + guild.name + " on the channel " + channel.name)
