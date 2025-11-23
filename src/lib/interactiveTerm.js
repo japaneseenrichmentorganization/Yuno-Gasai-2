@@ -83,6 +83,7 @@ InteractiveTerminal.prototype._commandinp = function() {
 
         switch(key) {
             case "\r":
+            case "\n":
                 // enter
                 process.stdout.write("> " + this._input);
                 process.stdout.write("\n");
@@ -98,13 +99,18 @@ InteractiveTerminal.prototype._commandinp = function() {
                 this.emit("quit");
                 break;
 
+            case "\u007f":
+            case "\u0008":
             case "\b":
-                // backspace
+                // backspace (handles DEL, BS, and \b)
                 this._input = this._input.substring(0, this._input.length - 1);
                 break;
 
             default:
-                this._input += key;
+                // Only add printable characters
+                if (key.charCodeAt(0) >= 32 || key === "\t") {
+                    this._input += key;
+                }
                 break;
         }
 
