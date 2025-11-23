@@ -30,91 +30,135 @@ module.exports.run = async function(yuno, author, args, msg) {
     args = args.join(" ");
 
     let reason = "",
-        toBanIds = [],
-        mutli
+        toBanIds = [];
 
     if (args.includes("|")) {
         reason = (args.split("|")[1] + " / Banned by " + msg.author.tag).trim();
         args = args.split("|")[0];
     } else {
-        reason = "Banned by " + msg.author.tag
+        reason = "Banned by " + msg.author.tag;
     }
 
     let toBanThings = args.split(" "),
-        userMentions = Array.from(msg.mentions.users.values());
+        usersToBan = [];
 
-    for(let i = 0; i < toBanThings.length; i++) {
-        let e = toBanThings[i];
-        if (!(e.indexOf("<") > -1) && e.trim() != "") {
-            let wantedUser = await msg.guild.members.fetch(e);
+    // Collect mentioned users
+    let userMentions = Array.from(msg.mentions.users.values());
+    for (let user of userMentions) {
+        usersToBan.push({
+            user: user,
+            inGuild: msg.guild.members.cache.has(user.id)
+        });
+    }
 
-            if (wantedUser)
-                userMentions.push(wantedUser) && console.log("pushing");
-            else
-                msg.channel.send({embeds: [new EmbedCmdResponse()
-                    .setColor(FAIL_COLOR)
-                    .setTitle(":negative_squared_cross_mark: Ban failed.")
-                    .setDescription(":arrow_right: Failed to ban user with id", e, ": User with this ID wasn't found in the server.")
-                    .setCMDRequester(msg.member)]});
+    // Process IDs (non-mentions)
+    for (let i = 0; i < toBanThings.length; i++) {
+        let e = toBanThings[i].trim();
+        
+        // Skip if empty or is a mention
+        if (!e || e.indexOf("<") > -1) continue;
+
+        // Try to fetch as user ID
+        try {
+            // First try to fetch from guild (member)
+            let member = await msg.guild.members.fetch(e).catch(() => null);
+            
+            if (member) {
+                // User is in the guild
+                usersToBan.push({
+                    user: member.user,
+                    inGuild: true
+                });
+            } else {
+                // Try to fetch user from Discord API (not in guild)
+                let user = await msg.client.users.fetch(e).catch(() => null);
+                
+                if (user) {
+                    usersToBan.push({
+                        user: user,
+                        inGuild: false
+                    });
+                } else {
+                    // User not found at all
+                    msg.channel.send({embeds: [new EmbedCmdResponse()
+                        .setColor(FAIL_COLOR)
+                        .setTitle(":negative_squared_cross_mark: Ban failed.")
+                        .setDescription(`:arrow_right: Failed to ban user with ID \`${e}\`: User not found on Discord.`)
+                        .setCMDRequester(msg.member)]});
+                }
+            }
+        } catch (err) {
+            msg.channel.send({embeds: [new EmbedCmdResponse()
+                .setColor(FAIL_COLOR)
+                .setTitle(":negative_squared_cross_mark: Ban failed.")
+                .setDescription(`:arrow_right: Failed to process \`${e}\`: ${err.message}`)
+                .setCMDRequester(msg.member)]});
         }
     }
 
-    if (userMentions.length !== 0)
-        userMentions.forEach(async u => {
-            let target = await msg.guild.members.fetch(u.id);
+    if (usersToBan.length === 0) {
+        return msg.channel.send(":negative_squared_cross_mark: No users to ban. Please mention users or provide user IDs.");
+    }
 
-            //I too like to live dangerously
-            /* 
-            if (msg.guild.member(target).id === msg.author.id)
-                return msg.channel.send(new EmbedCmdResponse()
-                    .setColor(FAIL_COLOR)
-                    .setTitle(":negative_squared_cross_mark: Ban failed.")
-                    .setDescription(":arrow_right: You can also leave the server instead of banning yourself ;)")
-                    .setCMDRequester(msg.member));
-            */
+    // Ban each user
+    for (let targetData of usersToBan) {
+        let target = targetData.user;
+        let inGuild = targetData.inGuild;
+
+        // Check if target is a master user
+        if (yuno.commandMan._isUserMaster(target.id)) {
+            msg.channel.send({embeds: [new EmbedCmdResponse()
+                .setColor(FAIL_COLOR)
+                .setTitle(":negative_squared_cross_mark: Ban failed.")
+                .setDescription(`:arrow_right: Failed to ban user ${target.tag}. The user is on the master list.`)
+                .setCMDRequester(msg.member)]});
+            continue;
+        }
+
+        // Prepare success embed
+        let successfulEmbed = new EmbedCmdResponse()
+            .setColor(SUCCESS_COLOR)
+            .setTitle(":white_check_mark: Ban successful.")
+            .setDescription(`:arrow_right: User ${target.tag} has been successfully banned.${inGuild ? '' : ' (User was not in server)'}`)
+            .setCMDRequester(msg.member);
+
+        let banImage = await yuno.dbCommands.getBanImage(yuno.database, msg.guild.id, msg.author.id);
+
+        if (banImage === null) {
+            banImage = yuno.config.get("ban.default-image");
+        }
+
+        if (banImage !== null && yuno.UTIL.checkIfUrl(banImage)) {
+            successfulEmbed.setImage(banImage);
+        }
+
+        // Execute the ban
+        try {
+            await msg.guild.members.ban(target.id, {
+                deleteMessageSeconds: 86400,
+                reason: reason
+            });
             
-             if (yuno.commandMan._isUserMaster(target))
-                 return msg.channel.send({embeds: [new EmbedCmdResponse()
-                     .setColor(FAIL_COLOR)
-                     .setTitle(":negative_squared_cross_mark: Ban failed.")
-                     .setDescription(":arrow_right: Failed to ban user " + target.user.tag + ". The user is on the master list.")
-                     .setCMDRequester(msg.member)]});
-
-            let successfulEmbed = (new EmbedCmdResponse()
-                    .setColor(SUCCESS_COLOR)
-                    .setTitle(":white_check_mark: Ban successful.")
-                    .setDescription(":arrow_right: User", target.user.tag, "has been successfully banned.")
-                    .setCMDRequester(msg.member)),
-                banImage = await yuno.dbCommands.getBanImage(yuno.database, msg.guild.id, msg.author.id);
-
-            if (banImage === null)
-                banImage = yuno.config.get("ban.default-image")
-
-            if (banImage !== null && yuno.UTIL.checkIfUrl(banImage))
-                successfulEmbed.setImage(banImage);
-
-            msg.guild.members.ban(u.id, {
-                "deleteMessageSeconds": 86400,
-                "reason": reason
-            }).then(function() {
-                msg.channel.send({embeds: [successfulEmbed]});
-            }).catch(function(err) {
-                msg.channel.send({embeds: [new EmbedCmdResponse()
-                    .setColor(FAIL_COLOR)
-                    .setTitle(":negative_squared_cross_mark: Ban failed.")
-                    .setDescription(":arrow_right: Failed to ban", target.user.tag, ":", err.message)
-                    .setCMDRequester(msg.member)]});
-            })
-        })
-    else
-        msg.channel.send(":negative_squared_cross_mark: No users mentioned.")
+            msg.channel.send({embeds: [successfulEmbed]});
+        } catch (err) {
+            msg.channel.send({embeds: [new EmbedCmdResponse()
+                .setColor(FAIL_COLOR)
+                .setTitle(":negative_squared_cross_mark: Ban failed.")
+                .setDescription(`:arrow_right: Failed to ban ${target.tag}: ${err.message}`)
+                .setCMDRequester(msg.member)]});
+        }
+    }
 }
 
 module.exports.about = {
     "command": "ban",
-    "description": "Bans an user",
-    "examples": ["ban <id> [anotherid] | reason", "ban @someone [id] [againananotherid] | reason",
-        "ban @someone"],
+    "description": "Bans users from the server. Works with mentions, user IDs (in server), and user IDs (not in server).",
+    "examples": [
+        "ban @someone | reason",
+        "ban 123456789012345678 | spam",
+        "ban @user1 @user2 123456789012345678 | multiple users",
+        "ban 123456789012345678"
+    ],
     "discord": true,
     "terminal": false,
     "list": true,
