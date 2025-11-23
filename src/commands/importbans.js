@@ -38,57 +38,75 @@ module.exports.run = async function(yuno, author, args, msg) {
 
             const statusMsg = await msg.channel.send(`:hourglass: Starting ban import for ${bans.length} users... This may take a while.`);
 
-            // Discord bulk ban API limit is 200 users per request
-            const batchSize = 200;
+            // Discord.js v14 doesn't have bulkCreate, we need to ban individually
+            // Process in batches to avoid rate limits
+            const batchSize = 5; // Small batch to be safe with rate limits
+            const delayBetweenBans = 1000; // 1 second delay between each ban
+            const delayBetweenBatches = 5000; // 5 second delay between batches
+            
             let totalBanned = 0;
             let totalFailed = 0;
-            let processedBatches = 0;
+            let totalAlreadyBanned = 0;
+            let processedCount = 0;
             const totalBatches = Math.ceil(bans.length / batchSize);
 
-            // Process bans in batches
+            // Process bans in small batches
             for (let i = 0; i < bans.length; i += batchSize) {
                 const batch = bans.slice(i, i + batchSize);
-                processedBatches++;
+                const batchNum = Math.floor(i / batchSize) + 1;
 
-                try {
-                    // Use bulk ban API with rate limiting support
-                    const result = await msg.guild.bans.bulkCreate(batch, {
-                        deleteMessageSeconds: 0, // Don't delete any messages
-                        reason: "Ban import from saved banlist"
-                    });
+                // Update status at start of each batch
+                await statusMsg.edit(
+                    `:hourglass: Processing ban import... Batch ${batchNum}/${totalBatches}\n` +
+                    `Progress: ${processedCount}/${bans.length} (${Math.round((processedCount/bans.length)*100)}%)\n` +
+                    `Banned: ${totalBanned} | Already banned: ${totalAlreadyBanned} | Failed: ${totalFailed}`
+                );
 
-                    totalBanned += result.bannedUsers.length;
-                    totalFailed += result.failedUsers.length;
-
-                    // Update status every 10 batches or on last batch
-                    if (processedBatches % 10 === 0 || processedBatches === totalBatches) {
-                        await statusMsg.edit(
-                            `:hourglass: Processing ban import... Batch ${processedBatches}/${totalBatches}\n` +
-                            `Banned: ${totalBanned} | Failed: ${totalFailed}`
-                        );
+                // Process each ban in the batch with individual delays
+                for (const userId of batch) {
+                    try {
+                        await msg.guild.members.ban(userId, {
+                            deleteMessageSeconds: 0,
+                            reason: "Ban import from saved banlist"
+                        });
+                        totalBanned++;
+                        console.log(`[BanMSystem] Banned user ${userId}`);
+                    } catch(error) {
+                        // Check if already banned
+                        if (error.code === 10026) { // Unknown Ban (user not banned)
+                            totalAlreadyBanned++;
+                        } else if (error.message.includes("already banned")) {
+                            totalAlreadyBanned++;
+                        } else {
+                            totalFailed++;
+                            console.error(`[BanMSystem] Failed to ban ${userId}:`, error.message);
+                        }
                     }
+                    
+                    processedCount++;
 
-                    console.log(`[BanMSystem] Batch ${processedBatches}/${totalBatches}: Banned ${result.bannedUsers.length}, Failed ${result.failedUsers.length}`);
-
-                } catch(batchError) {
-                    console.error(`[BanMSystem] Error in batch ${processedBatches}:`, batchError.message);
-                    totalFailed += batch.length; // Count entire batch as failed
+                    // Delay between individual bans
+                    if (processedCount < bans.length) {
+                        await new Promise(resolve => setTimeout(resolve, delayBetweenBans));
+                    }
                 }
 
-                // Small delay between batches to be extra safe with rate limits
+                // Longer delay between batches
                 if (i + batchSize < bans.length) {
-                    await new Promise(resolve => setTimeout(resolve, 1000));
+                    await new Promise(resolve => setTimeout(resolve, delayBetweenBatches));
                 }
             }
 
-            console.log(`[BanMSystem] Import complete. Total banned: ${totalBanned}, Total failed: ${totalFailed}`);
+            console.log(`[BanMSystem] Import complete. Banned: ${totalBanned}, Already banned: ${totalAlreadyBanned}, Failed: ${totalFailed}`);
 
             // Send final result
             await statusMsg.edit(
-                `Ban import complete!\n` +
+                `✅ Ban import complete!\n` +
                 `:white_check_mark: Successfully banned: **${totalBanned}**\n` +
-                `:negative_squared_cross_mark: Failed/Already banned: **${totalFailed}**\n` +
-                `Processed ${bans.length} users in ${totalBatches} batches`
+                `:information_source: Already banned: **${totalAlreadyBanned}**\n` +
+                `:negative_squared_cross_mark: Failed: **${totalFailed}**\n` +
+                `Processed **${bans.length}** users in ${totalBatches} batches\n\n` +
+                `⚠️ Note: This process took longer due to Discord rate limits. All bans have been applied.`
             );
 
         } catch(e) {
@@ -100,8 +118,8 @@ module.exports.run = async function(yuno, author, args, msg) {
 
 module.exports.about = {
     "command": "importbans",
-    "description": "Import bans",
-    "examples": ["importbans"],
+    "description": "Import bans from a saved banlist. Note: This may take several minutes for large ban lists due to Discord rate limits.",
+    "examples": ["importbans <guild-id>"],
     "discord": true,
     "terminal": false,
     "list": true,
