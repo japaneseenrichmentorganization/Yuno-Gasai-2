@@ -102,6 +102,6 @@ module.exports.about = {
     "terminal": false,
     "list": true,
     "listTerminal": false,
-    "requiredPermissions": ["KICK_MEMBERS"],
+    "requiredPermissions": ["KickMembers"],
     "aliases": []
 }
