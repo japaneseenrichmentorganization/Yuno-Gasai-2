@@ -9,3 +9,7 @@ config.json
 *.zip
 *.db
 *.save
+*_bk
+
+#Ignore large data files
+BANS-*.txt
