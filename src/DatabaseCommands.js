@@ -171,9 +171,9 @@ module.exports = self = {
      * @async
      */
     "initGuild": async function(database, guildid) {
-        let exists = await database.allPromise(`SELECT * FROM guilds WHERE id='${guildid}'`);
+        let exists = await database.allPromise("SELECT * FROM guilds WHERE id = ?", [guildid]);
         if (exists.length === 0)
-            await database.runPromise(`INSERT INTO guilds(id) VALUES(${guildid})`);
+            await database.runPromise("INSERT INTO guilds(id) VALUES(?)", [guildid]);
     },
 
     /**
@@ -200,7 +200,7 @@ module.exports = self = {
      */
     "setPrefix": async function(database, guildid, prefix) {
         await self.initGuild(database, guildid);
-        await database.runPromise("UPDATE guilds SET prefix='" + prefix + "' WHERE id='" + guildid + "'");
+        await database.runPromise("UPDATE guilds SET prefix = ? WHERE id = ?", [prefix, guildid]);
     },
 
     /**
@@ -227,7 +227,7 @@ module.exports = self = {
      */
     "setJoinDMMessage": async function(database, guildid, message) {
         await self.initGuild(database, guildid);
-        await database.runPromise("UPDATE guilds SET onJoinDMMsg='" + message + "' WHERE id='" + guildid + "'");
+        await database.runPromise("UPDATE guilds SET onJoinDMMsg = ? WHERE id = ?", [message, guildid]);
     },
 
     /**
@@ -254,7 +254,7 @@ module.exports = self = {
      */
     "setJoinDMMessageTitle": async function(database, guildid, messageTitle) {
         await self.initGuild(database, guildid);
-        await database.runPromise("UPDATE guilds SET onJoinDMMsgTitle='" + messageTitle + "' WHERE id='" + guildid + "'");
+        await database.runPromise("UPDATE guilds SET onJoinDMMsgTitle = ? WHERE id = ?", [messageTitle, guildid]);
     },
 
     /**
@@ -281,7 +281,7 @@ module.exports = self = {
      */
     "setSpamFilterEnabled": async function(database, guildid, spamFilter) {
         await self.initGuild(database, guildid);
-        await database.runPromise("UPDATE guilds SET spamFilter='" + spamFilter + "' WHERE id='" + guildid + "'");
+        await database.runPromise("UPDATE guilds SET spamFilter = ? WHERE id = ?", [spamFilter, guildid]);
     },
 
     /**
@@ -311,7 +311,7 @@ module.exports = self = {
      */
     "setXPEnabled": async function(database, guildid, xpen) {
         await self.initGuild(database, guildid);
-        await database.runPromise("UPDATE guilds SET measureXP='" + xpen + "' WHERE id='" + guildid + "'");
+        await database.runPromise("UPDATE guilds SET measureXP = ? WHERE id = ?", [xpen, guildid]);
     },
 
     /**
@@ -342,7 +342,7 @@ module.exports = self = {
             rolemap = JSON.stringify(rolemap);
 
         await self.initGuild(database, guildid);
-        await database.runPromise("UPDATE guilds SET levelRoleMap='" + rolemap + "' WHERE id='" + guildid + "'");
+        await database.runPromise("UPDATE guilds SET levelRoleMap = ? WHERE id = ?", [rolemap, guildid]);
     },
 
     /**
