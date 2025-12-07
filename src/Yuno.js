@@ -623,6 +623,8 @@ Yuno.prototype.launch = async function() {
 
 
     let dbPath = this.config.get("database"),
+        dbPassword = this.config.get("database.password"),
+        dbPragmas = this.config.get("database.pragmas"),
         newDb;
 
     try { fs.statSync(dbPath) } catch(e) {
@@ -632,17 +634,51 @@ Yuno.prototype.launch = async function() {
         }
     }
 
+    // Build database options from config
+    let dbOptions = {};
+
+    if (dbPassword) {
+        dbOptions.password = dbPassword;
+    }
+
+    if (dbPragmas && typeof dbPragmas === "object") {
+        dbOptions.pragmas = {
+            walMode: dbPragmas.walMode === true,
+            performanceMode: dbPragmas.performanceMode === true,
+            memoryTemp: dbPragmas.memoryTemp === true
+        };
+
+        if (typeof dbPragmas.cacheSize === "number") {
+            dbOptions.pragmas.cacheSize = dbPragmas.cacheSize;
+        }
+
+        if (typeof dbPragmas.mmapSize === "number") {
+            dbOptions.pragmas.mmapSize = dbPragmas.mmapSize;
+        }
+    }
+
     try {
-        await this.database.open(dbPath);
+        await this.database.open(dbPath, dbOptions);
         await DatabaseCommands.initDB(this.database, this, newDb);
     } catch(e) {
         this.prompt.error("Cannot open database.", e);
         this.shutdown(-1);
         return;
     }
-    
 
-    this.prompt.success("SQLite database opened.");
+    // Log database status
+    if (this.database.isEncrypted) {
+        this.prompt.success("SQLite database opened with encryption enabled.");
+    } else {
+        this.prompt.success("SQLite database opened.");
+        if (dbPassword && !this.database.isEncryptionAvailable()) {
+            this.prompt.warn("Database encryption was requested but @journeyapps/sqlcipher is not installed.");
+        }
+    }
+
+    if (dbPragmas && (dbPragmas.walMode || dbPragmas.performanceMode)) {
+        this.prompt.info("Database optimizations applied.");
+    }
 
     this.emit("sqlite-opened");
 

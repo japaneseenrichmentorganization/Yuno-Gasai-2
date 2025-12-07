@@ -26,5 +26,8 @@
     "moment-duration-format": "^2.3.2",
     "sqlite3": "^5.1.7",
     "urban": "^0.3.2"
+  },
+  "optionalDependencies": {
+    "@journeyapps/sqlcipher": "^5.3.1"
   }
 }

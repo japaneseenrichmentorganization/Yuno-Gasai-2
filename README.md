@@ -90,6 +90,28 @@ Yuno is a **yandere-themed Discord bot** combining powerful moderation tools wit
 
 </td>
 </tr>
+<tr>
+<td width="50%">
+
+### 🔐 Database Security
+*"I'll keep your secrets safe... forever~"*
+- 🔒 AES-256 database encryption
+- 🛡️ SQLCipher integration
+- 🔑 Password management command
+- 💾 Secure config storage
+
+</td>
+<td width="50%">
+
+### ⚡ Performance
+*"Nothing can slow me down~"*
+- 📈 WAL journal mode
+- 💨 Memory-optimized caching
+- 🧠 Configurable PRAGMA settings
+- 🎯 Tunable for your hosting
+
+</td>
+</tr>
 </table>
 
 ---
@@ -143,6 +165,92 @@ NODE_ENV=production node index.js
 
 ---
 
+## 🔐 Database Encryption
+
+*"Your secrets are safe with me~ No one else will ever see them..."* 💕
+
+Yuno supports **AES-256 database encryption** to protect your server data.
+
+### 📦 Installing Encryption Support
+
+```bash
+# Optional - only if you want encryption
+npm install @journeyapps/sqlcipher
+```
+
+### 🔑 Managing Encryption
+
+Use the `db-encrypt` command (master users only):
+
+| Command | Description |
+|---------|-------------|
+| `.db-encrypt status` | *"Am I keeping secrets?"* - Check encryption status |
+| `.db-encrypt set <password>` | *"I'll lock it away~"* - Enable/change encryption |
+| `.db-encrypt remove` | *"If you insist..."* - Remove encryption |
+
+```bash
+# Enable encryption
+.db-encrypt set YourSecurePassword123
+
+# Check status
+.db-encrypt status
+```
+
+> ⚠️ **Security Notes:**
+> - Passwords must be at least 8 characters
+> - Your Discord message is auto-deleted after setting a password
+> - Password is stored in `config.json` - keep this file secure!
+
+### 📝 Config File Method
+
+You can also set encryption in `config.json`:
+
+```json
+{
+    "database.password": "YourSecurePassword123"
+}
+```
+
+---
+
+## ⚡ Database Performance Tuning
+
+*"I'll be faster than anyone else... just for you~"* 💗
+
+Configure database optimizations in `DEFAULT_CONFIG.json` based on your hosting:
+
+```json
+{
+    "database.pragmas": {
+        "walMode": true,
+        "performanceMode": true,
+        "cacheSize": -64000,
+        "memoryTemp": true,
+        "mmapSize": 268435456
+    }
+}
+```
+
+### 🎛️ Available Options
+
+| Option | Description | Recommended For |
+|--------|-------------|-----------------|
+| `walMode` | WAL journal mode for better concurrent access | All setups 💕 |
+| `performanceMode` | Bundle: 64MB cache, 256MB mmap, memory temp | Dedicated servers |
+| `cacheSize` | Cache size in KB (use negative, e.g., `-64000` = 64MB) | Custom tuning |
+| `memoryTemp` | Store temp tables in RAM | Servers with spare RAM |
+| `mmapSize` | Memory-map size in bytes | High-traffic bots |
+
+### 💡 Hosting Recommendations
+
+| Hosting Type | Recommended Settings |
+|--------------|---------------------|
+| **Shared/VPS (1-2GB RAM)** | `walMode: true` only |
+| **VPS (4GB+ RAM)** | `walMode: true`, `performanceMode: true` |
+| **Dedicated Server** | All options enabled |
+
+---
+
 ## 💖 Commands Preview
 
 | Command | Description |
@@ -155,6 +263,7 @@ NODE_ENV=production node index.js
 | `scold` | *"Bad! But I still love you..."* 💢 |
 | `8ball` | *"Let fate decide~"* 🎱 |
 | `neko` | *"Nya~"* 🐱 |
+| `db-encrypt` | *"Your secrets are mine to keep~"* 🔐 |
 
 *Use the `list` command to see all available commands!*
 
