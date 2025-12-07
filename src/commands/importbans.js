@@ -24,6 +24,12 @@ module.exports.run = async function(yuno, author, args, msg) {
 
     let guid = args[0];
 
+    // Security: Validate guild ID to prevent path traversal attacks
+    // Guild IDs should only contain digits (Discord snowflake IDs)
+    if (!/^[0-9]+$/.test(guid)) {
+        return msg.channel.send(":negative_squared_cross_mark: Invalid guild ID. Guild IDs should only contain numbers.");
+    }
+
     fs.readFile("./BANS-" + guid + ".txt", async (err, data) => {
         if (err)
             return msg.channel.send("Error while retrieving bans: " + err.code);
