@@ -30,8 +30,9 @@ Yuno is a **yandere-themed Discord bot** combining powerful moderation tools wit
 
 | Contributor | Role |
 |-------------|------|
+| **blubskye** | Project Owner & Yuno's #1 Fan 💕🔪 |
 | **Maeeen** (maeeennn@gmail.com) | Original Developer 💝 |
-| **Oxdeception** | Original Developer 💝 |
+| **Oxdeception** | Contributor 💗 |
 | **fuzzymanboobs** | Contributor 💗 |
 
 ---
