@@ -24,6 +24,23 @@
     "_comment": "The database file (relative to the root of the project)",
     "database": "yuno-2-database.db",
 
+    "_comment": "Database encryption password. Requires @journeyapps/sqlcipher (npm install @journeyapps/sqlcipher). Leave null for no encryption.",
+    "database.password": null,
+
+    "_comment": "Database performance optimizations. Enable based on your hosting situation.",
+    "database.pragmas": {
+        "_comment": "WAL mode improves concurrent read/write performance",
+        "walMode": false,
+        "_comment": "Performance mode enables: synchronous=NORMAL, temp_store=MEMORY, 64MB cache, 256MB mmap",
+        "performanceMode": false,
+        "_comment": "Custom cache size in KB (use negative numbers, e.g., -64000 for 64MB)",
+        "cacheSize": null,
+        "_comment": "Store temporary tables in memory instead of disk",
+        "memoryTemp": false,
+        "_comment": "Memory-map size in bytes (e.g., 268435456 for 256MB)",
+        "mmapSize": null
+    },
+
     "_comment": "The bot will only react, send message, execute commands in this guild if this is a guild-id",
     "debug.work-only-on-guild": "",
 
