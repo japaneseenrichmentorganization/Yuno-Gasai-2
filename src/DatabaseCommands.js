@@ -17,6 +17,12 @@
 */
 
 const Database = require("./database");
+const LRUCache = require("./lib/lruCache");
+
+// Cache for guild settings (5 minute TTL, max 500 guilds)
+const guildSettingsCache = new LRUCache(500, 5 * 60 * 1000);
+// Cache for XP data (1 minute TTL, max 1000 entries)
+const xpDataCache = new LRUCache(1000, 60 * 1000);
 
 let self;
 
@@ -162,6 +168,13 @@ module.exports = self = {
             banner TEXT,
             image TEXT
         )`)
+
+        // Create indexes for common queries
+        await database.runPromise(`CREATE INDEX IF NOT EXISTS idx_experiences_user_guild ON experiences(userID, guildID)`);
+        await database.runPromise(`CREATE INDEX IF NOT EXISTS idx_guilds_id ON guilds(id)`);
+        await database.runPromise(`CREATE INDEX IF NOT EXISTS idx_channelcleans_gid_cname ON channelcleans(gid, cname)`);
+        await database.runPromise(`CREATE INDEX IF NOT EXISTS idx_mentionresponses_gid_trigger ON mentionResponses(gid, trigger)`);
+        await database.runPromise(`CREATE INDEX IF NOT EXISTS idx_banimages_gid_banner ON banImages(gid, banner)`);
     },
 
     /**
@@ -322,12 +335,22 @@ module.exports = self = {
      * @return {Object}
      */
     "getLevelRoleMap": async function(database, guildid) {
+        const cacheKey = `guild:levelRoleMap:${guildid}`;
+        const cached = guildSettingsCache.get(cacheKey);
+        if (cached !== undefined) {
+            return cached;
+        }
+
         let sql = await database.allPromise("SELECT levelRoleMap FROM guilds WHERE id = ?;", [guildid]);
 
-        if (sql[0]["levelRoleMap"] === null)
+        if (!sql || sql.length === 0 || sql[0]["levelRoleMap"] === null) {
+            guildSettingsCache.set(cacheKey, null);
             return null;
+        }
 
-        return JSON.parse(sql[0]["levelRoleMap"]);
+        const result = JSON.parse(sql[0]["levelRoleMap"]);
+        guildSettingsCache.set(cacheKey, result);
+        return result;
     },
 
     /**
@@ -341,6 +364,8 @@ module.exports = self = {
         if (typeof rolemap === "object")
             rolemap = JSON.stringify(rolemap);
 
+        // Invalidate cache on update
+        guildSettingsCache.delete(`guild:levelRoleMap:${guildid}`);
         await self.initGuild(database, guildid);
         await database.runPromise("UPDATE guilds SET levelRoleMap = ? WHERE id = ?", [rolemap, guildid]);
     },
@@ -355,23 +380,33 @@ module.exports = self = {
      * @return {Object}
      */
     "getXPData": async function(database, guildid, userid) {
+        const cacheKey = `xp:${guildid}:${userid}`;
+        const cached = xpDataCache.get(cacheKey);
+        if (cached !== undefined) {
+            return cached;
+        }
+
         let sql = await database.allPromise("SELECT level, exp FROM experiences WHERE userID = ? AND guildID = ?", [userid, guildid]);
 
         if (!sql || sql.length === 0) {
             await database.runPromise("INSERT INTO experiences (level, userID, guildID, exp) VALUES(?,?,?,?)",
                 [0, userid, guildid, 0])
-            return {
+            const result = {
                 "xp": 0,
                 "level": 0
-            }
+            };
+            xpDataCache.set(cacheKey, result);
+            return result;
         }
 
         let ret = sql[0];
 
-        return {
+        const result = {
             "xp": parseInt(ret.exp),
             "level": parseInt(ret.level)
-        }
+        };
+        xpDataCache.set(cacheKey, result);
+        return result;
     },
 
     /**
@@ -384,6 +419,8 @@ module.exports = self = {
      * @async
      */
     "setXPData": async function(database, guildid, userid, xp, level) {
+        // Invalidate cache on update
+        xpDataCache.delete(`xp:${guildid}:${userid}`);
         return await database.runPromise("UPDATE experiences SET level = ?, exp = ? WHERE guildID = ? AND userID = ?",
             [level, xp, guildid, userid])
     },
@@ -610,5 +647,22 @@ module.exports = self = {
      */
     "delBanImage": async function(database, guildid, bannerid) {
         return await database.runPromise("DELETE FROM banImages WHERE gid = ? AND banner = ?;", [guildid, bannerid])
+    },
+
+    /**
+     * Clear all caches (useful for shutdown/hot-reload)
+     */
+    "clearCaches": function() {
+        guildSettingsCache.clear();
+        xpDataCache.clear();
+    },
+
+    /**
+     * Invalidate all caches for a specific guild
+     * @param {String} guildid
+     */
+    "invalidateGuildCache": function(guildid) {
+        guildSettingsCache.invalidatePrefix(`guild:`);
+        xpDataCache.invalidatePrefix(`xp:${guildid}:`);
     }
 }

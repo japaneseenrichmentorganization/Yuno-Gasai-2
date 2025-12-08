@@ -187,7 +187,7 @@ CommandManager.prototype._parse = function(command) {
  * @private
  */
 CommandManager.prototype._commandExists = function(command) {
-    return Object.keys(this.commands).includes(command);
+    return Object.prototype.hasOwnProperty.call(this.commands, command);
 }
 
 /**

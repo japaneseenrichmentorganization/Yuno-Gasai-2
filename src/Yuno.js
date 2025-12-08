@@ -27,6 +27,7 @@ const DEFAULT_CONFIG_FILE = "config.json",
 
 const Util = require("util"),
     fs = require("fs"),
+    fsPromises = require("fs").promises,
     path = require("path"),
     EventEmitter = require("events"),
     {Client, GatewayIntentBits} = require("discord.js");
@@ -255,6 +256,50 @@ Yuno.prototype.parseArguments = async function(pargv) {
 
     if (pargv.includes("--help") || pargv.includes("-h"))
         return this.showCLIHelp();
+
+    // Display ASCII art banner - using RGB escape for #c88c8d (dusty rose pink)
+    const YUNO_PINK = "\x1b[38;2;200;140;141m";
+    const YUNO_PINK_BOLD = "\x1b[1;38;2;200;140;141m";
+    const RESET = "\x1b[0m";
+
+    console.log(`
+${YUNO_PINK}⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠂⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣯⢻⡘⢷⠀⠀⠀⠀⠀⠀⣿⣦⠹⡄⠀⢿⠟⣿⡆⠀⠸⡄⠀⢸⡄⠀⠀⠀⠀⠀⠀⠀⠀⣧
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢠⡄⠀⢸⣤⣳⡘⣇⠀⠀⠀⠀⠀⢸⣟⣆⢻⣆⢸⡆⢹⣿⣄⠀⣷⠀⢰⡇⠀⠀⠀⠀⠀⠀⠀⠀⢸
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⠸⡄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢸⣇⠀⠈⣆⠹⣿⣸⡇⡄⠀⠀⠀⢸⢧⠀⠈⠻⣆⢿⠀⠉⢻⡆⢹⠀⢸⡇⠀⠀⠀⠀⠀⠀⠀⠀⢸
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢸⠀⣷⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠸⣟⣦⠀⠘⣆⠘⢷⣷⠹⣆⣀⣀⣸⣿⣧⣀⣀⣈⡳⡄⢸⠀⢹⡀⡀⢸⡇⠀⠀⠀⠀⠀⠀⠀⠀⢸
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢸⠘⡆⣿⢇⠀⠰⡄⠀⠀⠀⠐⢦⡀⣀⣠⣿⣯⣳⣀⠼⣮⠻⣿⠋⠹⡉⠉⠇⠈⢿⡈⢹⣏⠉⠛⢻⡀⠈⣷⣇⣾⡇⠀⠀⠀⠀⠀⠀⠀⠀⢸
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢸⣧⣇⣿⢘⡆⠀⠸⡄⠀⠀⠀⠀⠁⠀⠀⢹⠀⠀⠈⢲⣼⣦⣼⣧⡤⣄⣰⣤⣀⠈⣧⠏⢻⡀⠀⢸⡇⠉⢹⣸⣿⠁⠀⠀⠀⠀⠀⠀⠀⠀⠘
+⠀⠀⠀⠀⢰⠀⠀⠀⠀⠀⠀⠀⠀⠘⡟⡟⡏⠉⠙⣇⠀⢿⣄⠀⠀⠀⠀⠀⢦⡸⣄⡴⣾⠿⠋⣹⣿⡟⣻⣿⠟⠷⢶⣤⡏⠀⠘⢧⠀⢸⠇⠀⠸⣿⡏⠀⠀⠀⠀⠀⠀⡄⠀⢀⣀
+⠀⢣⠀⢀⡿⡀⠀⠀⢀⡀⠀⠀⠀⠀⣿⣿⣷⣶⣶⠾⢦⡈⣏⢢⡀⠀⡀⠀⠀⠙⣿⡜⠁⠀⡿⠟⠁⠀⠉⣃⣴⣶⡄⠘⣿⣦⣀⠸⣆⢸⠀⠀⣰⡟⠀⠀⠀⠀⠀⠀⣰⡇⠀⡼⣆
+⠀⠸⡆⠸⡇⣧⠀⠀⣤⢣⠀⠀⠀⠀⢻⣿⣿⡏⠹⢿⣷⣝⢿⣆⠙⢦⡉⠢⢄⡀⢬⣓⣦⡀⠀⠀⠀⠸⡿⠜⣿⣿⣿⠀⣿⣾⡟⠛⣿⡟⠀⢠⡟⣀⡤⠋⢀⠀⠀⣠⣿⠇⣸⠇⠁
+⠀⠀⠸⡀⡇⠸⡄⠀⡟⢮⢇⠀⠀⠀⠈⢿⣿⡇⢰⣾⣿⣿⡆⠙⢦⠀⠉⠲⢤⣉⠓⠿⠭⠍⠃⠀⠀⠀⢹⣄⠹⠿⠛⢀⡿⠘⠁⠀⣿⠃⠀⣹⣾⣟⣠⣶⠏⠀⣴⣿⣟⣴⠏⠀⠙
+⠀⠀⠀⠹⣽⠀⢣⡀⡇⠈⠻⣧⠀⠀⠀⠘⢿⠀⠈⣇⢹⡿⣿⠀⠀⠀⠀⠀⠀⠉⠀⠀⠀⠀⠀⠀⠀⠀⠀⠙⠶⠤⠴⠾⣁⢀⣠⣴⣣⣶⣿⣽⡿⢻⣿⠃⣠⣾⣿⣿⠏⣿⠀⠀⠀
+⠀⠀⠀⠀⠹⣇⠈⢳⢱⠀⠀⢈⡷⣄⠀⢳⣌⣳⣀⠘⠷⠴⢿⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠉⠉⠉⠉⠉⠀⠀⠀⠉⠉⠁⠀⠀⢀⣿⣦⣿⣣⣾⣿⡿⠋⣿⠀⣿⠀⠀⠀
+⠀⠀⠀⠀⠀⠈⠓⠀⠻⡄⣠⠾⠋⠀⣹⢦⣙⣟⠛⠛⠛⠃⡼⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢈⣿⠟⠋⣻⣾⠏⠀⠀⡿⠀⣿⡤⠖⠋
+⠀⠀⠀⠀⠀⠀⢠⣄⣤⠛⢁⣠⣴⣞⡁⣸⡏⢿⡁⠀⢀⡴⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢸⠇⢀⣶⠟⠀⠀⠀⢠⡇⢰⡏⠀⠀⢀
+⠀⠀⠀⠀⠀⠀⠀⠈⠉⠉⠉⠉⢩⣾⠿⢹⢷⣸⣇⡴⠋⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣿⠀⣾⠁⠀⠀⠀⠀⢸⠀⢸⠀⢀⡴⡟
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⡴⠟⠁⠀⢸⠈⣿⣿⣄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢠⣿⣸⠇⠀⠀⠀⢰⠆⠀⠀⢸⡶⣿⣭⣟
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠁⠀⠀⠀⠀⢸⠀⢹⣿⡈⠳⣄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢸⣿⡟⣠⠄⠀⠀⡼⠀⠀⠀⢸⠃⠈⠻⣿
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢸⠀⠀⢻⣷⡀⠘⢷⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣾⣿⢧⠏⠀⠀⢰⡇⠀⠀⠀⣿⠀⠀⠀⠈
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢸⡆⠀⠈⣿⣷⡀⠈⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢠⣿⡿⡼⠀⠀⠀⠾⣸⠀⠀⠀⡟⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢸⡇⠀⠀⠘⣏⠻⣄⠀⠀⠀⠀⣀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢸⣿⣡⡇⠀⠀⠀⢰⡇⠀⠀⢰⡇⠀⠀⠠⠖
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⡇⠀⠀⠀⠈⣾⠎⢷⡀⠀⠀⠸⣍⠉⠉⠉⠁⠀⠀⠈⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣾⢷⣿⠇⠀⠀⠀⡞⠀⠀⠀⣾⣧⡴⠋⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⡇⠀⠀⠀⠀⠈⢷⣿⡿⣄⠀⠀⠈⠙⠿⠶⠤⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣠⣾⡟⢀⣿⠀⠀⠀⢰⠃⠀⠀⢰⡿⠋⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣯⠀⠀⠀⠀⠀⠀⢿⡇⠈⣧⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣀⣴⡿⠟⢻⡇⢸⣿⠀⠀⢠⡏⠀⠀⢀⣾⠀⠀⠀⠀⠀⠀
+⣠⡄⠀⠀⠀⠀⠀⠀⠀⠀⣴⣦⡦⠀⠀⠀⢸⠀⠀⠀⠀⠀⠀⢸⡇⠀⢹⠱⡄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣀⣴⡾⠟⠋⠀⠀⣼⡇⣿⣿⠀⢀⡎⠀⠀⠀⣸⡟⠀⠀⠀⠀⠀⠀
+⣿⣿⣦⣤⣤⣤⣤⣤⣠⣶⣿⣿⣄⠀⠀⠀⠈⡆⠀⠀⠀⠀⠀⠀⡇⠀⢸⠀⠹⡆⠀⠀⠀⠀⠀⠀⣀⣤⣶⣾⣿⠟⠀⠀⠀⠀⠀⣹⢁⣿⣿⢀⡾⠀⠀⠀⢠⢻⠇⠀⠀⠀⠀⣀⡤
+⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡿⠁⠀⠀⠀⡇⠀⠀⠀⠀⠀⠀⣇⠀⢸⠀⠀⠘⠶⠤⠶⠶⠛⠋⠁⠀⢈⣿⡁⠀⠀⠀⠀⠀⠀⣾⣾⣿⣿⡾⠀⠀⠀⠀⠈⡏⣀⡤⠶⠊⠉⠀⠀
+⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣇⠀⠀⠀⠀⠀⢳⠀⠀⠀⠀⠀⠀⣿⠀⢸⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⣧⠀⠀⠀⠀⠀⣼⣿⣿⣿⡿⠁⠀⠀⠀⠀⣼⠏⠁⠀⠀⠀⠀⠀⠀
+⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⠀⠀⠀⠀⠀⢸⡆⠀⠀⠀⠀⠀⣿⠀⢸⠀⠀⠀⠀⠀⠀⡇⠀⠀⠀⠀⠀⠀⢸⡄⠀⠀⠀⣠⡟⢹⣿⡟⠁⠀⠀⠀⣀⣸⡿⠀⠀⠀⠀⠀⠀⠀⠀
+⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡆⠀⠀⠀⠀⠀⡇⠀⠀⠀⠀⠀⣸⠀⢸⠀⠀⠀⠀⠀⠀⡇⠀⠀⠀⠀⠀⠀⠘⣷⠀⠀⢰⣿⢥⣽⠏⠀⠀⠀⠀⠀⢩⣿⠇⠀⠀⠀⠀⠀⠀⠀⠀
+⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡇⠀⠀⠀⠀⠀⢹⠀⠀⠀⠀⠀⣿⠀⡸⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣿⣠⣴⣾⣯⡾⠋⠀⠀⠀⠀⠀⢠⣿⡏⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⠀⠀⠀⠀⠀⠀⠸⡄⠀⠀⠀⠀⣾⠀⡇⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣠⠞⠿⠋⠁⢸⡿⠀⠀⠀⠀⠀⠀⣰⣿⡟⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣦⠀⠀⠀⠀⠀⠀⡇⠀⠀⠀⠀⣿⠀⡇⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣠⡞⠁⠀⠀⠀⢀⡞⠀⠀⠀⠀⠀⢀⣾⣿⠟⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⠏⠀⠀⠀⠀⠀⠀⢸⡄⠀⠀⠀⢸⣠⡇⠀⠀⠀⠀⠀⠀⠀⢀⣠⡾⠋⠀⠀⠀⠀⣠⡞⠀⢀⠀⣀⢀⣴⣿⣿⣋⣤⠤⠖⠒⠚⠛⠛⠒⠦⣤⣀⠀${RESET}
+
+${YUNO_PINK_BOLD}                    ♥ Yuno Gasai v${this.version} ♥${RESET}
+${YUNO_PINK}           "I'll protect this server forever... just for you~"${RESET}
+`);
 
     this.interactivity = !((pargv.includes("--no-interactions") || pargv.includes("-noit") || process.env.NO_INTERACTION))
 
@@ -544,7 +589,7 @@ Yuno.prototype.shutdown = async function(reason, e) {
  * @async
  */
 Yuno.prototype._loadModules = async function() {
-    let files = fs.readdirSync("./src/modules");
+    let files = await fsPromises.readdir("./src/modules");
 
     for (const file of files) {
         delete require.cache[require.resolve("./modules/" + file)]
@@ -561,7 +606,7 @@ Yuno.prototype._loadModules = async function() {
  * @async
  */
 Yuno.prototype._loadModulesHR = async function() {
-    let files = fs.readdirSync("./src/modules");
+    let files = await fsPromises.readdir("./src/modules");
 
     for (const file of files) {
         delete require.cache[require.resolve("./modules/" + file)]
@@ -615,7 +660,7 @@ Yuno.prototype.launch = async function() {
         dbPragmas = this.config.get("database.pragmas"),
         newDb;
 
-    try { fs.statSync(dbPath) } catch(e) {
+    try { await fsPromises.stat(dbPath) } catch(e) {
         if (e.code === "ENOENT") {
             newDb = true;
             this.prompt.warn("Database " + dbPath + " as specified in the config doesn't exists. Creating a new one...");

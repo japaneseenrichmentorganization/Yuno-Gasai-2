@@ -98,6 +98,9 @@ module.exports.configLoaded = function(Yuno, config) {
         dmMessage = dmMessage_;
 }
 
-module.exports.destroy = function() {
-    
+module.exports.beforeShutdown = function(Yuno) {
+    if (discClient) {
+        discClient.removeListener("messageCreate", msgEvent);
+    }
+    ONE_TIME_EVENT = false;
 }

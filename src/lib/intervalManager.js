@@ -87,7 +87,7 @@ IntervalManager.prototype.get = function(id) {
  * @param {String} id 
  */
 IntervalManager.prototype._has = function(id) {
-    return Object.keys(this.intervals).includes(id);
+    return Object.prototype.hasOwnProperty.call(this.intervals, id);
 }
 
 let _getValueFromIntervals = function(id, prop){

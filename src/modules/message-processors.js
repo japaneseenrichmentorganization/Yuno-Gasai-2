@@ -16,11 +16,15 @@
     along with this program.  If not, see https://www.gnu.org/licenses/.
 */
 
+const fsPromises = require("fs").promises;
+
 let workOnlyOnGuild = null,
     messageProcsors = [],
     messageProcsorsPaths = [],
     DISCORD_EVENT = false,
-    commandExecutor = null;
+    commandExecutor = null,
+    discClient = null,
+    messageHandler = null;
 
 module.exports.modulename = "message-processors";
 
@@ -44,7 +48,7 @@ let readModule = function(file) {
 let readModules = async function() {
     messageProcsors = [];
     messageProcsorsPaths = [];
-    let messageProcessorsPath = fs.readdirSync("src/message-processors", "utf8");
+    let messageProcessorsPath = await fsPromises.readdir("src/message-processors", "utf8");
 
     for (const el of messageProcessorsPath) {
         if (el.indexOf(".js") === el.length - ".js".length)
@@ -54,7 +58,7 @@ let readModules = async function() {
 
 let discordConnected = async function(Yuno) {
     await readModules();
-    let discClient = Yuno.dC;
+    discClient = Yuno.dC;
 
     for (const e of messageProcsors) {
         await e.configLoaded(Yuno, Yuno.config);
@@ -62,14 +66,14 @@ let discordConnected = async function(Yuno) {
     }
 
     let workOnlyOnGuild_ = discClient.guilds.cache.get(workOnlyOnGuild);
-    
+
     if (workOnlyOnGuild_ !== null)
         workOnlyOnGuild = workOnlyOnGuild_
 
     if (!DISCORD_EVENT) {
         DISCORD_EVENT = true;
 
-        discClient.on("messageCreate", (function(msg) {
+        messageHandler = function(msg) {
             if (msg.author.id === discClient.user.id)
                 return;
 
@@ -89,7 +93,9 @@ let discordConnected = async function(Yuno) {
                     throw e;
                 }
             }
-        }))
+        };
+
+        discClient.on("messageCreate", messageHandler);
     }
 };
 
@@ -105,4 +111,12 @@ module.exports.configLoaded = function(Yuno, config) {
 
     if (typeof workOnlyOnGuild_ === "string")
         workOnlyOnGuild = workOnlyOnGuild_
+}
+
+module.exports.beforeShutdown = function(Yuno) {
+    if (discClient && messageHandler) {
+        discClient.removeListener("messageCreate", messageHandler);
+    }
+    DISCORD_EVENT = false;
+    messageHandler = null;
 }
