@@ -50,6 +50,18 @@ module.exports.run = async function(yuno, author, args, msg) {
 
         try {
             await msg.guild.members.unban(e, reason);
+
+            // Record to database for mod-stats
+            await yuno.dbCommands.addModAction(
+                yuno.database,
+                msg.guild.id,
+                msg.author.id,
+                e,
+                "unban",
+                reason,
+                Date.now()
+            );
+
             await msg.channel.send({embeds: [new EmbedCmdResponse()
                 .setColor(SUCCESS_COLOR)
                 .setTitle(":white_check_mark: Unban successful.")

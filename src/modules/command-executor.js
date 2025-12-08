@@ -41,7 +41,7 @@ let msgEvent = (function(msg) {
         else
             return msg.reply((dmMessage !== null ? dmMessage : "I'm just a bot :'(. I can't answer to you.") + "\nYou can also send !source(s) to get the sources of the bot.");
     }
-    
+
     if (typeof workOnlyOnGuild !== "undefined" && workOnlyOnGuild !== null && workOnlyOnGuild.id !== msg.guild.id)
         return;
 
@@ -51,6 +51,21 @@ let msgEvent = (function(msg) {
     // switching to default prefix if guild
     if (guildPrefix === null || typeof guildPrefix === "undefined")
         guildPrefix = defaultPrefix;
+
+    // Check if the bot is mentioned - trigger delay command
+    if (msg.mentions.has(discClient.user) && !msg.mentions.everyone) {
+        // Remove the mention and check if there's a command after it
+        const mentionRegex = new RegExp(`<@!?${discClient.user.id}>`, 'g');
+        const contentWithoutMention = msgCnt.replace(mentionRegex, '').trim();
+
+        // If just a mention or mention with "delay"/"wait"/"hold", run delay command
+        if (contentWithoutMention === '' ||
+            contentWithoutMention.toLowerCase() === 'delay' ||
+            contentWithoutMention.toLowerCase() === 'wait' ||
+            contentWithoutMention.toLowerCase() === 'hold') {
+            return Yuno.commandMan.execute(Yuno, msg.member, 'delay', msg);
+        }
+    }
 
     if (msgCnt.indexOf(guildPrefix) === 0) {
         let command = msgCnt.substring(guildPrefix.length);

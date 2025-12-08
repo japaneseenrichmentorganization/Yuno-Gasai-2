@@ -138,7 +138,18 @@ module.exports.run = async function(yuno, author, args, msg) {
                 deleteMessageSeconds: 86400,
                 reason: reason
             });
-            
+
+            // Record to database for mod-stats
+            await yuno.dbCommands.addModAction(
+                yuno.database,
+                msg.guild.id,
+                msg.author.id,
+                target.id,
+                "ban",
+                reason,
+                Date.now()
+            );
+
             msg.channel.send({embeds: [successfulEmbed]});
         } catch (err) {
             msg.channel.send({embeds: [new EmbedCmdResponse()
