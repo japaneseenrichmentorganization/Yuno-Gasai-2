@@ -18,11 +18,15 @@
 
 module.exports.modulename = "auto-role-restore";
 
-let DISCORD_EVENTED = false;
+let DISCORD_EVENTED = false,
+    discClient = null,
+    memberAddHandler = null;
 
 let discordConnected = async function(Yuno) {
-    if (!DISCORD_EVENTED)
-        Yuno.dC.on("guildMemberAdd", async function(member) {
+    discClient = Yuno.dC;
+
+    if (!DISCORD_EVENTED) {
+        memberAddHandler = async function(member) {
             try {
                 // Check if user has XP data in the database
                 let xpData = await Yuno.dbCommands.getXPData(Yuno.database, member.guild.id, member.id);
@@ -61,7 +65,10 @@ let discordConnected = async function(Yuno) {
                 // Log error but don't throw - we don't want to crash on rejoins
                 console.error("Failed to auto-restore roles on member join:", e.message);
             }
-        })
+        };
+
+        discClient.on("guildMemberAdd", memberAddHandler);
+    }
 
     DISCORD_EVENTED = true;
 };
@@ -71,4 +78,14 @@ module.exports.init = function(Yuno, hotReloaded) {
         discordConnected(Yuno);
     else
         Yuno.on("discord-connected", discordConnected)
+}
+
+module.exports.configLoaded = function() {}
+
+module.exports.beforeShutdown = function(Yuno) {
+    if (discClient && memberAddHandler) {
+        discClient.removeListener("guildMemberAdd", memberAddHandler);
+    }
+    DISCORD_EVENTED = false;
+    memberAddHandler = null;
 }

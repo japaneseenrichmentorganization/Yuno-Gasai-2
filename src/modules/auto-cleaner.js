@@ -50,10 +50,23 @@ let setupCleaners = async function(Yuno) {
 }
 module.exports.configLoaded = function() {
 }
+
 module.exports.init = function(Yuno, hotreloaded) {
     intervalManager = Yuno.intervalMan;
     if (hotreloaded)
         setupCleaners(Yuno)
     else
         Yuno.on("discord-connected", setupCleaners.bind(Yuno, Yuno));
+}
+
+module.exports.beforeShutdown = function(Yuno) {
+    // Clear all autocleaner intervals on shutdown/hot-reload
+    if (intervalManager) {
+        const intervals = Object.keys(intervalManager.intervals);
+        for (const id of intervals) {
+            if (id.startsWith("autocleaner-clean-")) {
+                intervalManager.clear(id);
+            }
+        }
+    }
 }

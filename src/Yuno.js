@@ -27,6 +27,7 @@ const DEFAULT_CONFIG_FILE = "config.json",
 
 const Util = require("util"),
     fs = require("fs"),
+    fsPromises = require("fs").promises,
     path = require("path"),
     EventEmitter = require("events"),
     {Client, GatewayIntentBits} = require("discord.js");
@@ -256,6 +257,50 @@ Yuno.prototype.parseArguments = async function(pargv) {
     if (pargv.includes("--help") || pargv.includes("-h"))
         return this.showCLIHelp();
 
+    // Display ASCII art banner - using RGB escape for #c88c8d (dusty rose pink)
+    const YUNO_PINK = "\x1b[38;2;200;140;141m";
+    const YUNO_PINK_BOLD = "\x1b[1;38;2;200;140;141m";
+    const RESET = "\x1b[0m";
+
+    console.log(`
+${YUNO_PINK}⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠂⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣯⢻⡘⢷⠀⠀⠀⠀⠀⠀⣿⣦⠹⡄⠀⢿⠟⣿⡆⠀⠸⡄⠀⢸⡄⠀⠀⠀⠀⠀⠀⠀⠀⣧
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢠⡄⠀⢸⣤⣳⡘⣇⠀⠀⠀⠀⠀⢸⣟⣆⢻⣆⢸⡆⢹⣿⣄⠀⣷⠀⢰⡇⠀⠀⠀⠀⠀⠀⠀⠀⢸
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⠸⡄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢸⣇⠀⠈⣆⠹⣿⣸⡇⡄⠀⠀⠀⢸⢧⠀⠈⠻⣆⢿⠀⠉⢻⡆⢹⠀⢸⡇⠀⠀⠀⠀⠀⠀⠀⠀⢸
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢸⠀⣷⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠸⣟⣦⠀⠘⣆⠘⢷⣷⠹⣆⣀⣀⣸⣿⣧⣀⣀⣈⡳⡄⢸⠀⢹⡀⡀⢸⡇⠀⠀⠀⠀⠀⠀⠀⠀⢸
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢸⠘⡆⣿⢇⠀⠰⡄⠀⠀⠀⠐⢦⡀⣀⣠⣿⣯⣳⣀⠼⣮⠻⣿⠋⠹⡉⠉⠇⠈⢿⡈⢹⣏⠉⠛⢻⡀⠈⣷⣇⣾⡇⠀⠀⠀⠀⠀⠀⠀⠀⢸
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢸⣧⣇⣿⢘⡆⠀⠸⡄⠀⠀⠀⠀⠁⠀⠀⢹⠀⠀⠈⢲⣼⣦⣼⣧⡤⣄⣰⣤⣀⠈⣧⠏⢻⡀⠀⢸⡇⠉⢹⣸⣿⠁⠀⠀⠀⠀⠀⠀⠀⠀⠘
+⠀⠀⠀⠀⢰⠀⠀⠀⠀⠀⠀⠀⠀⠘⡟⡟⡏⠉⠙⣇⠀⢿⣄⠀⠀⠀⠀⠀⢦⡸⣄⡴⣾⠿⠋⣹⣿⡟⣻⣿⠟⠷⢶⣤⡏⠀⠘⢧⠀⢸⠇⠀⠸⣿⡏⠀⠀⠀⠀⠀⠀⡄⠀⢀⣀
+⠀⢣⠀⢀⡿⡀⠀⠀⢀⡀⠀⠀⠀⠀⣿⣿⣷⣶⣶⠾⢦⡈⣏⢢⡀⠀⡀⠀⠀⠙⣿⡜⠁⠀⡿⠟⠁⠀⠉⣃⣴⣶⡄⠘⣿⣦⣀⠸⣆⢸⠀⠀⣰⡟⠀⠀⠀⠀⠀⠀⣰⡇⠀⡼⣆
+⠀⠸⡆⠸⡇⣧⠀⠀⣤⢣⠀⠀⠀⠀⢻⣿⣿⡏⠹⢿⣷⣝⢿⣆⠙⢦⡉⠢⢄⡀⢬⣓⣦⡀⠀⠀⠀⠸⡿⠜⣿⣿⣿⠀⣿⣾⡟⠛⣿⡟⠀⢠⡟⣀⡤⠋⢀⠀⠀⣠⣿⠇⣸⠇⠁
+⠀⠀⠸⡀⡇⠸⡄⠀⡟⢮⢇⠀⠀⠀⠈⢿⣿⡇⢰⣾⣿⣿⡆⠙⢦⠀⠉⠲⢤⣉⠓⠿⠭⠍⠃⠀⠀⠀⢹⣄⠹⠿⠛⢀⡿⠘⠁⠀⣿⠃⠀⣹⣾⣟⣠⣶⠏⠀⣴⣿⣟⣴⠏⠀⠙
+⠀⠀⠀⠹⣽⠀⢣⡀⡇⠈⠻⣧⠀⠀⠀⠘⢿⠀⠈⣇⢹⡿⣿⠀⠀⠀⠀⠀⠀⠉⠀⠀⠀⠀⠀⠀⠀⠀⠀⠙⠶⠤⠴⠾⣁⢀⣠⣴⣣⣶⣿⣽⡿⢻⣿⠃⣠⣾⣿⣿⠏⣿⠀⠀⠀
+⠀⠀⠀⠀⠹⣇⠈⢳⢱⠀⠀⢈⡷⣄⠀⢳⣌⣳⣀⠘⠷⠴⢿⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠉⠉⠉⠉⠉⠀⠀⠀⠉⠉⠁⠀⠀⢀⣿⣦⣿⣣⣾⣿⡿⠋⣿⠀⣿⠀⠀⠀
+⠀⠀⠀⠀⠀⠈⠓⠀⠻⡄⣠⠾⠋⠀⣹⢦⣙⣟⠛⠛⠛⠃⡼⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢈⣿⠟⠋⣻⣾⠏⠀⠀⡿⠀⣿⡤⠖⠋
+⠀⠀⠀⠀⠀⠀⢠⣄⣤⠛⢁⣠⣴⣞⡁⣸⡏⢿⡁⠀⢀⡴⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢸⠇⢀⣶⠟⠀⠀⠀⢠⡇⢰⡏⠀⠀⢀
+⠀⠀⠀⠀⠀⠀⠀⠈⠉⠉⠉⠉⢩⣾⠿⢹⢷⣸⣇⡴⠋⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣿⠀⣾⠁⠀⠀⠀⠀⢸⠀⢸⠀⢀⡴⡟
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⡴⠟⠁⠀⢸⠈⣿⣿⣄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢠⣿⣸⠇⠀⠀⠀⢰⠆⠀⠀⢸⡶⣿⣭⣟
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠁⠀⠀⠀⠀⢸⠀⢹⣿⡈⠳⣄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢸⣿⡟⣠⠄⠀⠀⡼⠀⠀⠀⢸⠃⠈⠻⣿
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢸⠀⠀⢻⣷⡀⠘⢷⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣾⣿⢧⠏⠀⠀⢰⡇⠀⠀⠀⣿⠀⠀⠀⠈
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢸⡆⠀⠈⣿⣷⡀⠈⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢠⣿⡿⡼⠀⠀⠀⠾⣸⠀⠀⠀⡟⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢸⡇⠀⠀⠘⣏⠻⣄⠀⠀⠀⠀⣀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢸⣿⣡⡇⠀⠀⠀⢰⡇⠀⠀⢰⡇⠀⠀⠠⠖
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⡇⠀⠀⠀⠈⣾⠎⢷⡀⠀⠀⠸⣍⠉⠉⠉⠁⠀⠀⠈⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣾⢷⣿⠇⠀⠀⠀⡞⠀⠀⠀⣾⣧⡴⠋⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⡇⠀⠀⠀⠀⠈⢷⣿⡿⣄⠀⠀⠈⠙⠿⠶⠤⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣠⣾⡟⢀⣿⠀⠀⠀⢰⠃⠀⠀⢰⡿⠋⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣯⠀⠀⠀⠀⠀⠀⢿⡇⠈⣧⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣀⣴⡿⠟⢻⡇⢸⣿⠀⠀⢠⡏⠀⠀⢀⣾⠀⠀⠀⠀⠀⠀
+⣠⡄⠀⠀⠀⠀⠀⠀⠀⠀⣴⣦⡦⠀⠀⠀⢸⠀⠀⠀⠀⠀⠀⢸⡇⠀⢹⠱⡄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣀⣴⡾⠟⠋⠀⠀⣼⡇⣿⣿⠀⢀⡎⠀⠀⠀⣸⡟⠀⠀⠀⠀⠀⠀
+⣿⣿⣦⣤⣤⣤⣤⣤⣠⣶⣿⣿⣄⠀⠀⠀⠈⡆⠀⠀⠀⠀⠀⠀⡇⠀⢸⠀⠹⡆⠀⠀⠀⠀⠀⠀⣀⣤⣶⣾⣿⠟⠀⠀⠀⠀⠀⣹⢁⣿⣿⢀⡾⠀⠀⠀⢠⢻⠇⠀⠀⠀⠀⣀⡤
+⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡿⠁⠀⠀⠀⡇⠀⠀⠀⠀⠀⠀⣇⠀⢸⠀⠀⠘⠶⠤⠶⠶⠛⠋⠁⠀⢈⣿⡁⠀⠀⠀⠀⠀⠀⣾⣾⣿⣿⡾⠀⠀⠀⠀⠈⡏⣀⡤⠶⠊⠉⠀⠀
+⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣇⠀⠀⠀⠀⠀⢳⠀⠀⠀⠀⠀⠀⣿⠀⢸⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⣧⠀⠀⠀⠀⠀⣼⣿⣿⣿⡿⠁⠀⠀⠀⠀⣼⠏⠁⠀⠀⠀⠀⠀⠀
+⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⠀⠀⠀⠀⠀⢸⡆⠀⠀⠀⠀⠀⣿⠀⢸⠀⠀⠀⠀⠀⠀⡇⠀⠀⠀⠀⠀⠀⢸⡄⠀⠀⠀⣠⡟⢹⣿⡟⠁⠀⠀⠀⣀⣸⡿⠀⠀⠀⠀⠀⠀⠀⠀
+⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡆⠀⠀⠀⠀⠀⡇⠀⠀⠀⠀⠀⣸⠀⢸⠀⠀⠀⠀⠀⠀⡇⠀⠀⠀⠀⠀⠀⠘⣷⠀⠀⢰⣿⢥⣽⠏⠀⠀⠀⠀⠀⢩⣿⠇⠀⠀⠀⠀⠀⠀⠀⠀
+⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡇⠀⠀⠀⠀⠀⢹⠀⠀⠀⠀⠀⣿⠀⡸⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣿⣠⣴⣾⣯⡾⠋⠀⠀⠀⠀⠀⢠⣿⡏⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⠀⠀⠀⠀⠀⠀⠸⡄⠀⠀⠀⠀⣾⠀⡇⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣠⠞⠿⠋⠁⢸⡿⠀⠀⠀⠀⠀⠀⣰⣿⡟⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣦⠀⠀⠀⠀⠀⠀⡇⠀⠀⠀⠀⣿⠀⡇⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣠⡞⠁⠀⠀⠀⢀⡞⠀⠀⠀⠀⠀⢀⣾⣿⠟⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⠏⠀⠀⠀⠀⠀⠀⢸⡄⠀⠀⠀⢸⣠⡇⠀⠀⠀⠀⠀⠀⠀⢀⣠⡾⠋⠀⠀⠀⠀⣠⡞⠀⢀⠀⣀⢀⣴⣿⣿⣋⣤⠤⠖⠒⠚⠛⠛⠒⠦⣤⣀⠀${RESET}
+
+${YUNO_PINK_BOLD}                    ♥ Yuno Gasai v${this.version} ♥${RESET}
+${YUNO_PINK}           "I'll protect this server forever... just for you~"${RESET}
+`);
+
     this.interactivity = !((pargv.includes("--no-interactions") || pargv.includes("-noit") || process.env.NO_INTERACTION))
 
     if (!this.interactivity)
@@ -429,23 +474,20 @@ Yuno.prototype._uncaughtException = function(e) {
  * @private
  * @return {Promise}
  */
-Yuno.prototype._triggerConfigEvents = function() {
+Yuno.prototype._triggerConfigEvents = async function() {
     // Instances that need a config event.
     // Sorted by their importance (from first to last)
     const INSTANCES = [this.prompt, this.interactiveTerm, this.commandMan, this.configMan];
 
-    return new Promise((function(res, rej) {
-        INSTANCES.forEach((async function(el) {
-            if (typeof el.configLoaded === "function")
-                await el.configLoaded(this, this.config);
-        }).bind(this));
+    for (const el of INSTANCES) {
+        if (typeof el.configLoaded === "function")
+            await el.configLoaded(this, this.config);
+    }
 
-        this.modules.forEach((async function(el) {
-            if (typeof el.configLoaded === "function")
-                await el.configLoaded(this, this.config);
-        }).bind(this));
-        res();
-    }).bind(this));
+    for (const el of this.modules) {
+        if (typeof el.configLoaded === "function")
+            await el.configLoaded(this, this.config);
+    }
 }
 
 /**
@@ -453,23 +495,20 @@ Yuno.prototype._triggerConfigEvents = function() {
  * @private
  * @return {Promise}
  */
-Yuno.prototype._triggerShutdownEvents = function() {
+Yuno.prototype._triggerShutdownEvents = async function() {
     // Instances that need a shutdown event.
     // Sorted by their importance (from first to last)
     const INSTANCES = [this.prompt, this.interactiveTerm, this.commandMan, this.configMan]
 
-    return new Promise((function(res, rej) {
-        INSTANCES.forEach((async function(el) {
-            if (el.beforeShutdown && typeof el.beforeShutdown === "function")
-                await el.beforeShutdown(this);
-        }).bind(this));
+    for (const el of INSTANCES) {
+        if (el.beforeShutdown && typeof el.beforeShutdown === "function")
+            await el.beforeShutdown(this);
+    }
 
-        this.modules.forEach((async function(el) {
-            if (typeof el.beforeShutdown === "function")
-                await el.beforeShutdown(this, this.config);
-        }).bind(this));
-        res();
-    }).bind(this));
+    for (const el of this.modules) {
+        if (typeof el.beforeShutdown === "function")
+            await el.beforeShutdown(this, this.config);
+    }
 }
 
 /**
@@ -549,19 +588,16 @@ Yuno.prototype.shutdown = async function(reason, e) {
  * Do not confound the ModuleExporter (which is for "librairies") and this, that will load Yuno's module.
  * @async
  */
-Yuno.prototype._loadModules = function() {
-    return new Promise((function(resolve) {
-        let files = fs.readdirSync("./src/modules");
+Yuno.prototype._loadModules = async function() {
+    let files = await fsPromises.readdir("./src/modules");
 
-        files.forEach((async function(file) {
-            delete require.cache[require.resolve("./modules/" + file)]
-            let mod = require("./modules/" + file);
-            this.modules.push(mod);
-            await mod.init(this);
-            this.prompt.success("Module " + mod.modulename + " successfully loaded.");
-        }).bind(this))
-        resolve();
-    }).bind(this))
+    for (const file of files) {
+        delete require.cache[require.resolve("./modules/" + file)]
+        let mod = require("./modules/" + file);
+        this.modules.push(mod);
+        await mod.init(this);
+        this.prompt.success("Module " + mod.modulename + " successfully loaded.");
+    }
 }
 
 /**
@@ -569,20 +605,17 @@ Yuno.prototype._loadModules = function() {
  * Do not confound the ModuleExporter (which is for "librairies") and this, that will load Yuno's module.
  * @async
  */
-Yuno.prototype._loadModulesHR = function() {
-    return new Promise((function(resolve) {
-        let files = fs.readdirSync("./src/modules");
+Yuno.prototype._loadModulesHR = async function() {
+    let files = await fsPromises.readdir("./src/modules");
 
-        files.forEach((async function(file) {
-            delete require.cache[require.resolve("./modules/" + file)]
-            let mod = require("./modules/" + file);
-            this.modules.push(mod);
-            await mod.configLoaded(this, this.config);
-            await mod.init(this, true);
-            this.prompt.success("Module " + mod.modulename + " successfully loaded.");
-        }).bind(this))
-        resolve();
-    }).bind(this))
+    for (const file of files) {
+        delete require.cache[require.resolve("./modules/" + file)]
+        let mod = require("./modules/" + file);
+        this.modules.push(mod);
+        await mod.configLoaded(this, this.config);
+        await mod.init(this, true);
+        this.prompt.success("Module " + mod.modulename + " successfully loaded.");
+    }
 }
 
 /**
@@ -627,7 +660,7 @@ Yuno.prototype.launch = async function() {
         dbPragmas = this.config.get("database.pragmas"),
         newDb;
 
-    try { fs.statSync(dbPath) } catch(e) {
+    try { await fsPromises.stat(dbPath) } catch(e) {
         if (e.code === "ENOENT") {
             newDb = true;
             this.prompt.warn("Database " + dbPath + " as specified in the config doesn't exists. Creating a new one...");

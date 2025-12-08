@@ -17,6 +17,7 @@ module.exports.messageProcName = "spam-filter"
 
 const {EmbedBuilder, PermissionsBitField} = require("discord.js"),
     fs = require("fs"),
+    fsPromises = require("fs").promises,
     prompt = (require("../lib/prompt")).init();
 
 const DISCORD_INVITE_REGEX = /(https)*(http)*:*(\/\/)*discord(.gg|app.com\/invite)\/[a-zA-Z0-9]{1,}/i;
@@ -25,19 +26,27 @@ const LINK_REGEX = /(ftp|http|https):\/\/(www\.)??[-a-zA-Z0-9@:%._\+~#=]{2,256}\
 let maxWarnings = 3,
     spamfilt = {},
     warnings = {},
-    customspamrules = {};
+    customspamrules = {},
+    customSpamRulesLoaded = false;
 
-// reading custom spam rules files
-try {
-    fs.readdirSync("./src/message-processors/custom-spam-rules", "utf8").forEach(el => {
-        el = "./custom-spam-rules/" + el;
-        let test = require.resolve(el);
-        delete require.cache[require.resolve(el)];
-        let req = require(el);
-        customspamrules[req.id] = req;
-    })
-} catch(e) {
-    prompt.error("Error while reading custom-spam-rules", e);
+// Load custom spam rules asynchronously
+async function loadCustomSpamRules() {
+    if (customSpamRulesLoaded) return;
+    try {
+        const files = await fsPromises.readdir("./src/message-processors/custom-spam-rules", "utf8");
+        for (const el of files) {
+            let filePath = "./custom-spam-rules/" + el;
+            let resolvedPath = require.resolve(filePath);
+            delete require.cache[resolvedPath];
+            let req = require(filePath);
+            customspamrules[req.id] = req;
+        }
+        customSpamRulesLoaded = true;
+    } catch(e) {
+        if (e.code !== "ENOENT") {
+            prompt.error("Error while reading custom-spam-rules", e);
+        }
+    }
 }
 
 let ban = function(msg, banreason, warningmsg) {
@@ -69,7 +78,7 @@ module.exports.message = async function(content, msg) {
     if (new String(spamfilt[msg.guild.id]).toLowerCase() === "false")
         return;
 
-    if (Object.keys(customspamrules).includes(msg.guild.id))
+    if (Object.prototype.hasOwnProperty.call(customspamrules, msg.guild.id))
         return customspamrules[msg.guild.id].message(content, msg);
 // Obtain the member if we don't have it
     if(msg.guild && !msg.guild.members.cache.has(msg.author.id) && !msg.webhookID) {
@@ -109,13 +118,20 @@ module.exports.message = async function(content, msg) {
 }
 
 module.exports.discordConnected = async function(Yuno) {
+    await loadCustomSpamRules();
     spamfilt = await Yuno.dbCommands.getSpamFilterEnabled(Yuno.database);
 
-    Object.values(customspamrules).forEach(el => typeof el.discordConnected === "function" ? el.discordConnected(Yuno) : null);
+    for (const el of Object.values(customspamrules)) {
+        if (typeof el.discordConnected === "function")
+            await el.discordConnected(Yuno);
+    }
 }
 
 module.exports.configLoaded = async function(Yuno, config) {
-    Object.values(customspamrules).forEach(el => typeof el.configLoaded === "function" ? el.configLoaded(Yuno, config) : null);
+    for (const el of Object.values(customspamrules)) {
+        if (typeof el.configLoaded === "function")
+            await el.configLoaded(Yuno, config);
+    }
 
     let spamWarnings = config.get("spam.max-warnings");
 
