@@ -58,39 +58,52 @@ module.exports.run = async function(yuno, author, args, msg) {
         }
     }
 
-    if (userMentions.length !== 0)
-        userMentions.forEach(async u => {
-            let target = await msg.guild.members.fetch(u.id);
+    for (const u of userMentions) {
+        let target;
+        try {
+            target = await msg.guild.members.fetch(u.id);
+        } catch (err) {
+            await msg.channel.send({embeds: [new EmbedCmdResponse()
+                .setColor(FAIL_COLOR)
+                .setTitle(":negative_squared_cross_mark: Kick failed.")
+                .setDescription(":arrow_right: Failed to fetch user with ID " + u.id + ": " + err.message)
+                .setCMDRequester(msg.member)]});
+            continue;
+        }
 
-            if (target.id === msg.author.id)
-                return msg.channel.send({embeds: [new EmbedCmdResponse()
-                    .setColor(FAIL_COLOR)
-                    .setTitle(":negative_squared_cross_mark: Kick failed.")
-                    .setDescription(":arrow_right: You can also leave the server instead of kicking yourself ;)")
-                    .setCMDRequester(msg.member)]});
+        if (target.id === msg.author.id) {
+            await msg.channel.send({embeds: [new EmbedCmdResponse()
+                .setColor(FAIL_COLOR)
+                .setTitle(":negative_squared_cross_mark: Kick failed.")
+                .setDescription(":arrow_right: You can also leave the server instead of kicking yourself ;)")
+                .setCMDRequester(msg.member)]});
+            continue;
+        }
 
-            if (!yuno.commandMan._isUserMaster(msg.author.id) && msg.member.roles.highest.comparePositionTo(msg.guild.members.cache.get(target.id).roles.highest) <= 0)
-                return msg.channel.send({embeds: [new EmbedCmdResponse()
-                    .setColor(FAIL_COLOR)
-                    .setTitle(":negative_squared_cross_mark: Kick failed.")
-                    .setDescription(":arrow_right: Failed to kick user " + target.user.tag + ". The user has a higher or the same hierarchy than you.")
-                    .setCMDRequester(msg.member)]});
+        if (!yuno.commandMan._isUserMaster(msg.author.id) && msg.member.roles.highest.comparePositionTo(msg.guild.members.cache.get(target.id).roles.highest) <= 0) {
+            await msg.channel.send({embeds: [new EmbedCmdResponse()
+                .setColor(FAIL_COLOR)
+                .setTitle(":negative_squared_cross_mark: Kick failed.")
+                .setDescription(":arrow_right: Failed to kick user " + target.user.tag + ". The user has a higher or the same hierarchy than you.")
+                .setCMDRequester(msg.member)]});
+            continue;
+        }
 
-
-            msg.guild.members.resolve(target.id).kick(reason).then(function() {
-                msg.channel.send({embeds: [new EmbedCmdResponse()
-                    .setColor(SUCCESS_COLOR)
-                    .setTitle(":white_check_mark: Kick successful.")
-                    .setDescription(":arrow_right: User", target.user.tag, "has been successfully kicked.")
-                    .setCMDRequester(msg.member)]});
-            }).catch(function(err) {
-                msg.channel.send({embeds: [new EmbedCmdResponse()
-                    .setColor(FAIL_COLOR)
-                    .setTitle(":negative_squared_cross_mark: Kick failed.")
-                    .setDescription(":arrow_right: Failed to kick", target.user.tag, ":", err.message)
-                    .setCMDRequester(msg.member)]});
-            })
-        })
+        try {
+            await target.kick(reason);
+            await msg.channel.send({embeds: [new EmbedCmdResponse()
+                .setColor(SUCCESS_COLOR)
+                .setTitle(":white_check_mark: Kick successful.")
+                .setDescription(":arrow_right: User", target.user.tag, "has been successfully kicked.")
+                .setCMDRequester(msg.member)]});
+        } catch (err) {
+            await msg.channel.send({embeds: [new EmbedCmdResponse()
+                .setColor(FAIL_COLOR)
+                .setTitle(":negative_squared_cross_mark: Kick failed.")
+                .setDescription(":arrow_right: Failed to kick", target.user.tag, ":", err.message)
+                .setCMDRequester(msg.member)]});
+        }
+    }
 }
 
 module.exports.about = {

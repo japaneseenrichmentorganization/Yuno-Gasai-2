@@ -46,20 +46,20 @@ let readModules = async function() {
     messageProcsorsPaths = [];
     let messageProcessorsPath = fs.readdirSync("src/message-processors", "utf8");
 
-    messageProcessorsPath.forEach((async function(el) {
+    for (const el of messageProcessorsPath) {
         if (el.indexOf(".js") === el.length - ".js".length)
             await readModule(el);
-    }));
+    }
 }
 
 let discordConnected = async function(Yuno) {
     await readModules();
     let discClient = Yuno.dC;
 
-    messageProcsors.forEach(async e => {
+    for (const e of messageProcsors) {
         await e.configLoaded(Yuno, Yuno.config);
         await e.discordConnected(Yuno);
-    })
+    }
 
     let workOnlyOnGuild_ = discClient.guilds.cache.get(workOnlyOnGuild);
     
@@ -81,7 +81,7 @@ let discordConnected = async function(Yuno) {
 
             let content = msg.content;
 
-            for(proces of messageProcsors) {
+            for (const proces of messageProcsors) {
                 try {
                     proces.message(content, msg);
                 } catch(e) {
