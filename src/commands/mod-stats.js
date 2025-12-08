@@ -20,7 +20,7 @@ const {GuildMember, EmbedBuilder} = require("discord.js");
 
 module.exports.run = async function(yuno, author, args, msg) {
     let g = msg.guild,
-        bans = await msg.guild.fetchBans();
+        bans = await msg.guild.bans.fetch();
 
     // TODO
 }
@@ -33,6 +33,6 @@ module.exports.about = {
     "terminal": false,
     "list": true,
     "listTerminal": false,
-    "requiredPermissions": ["MANAGE_ROLES"],
+    "requiredPermissions": ["ManageRoles"],
     "aliases": "ms"
 }
