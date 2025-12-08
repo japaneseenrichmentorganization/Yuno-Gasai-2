@@ -91,6 +91,18 @@ module.exports.run = async function(yuno, author, args, msg) {
 
         try {
             await target.kick(reason);
+
+            // Record to database for mod-stats
+            await yuno.dbCommands.addModAction(
+                yuno.database,
+                msg.guild.id,
+                msg.author.id,
+                target.id,
+                "kick",
+                reason,
+                Date.now()
+            );
+
             await msg.channel.send({embeds: [new EmbedCmdResponse()
                 .setColor(SUCCESS_COLOR)
                 .setTitle(":white_check_mark: Kick successful.")

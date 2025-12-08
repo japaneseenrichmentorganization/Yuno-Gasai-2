@@ -169,7 +169,28 @@ module.exports = self = {
             image TEXT
         )`)
 
+        /*
+         * Moderation actions tracking
+         * gid = guild id
+         * moderatorId = user id of the moderator who performed the action
+         * targetId = user id of the target
+         * action = 'ban', 'kick', 'unban', 'timeout'
+         * reason = reason for the action
+         * timestamp = when the action occurred
+         */
+        await database.runPromise(`CREATE TABLE IF NOT EXISTS modActions (
+            id INTEGER PRIMARY KEY,
+            gid TEXT,
+            moderatorId TEXT,
+            targetId TEXT,
+            action TEXT,
+            reason TEXT,
+            timestamp INTEGER
+        )`)
+
         // Create indexes for common queries
+        await database.runPromise(`CREATE INDEX IF NOT EXISTS idx_modactions_gid_moderator ON modActions(gid, moderatorId)`);
+        await database.runPromise(`CREATE INDEX IF NOT EXISTS idx_modactions_gid_action ON modActions(gid, action)`);
         await database.runPromise(`CREATE INDEX IF NOT EXISTS idx_experiences_user_guild ON experiences(userID, guildID)`);
         await database.runPromise(`CREATE INDEX IF NOT EXISTS idx_guilds_id ON guilds(id)`);
         await database.runPromise(`CREATE INDEX IF NOT EXISTS idx_channelcleans_gid_cname ON channelcleans(gid, cname)`);
@@ -664,5 +685,92 @@ module.exports = self = {
     "invalidateGuildCache": function(guildid) {
         guildSettingsCache.invalidatePrefix(`guild:`);
         xpDataCache.invalidatePrefix(`xp:${guildid}:`);
+    },
+
+    /**
+     * Add a moderation action to the database
+     * @param {Database} database
+     * @param {String} guildid
+     * @param {String} moderatorId
+     * @param {String} targetId
+     * @param {String} action - 'ban', 'kick', 'unban', 'timeout'
+     * @param {String} reason
+     * @param {number} timestamp - Unix timestamp in ms
+     * @async
+     */
+    "addModAction": async function(database, guildid, moderatorId, targetId, action, reason, timestamp) {
+        await self.initGuild(database, guildid);
+        return await database.runPromise(
+            "INSERT INTO modActions(id, gid, moderatorId, targetId, action, reason, timestamp) VALUES(null, ?, ?, ?, ?, ?, ?)",
+            [guildid, moderatorId, targetId, action, reason || null, timestamp]
+        );
+    },
+
+    /**
+     * Check if a mod action already exists (to avoid duplicates when scanning)
+     * @param {Database} database
+     * @param {String} guildid
+     * @param {String} targetId
+     * @param {String} action
+     * @param {number} timestamp
+     * @async
+     * @return {boolean}
+     */
+    "modActionExists": async function(database, guildid, targetId, action, timestamp) {
+        const result = await database.allPromise(
+            "SELECT id FROM modActions WHERE gid = ? AND targetId = ? AND action = ? AND timestamp = ?",
+            [guildid, targetId, action, timestamp]
+        );
+        return result.length > 0;
+    },
+
+    /**
+     * Get mod action stats for a guild
+     * @param {Database} database
+     * @param {String} guildid
+     * @async
+     * @return {Object} Stats object with counts per moderator and action type
+     */
+    "getModStats": async function(database, guildid) {
+        await self.initGuild(database, guildid);
+
+        // Get counts by action type
+        const actionCounts = await database.allPromise(
+            "SELECT action, COUNT(*) as count FROM modActions WHERE gid = ? GROUP BY action",
+            [guildid]
+        );
+
+        // Get counts by moderator
+        const modCounts = await database.allPromise(
+            "SELECT moderatorId, action, COUNT(*) as count FROM modActions WHERE gid = ? GROUP BY moderatorId, action ORDER BY count DESC",
+            [guildid]
+        );
+
+        // Get top moderators by total actions
+        const topMods = await database.allPromise(
+            "SELECT moderatorId, COUNT(*) as count FROM modActions WHERE gid = ? GROUP BY moderatorId ORDER BY count DESC LIMIT 10",
+            [guildid]
+        );
+
+        return {
+            actionCounts,
+            modCounts,
+            topMods
+        };
+    },
+
+    /**
+     * Get total mod actions count for a guild
+     * @param {Database} database
+     * @param {String} guildid
+     * @async
+     * @return {number}
+     */
+    "getModActionsCount": async function(database, guildid) {
+        const result = await database.allPromise(
+            "SELECT COUNT(*) as count FROM modActions WHERE gid = ?",
+            [guildid]
+        );
+        return result[0]?.count || 0;
     }
 }
