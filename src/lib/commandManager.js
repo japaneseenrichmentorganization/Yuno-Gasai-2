@@ -19,7 +19,8 @@
 const EventEmitter = require("events"),
     fsPromises = require("fs").promises,
     path = require("path"),
-    { GuildMember, PermissionsBitField } = require("discord.js");
+    { GuildMember, PermissionsBitField } = require("discord.js"),
+    prompt = require("./prompt").init();
 
 let insufficientPermissionsMessage = "Insufficient permissions.",
     masterusers = [];
