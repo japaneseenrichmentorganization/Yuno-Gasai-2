@@ -429,23 +429,20 @@ Yuno.prototype._uncaughtException = function(e) {
  * @private
  * @return {Promise}
  */
-Yuno.prototype._triggerConfigEvents = function() {
+Yuno.prototype._triggerConfigEvents = async function() {
     // Instances that need a config event.
     // Sorted by their importance (from first to last)
     const INSTANCES = [this.prompt, this.interactiveTerm, this.commandMan, this.configMan];
 
-    return new Promise((function(res, rej) {
-        INSTANCES.forEach((async function(el) {
-            if (typeof el.configLoaded === "function")
-                await el.configLoaded(this, this.config);
-        }).bind(this));
+    for (const el of INSTANCES) {
+        if (typeof el.configLoaded === "function")
+            await el.configLoaded(this, this.config);
+    }
 
-        this.modules.forEach((async function(el) {
-            if (typeof el.configLoaded === "function")
-                await el.configLoaded(this, this.config);
-        }).bind(this));
-        res();
-    }).bind(this));
+    for (const el of this.modules) {
+        if (typeof el.configLoaded === "function")
+            await el.configLoaded(this, this.config);
+    }
 }
 
 /**
@@ -453,23 +450,20 @@ Yuno.prototype._triggerConfigEvents = function() {
  * @private
  * @return {Promise}
  */
-Yuno.prototype._triggerShutdownEvents = function() {
+Yuno.prototype._triggerShutdownEvents = async function() {
     // Instances that need a shutdown event.
     // Sorted by their importance (from first to last)
     const INSTANCES = [this.prompt, this.interactiveTerm, this.commandMan, this.configMan]
 
-    return new Promise((function(res, rej) {
-        INSTANCES.forEach((async function(el) {
-            if (el.beforeShutdown && typeof el.beforeShutdown === "function")
-                await el.beforeShutdown(this);
-        }).bind(this));
+    for (const el of INSTANCES) {
+        if (el.beforeShutdown && typeof el.beforeShutdown === "function")
+            await el.beforeShutdown(this);
+    }
 
-        this.modules.forEach((async function(el) {
-            if (typeof el.beforeShutdown === "function")
-                await el.beforeShutdown(this, this.config);
-        }).bind(this));
-        res();
-    }).bind(this));
+    for (const el of this.modules) {
+        if (typeof el.beforeShutdown === "function")
+            await el.beforeShutdown(this, this.config);
+    }
 }
 
 /**
@@ -549,19 +543,16 @@ Yuno.prototype.shutdown = async function(reason, e) {
  * Do not confound the ModuleExporter (which is for "librairies") and this, that will load Yuno's module.
  * @async
  */
-Yuno.prototype._loadModules = function() {
-    return new Promise((function(resolve) {
-        let files = fs.readdirSync("./src/modules");
+Yuno.prototype._loadModules = async function() {
+    let files = fs.readdirSync("./src/modules");
 
-        files.forEach((async function(file) {
-            delete require.cache[require.resolve("./modules/" + file)]
-            let mod = require("./modules/" + file);
-            this.modules.push(mod);
-            await mod.init(this);
-            this.prompt.success("Module " + mod.modulename + " successfully loaded.");
-        }).bind(this))
-        resolve();
-    }).bind(this))
+    for (const file of files) {
+        delete require.cache[require.resolve("./modules/" + file)]
+        let mod = require("./modules/" + file);
+        this.modules.push(mod);
+        await mod.init(this);
+        this.prompt.success("Module " + mod.modulename + " successfully loaded.");
+    }
 }
 
 /**
@@ -569,20 +560,17 @@ Yuno.prototype._loadModules = function() {
  * Do not confound the ModuleExporter (which is for "librairies") and this, that will load Yuno's module.
  * @async
  */
-Yuno.prototype._loadModulesHR = function() {
-    return new Promise((function(resolve) {
-        let files = fs.readdirSync("./src/modules");
+Yuno.prototype._loadModulesHR = async function() {
+    let files = fs.readdirSync("./src/modules");
 
-        files.forEach((async function(file) {
-            delete require.cache[require.resolve("./modules/" + file)]
-            let mod = require("./modules/" + file);
-            this.modules.push(mod);
-            await mod.configLoaded(this, this.config);
-            await mod.init(this, true);
-            this.prompt.success("Module " + mod.modulename + " successfully loaded.");
-        }).bind(this))
-        resolve();
-    }).bind(this))
+    for (const file of files) {
+        delete require.cache[require.resolve("./modules/" + file)]
+        let mod = require("./modules/" + file);
+        this.modules.push(mod);
+        await mod.configLoaded(this, this.config);
+        await mod.init(this, true);
+        this.prompt.success("Module " + mod.modulename + " successfully loaded.");
+    }
 }
 
 /**

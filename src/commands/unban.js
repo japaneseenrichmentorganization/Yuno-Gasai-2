@@ -42,24 +42,27 @@ module.exports.run = async function(yuno, author, args, msg) {
 
     let toBanThings = args.split(" ")
 
-    toBanThings.forEach(function(e) {
+    for (const e of toBanThings) {
         // Skip empty strings and user mentions (starts with <@)
-        if (e.trim() !== "" && !e.startsWith("<@")) {
-            msg.guild.members.unban(e, reason).then(function() {
-                msg.channel.send({embeds: [new EmbedCmdResponse()
-                    .setColor(SUCCESS_COLOR)
-                    .setTitle(":white_check_mark: Unban successful.")
-                    .setDescription(":arrow_right: User with id", e, "has been successfully unbanned.")
-                    .setCMDRequester(msg.member)]});
-            }).catch(function(err) {
-                msg.channel.send({embeds: [new EmbedCmdResponse()
-                    .setColor(FAIL_COLOR)
-                    .setTitle(":negative_squared_cross_mark: Unban failed.")
-                    .setDescription(":arrow_right: Failed to unban", e, ":", err.message)
-                    .setCMDRequester(msg.member)]});
-            })
+        if (e.trim() === "" || e.startsWith("<@")) {
+            continue;
         }
-    })
+
+        try {
+            await msg.guild.members.unban(e, reason);
+            await msg.channel.send({embeds: [new EmbedCmdResponse()
+                .setColor(SUCCESS_COLOR)
+                .setTitle(":white_check_mark: Unban successful.")
+                .setDescription(":arrow_right: User with id", e, "has been successfully unbanned.")
+                .setCMDRequester(msg.member)]});
+        } catch (err) {
+            await msg.channel.send({embeds: [new EmbedCmdResponse()
+                .setColor(FAIL_COLOR)
+                .setTitle(":negative_squared_cross_mark: Unban failed.")
+                .setDescription(":arrow_right: Failed to unban", e, ":", err.message)
+                .setCMDRequester(msg.member)]});
+        }
+    }
 }
 
 module.exports.about = {
