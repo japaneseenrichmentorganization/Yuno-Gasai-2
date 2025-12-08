@@ -15,7 +15,7 @@
     You should have received a copy of the GNU Affero General Public License
     along with this program.  If not, see https://www.gnu.org/licenses/.
 */
-const fs = require("fs");
+const fs = require("fs").promises;
 const {PermissionsBitField} = require("discord.js");
 
 module.exports.run = async function(yuno, author, args, msg) {
@@ -71,13 +71,12 @@ module.exports.run = async function(yuno, author, args, msg) {
         const banstr = JSON.stringify(allBannedUserIds);
 
         // Write to file
-        fs.writeFile("./BANS-" + guid + ".txt", banstr, async (err) => {
-            if (err) {
-                await statusMsg.edit("Error while saving bans :( :" + err.code);
-            } else {
-                await statusMsg.edit(`Bans exported successfully! **${allBannedUserIds.length}** bans saved with Guild ID: ${guid}`);
-            }
-        });
+        try {
+            await fs.writeFile(`./BANS-${guid}.txt`, banstr);
+            await statusMsg.edit(`Bans exported successfully! **${allBannedUserIds.length}** bans saved with Guild ID: ${guid}`);
+        } catch (err) {
+            await statusMsg.edit(`Error while saving bans :( :${err.code}`);
+        }
     } catch(e) {
         msg.channel.send("Error while fetching bans: " + e.message);
         console.error("Export bans error:", e);

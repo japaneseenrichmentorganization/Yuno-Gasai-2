@@ -20,176 +20,187 @@ let instance = null;
 
 /**
  * The interval manager singleton. It manages all the intervals and still gets their reference on hot-reload.
- * @param {Object} [intervals] This is for hot-reload. Never give intervals argument, unless you know what you're doing.
  * @deprecated Use IntervalManager.init() to create an instance of IntervalManager. Do not use new IntervalManager().
- * @prop {Object} 
- * @constructor
  */
-let IntervalManager = function(intervals) {
-    this.intervals = typeof intervals === "object" ? intervals : {};
-}
+class IntervalManager {
+    /**
+     * @param {Object} [intervals] This is for hot-reload. Never give intervals argument, unless you know what you're doing.
+     */
+    constructor(intervals) {
+        this.intervals = typeof intervals === "object" ? intervals : {};
+    }
 
-/**
- * Inits the singleton
- * @param {Object} [intervals]
- * @return {IntervalManager} The instance.
- */
-IntervalManager.init = function(intervals) {
-    if (instance === null)
-        instance = new IntervalManager(intervals);
-    return instance;
-}
+    /**
+     * Inits the singleton
+     * @param {Object} [intervals]
+     * @return {IntervalManager} The instance.
+     */
+    static init(intervals) {
+        if (instance === null)
+            instance = new IntervalManager(intervals);
+        return instance;
+    }
 
+    /**
+     * Saves the settings, to export them to a new instance (e.g. hot-reload)
+     * The new IntervalManager instance can be reconstructed with `IntervalManager.init(oldInstance.backup());`
+     * @return {Object}
+     */
+    backup() {
+        return this.intervals;
+    }
 
-/**
- * Saves the settings, to export them to a new instance (e.g. hot-reload)
- * The new IntervalManager instance can be reconstructed with `IntervalManager.init(oldInstance.backup());`
- * @return {Object}
- */
-IntervalManager.prototype.backup = function() {
-    return this.intervals;
-}
-
-/**
- * Appends a new interval into the IntervalManager
- * @param {String} id A desired id for the timeout/interval
- * @param {number} timeoutId The result of setTimeout/setInterval
- * @param {function} [func] The function
- * @param {number} [delay]
- * @param {boolean} [isTimeout] true if the timeoutId refers to a timeout
- * @param {boolean} [force]
- * @deprecated Use IntervalManager.prototype.setTimeout/setInterval for 
- * @returns {null|undefined} Returns null when the id is already taken.
- */
-IntervalManager.prototype.add = function(id, timeoutId, func, delay, args, isTimeout, force) {
-    if (!this.intervals.hasOwnProperty(id) || force === true)
-        return this.intervals[id] = {
-            "id": timeoutId,
-            "setAt": Date.now(),
-            "delay": typeof delay === "number" ? delay : null,
-            "args": args ? args : null,
-            "func": typeof func === "function" ? func : null,
-            "isTimeout": typeof isTimeout === "boolean" ? isTimeout : null
-        };
-    else
+    /**
+     * Appends a new interval into the IntervalManager
+     * @param {String} id A desired id for the timeout/interval
+     * @param {number} timeoutId The result of setTimeout/setInterval
+     * @param {function} [func] The function
+     * @param {number} [delay]
+     * @param {Array} [args]
+     * @param {boolean} [isTimeout] true if the timeoutId refers to a timeout
+     * @param {boolean} [force]
+     * @deprecated Use IntervalManager.setTimeout/setInterval instead
+     * @returns {null|Object} Returns null when the id is already taken.
+     */
+    add(id, timeoutId, func, delay, args, isTimeout, force) {
+        if (!Object.prototype.hasOwnProperty.call(this.intervals, id) || force === true) {
+            return this.intervals[id] = {
+                id: timeoutId,
+                setAt: Date.now(),
+                delay: typeof delay === "number" ? delay : null,
+                args: args ?? null,
+                func: typeof func === "function" ? func : null,
+                isTimeout: typeof isTimeout === "boolean" ? isTimeout : null
+            };
+        }
         return null;
-}
+    }
 
-IntervalManager.prototype.get = function(id) {
-    if (this._has(id))
-        return this.intervals[id]
-    else
-        return null;
-}
+    /**
+     * Gets an interval by id
+     * @param {String} id
+     * @return {Object|null}
+     */
+    get(id) {
+        return this._has(id) ? this.intervals[id] : null;
+    }
 
-/**
- * Returns true if the 
- * @param {String} id 
- */
-IntervalManager.prototype._has = function(id) {
-    return Object.prototype.hasOwnProperty.call(this.intervals, id);
-}
+    /**
+     * Returns true if the interval exists
+     * @param {String} id
+     * @return {boolean}
+     */
+    _has(id) {
+        return Object.prototype.hasOwnProperty.call(this.intervals, id);
+    }
 
-let _getValueFromIntervals = function(id, prop){
-    if (this._has(id))
-        return this.intervals[id][prop]
-    else
-        return null;
-}
+    /**
+     * Gets a value from an interval
+     * @param {String} id
+     * @param {String} prop
+     * @return {any|null}
+     * @private
+     */
+    _getValueFromIntervals(id, prop) {
+        return this._has(id) ? this.intervals[id][prop] : null;
+    }
 
-/**
- * Returns the interval/timeout id
- * @param {String} id
- * @return {number|null}
- */
-IntervalManager.prototype.getId = function(id) {
-    return _getValueFromIntervals.bind(this)(id, "id");
-}
+    /**
+     * Returns the interval/timeout id
+     * @param {String} id
+     * @return {number|null}
+     */
+    getId(id) {
+        return this._getValueFromIntervals(id, "id");
+    }
 
-/**
- * Returns the timestamp from where the interval/timeout has been defined
- * @param {String} id
- * @return {number|null}
- */
-IntervalManager.prototype.getWhenTheTimeoutHasBeenSet = function(id) {
-    return _getValueFromIntervals(id, "setAt");
-}
+    /**
+     * Returns the timestamp from where the interval/timeout has been defined
+     * @param {String} id
+     * @return {number|null}
+     */
+    getWhenTheTimeoutHasBeenSet(id) {
+        return this._getValueFromIntervals(id, "setAt");
+    }
 
-/**
- * Returns the delay of a timeout/interval id
- * @param {String} id
- * @return {number|null}
- */
-IntervalManager.prototype.getDelay = function(id) {
-    return _getValueFromIntervals(id, "delay");
-}
+    /**
+     * Returns the delay of a timeout/interval id
+     * @param {String} id
+     * @return {number|null}
+     */
+    getDelay(id) {
+        return this._getValueFromIntervals(id, "delay");
+    }
 
-/**
- * Clears a timeout/interval
- * @param {String} id
- */
-IntervalManager.prototype.clear = function(id) {
-    let ref = this.get(id);
-    if (ref.isTimeout === null || ref.isTimeout === true)
-        clearTimeout(this.getId(id)); 
-    if (ref.isTimeout === null || ref.isTimeout === false)
-        clearInterval(this.getId(id));
-}
+    /**
+     * Clears a timeout/interval
+     * @param {String} id
+     */
+    clear(id) {
+        const ref = this.get(id);
+        if (!ref) return;
 
-/**
- * Sets a timeout
- * @param {String} id
- * @param {function} func
- * @param {number} delay
- * @param {arguments} args The args given to the function
- */
-IntervalManager.prototype.setTimeout = function(id, func, delay, ...args) {
-    this.add(id, setTimeout(func, delay, args), func, delay, args, true)
-}
+        if (ref.isTimeout === null || ref.isTimeout === true)
+            clearTimeout(this.getId(id));
+        if (ref.isTimeout === null || ref.isTimeout === false)
+            clearInterval(this.getId(id));
+    }
 
-/**
- * Sets an interval
- * @param {String} id
- * @param {function} func
- * @param {number} delay
- * @param {arguments} args The args given to the function
- */
-IntervalManager.prototype.setInterval = function(id, func, delay, ...args) {
-    this.add(id, setInterval(func, delay, args), func, delay, args, false)
-}
+    /**
+     * Sets a timeout
+     * @param {String} id
+     * @param {function} func
+     * @param {number} delay
+     * @param {...any} args The args given to the function
+     */
+    setTimeout(id, func, delay, ...args) {
+        this.add(id, setTimeout(func, delay, ...args), func, delay, args, true);
+    }
 
-/**
- * Updates the delay of a timeout/interval
- * @param {String} id
- * @param {number} delay The new delay.
- */
-IntervalManager.prototype.updateDelay = function(id, delay) {
-    let ref = this.get(id);
-    if (ref === null)
-        return;
+    /**
+     * Sets an interval
+     * @param {String} id
+     * @param {function} func
+     * @param {number} delay
+     * @param {...any} args The args given to the function
+     */
+    setInterval(id, func, delay, ...args) {
+        this.add(id, setInterval(func, delay, ...args), func, delay, args, false);
+    }
 
-    this.clear(id);
-    this.add(id, setTimeout(ref.func, delay, ref.args), ref.func, delay, args, ref.isTimeout, true);
-}
+    /**
+     * Updates the delay of a timeout/interval
+     * @param {String} id
+     * @param {number} delay The new delay.
+     */
+    updateDelay(id, delay) {
+        const ref = this.get(id);
+        if (ref === null)
+            return;
 
-/**
- * Gives the remaining time for a timeout
- * @param {String} id
- * @param {number} [delay] If the delay hasn't been given earlier.
- * @return {number|null} Null if the timeout hasn't been found
- */
-IntervalManager.prototype.getRemainingTime = function(id, delay) {
-    let ref = this.get(id);
+        this.clear(id);
+        this.add(id, setTimeout(ref.func, delay, ...ref.args), ref.func, delay, ref.args, ref.isTimeout, true);
+    }
 
-    if (typeof delay !== "number")
-        delay = ref.delay;
+    /**
+     * Gives the remaining time for a timeout
+     * @param {String} id
+     * @param {number} [delay] If the delay hasn't been given earlier.
+     * @return {number|null} Null if the timeout hasn't been found
+     */
+    getRemainingTime(id, delay) {
+        const ref = this.get(id);
+        if (!ref) return null;
 
-    if (delay === null)
-        return;
+        if (typeof delay !== "number")
+            delay = ref.delay;
 
-    let elapsedTime = Date.now() - ref.setAt;
+        if (delay === null)
+            return null;
 
-    return delay - elapsedTime;
+        const elapsedTime = Date.now() - ref.setAt;
+        return delay - elapsedTime;
+    }
 }
 
 module.exports = IntervalManager;
