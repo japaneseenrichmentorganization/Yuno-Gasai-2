@@ -59,7 +59,17 @@ module.exports.run = async function(yuno, author, args, msg) {
     }
 
     for (const u of userMentions) {
-        let target = await msg.guild.members.fetch(u.id);
+        let target;
+        try {
+            target = await msg.guild.members.fetch(u.id);
+        } catch (err) {
+            await msg.channel.send({embeds: [new EmbedCmdResponse()
+                .setColor(FAIL_COLOR)
+                .setTitle(":negative_squared_cross_mark: Kick failed.")
+                .setDescription(":arrow_right: Failed to fetch user with ID " + u.id + ": " + err.message)
+                .setCMDRequester(msg.member)]});
+            continue;
+        }
 
         if (target.id === msg.author.id) {
             await msg.channel.send({embeds: [new EmbedCmdResponse()
@@ -80,13 +90,13 @@ module.exports.run = async function(yuno, author, args, msg) {
         }
 
         try {
-            await msg.guild.members.resolve(target.id).kick(reason);
+            await target.kick(reason);
             await msg.channel.send({embeds: [new EmbedCmdResponse()
                 .setColor(SUCCESS_COLOR)
                 .setTitle(":white_check_mark: Kick successful.")
                 .setDescription(":arrow_right: User", target.user.tag, "has been successfully kicked.")
                 .setCMDRequester(msg.member)]});
-        } catch(err) {
+        } catch (err) {
             await msg.channel.send({embeds: [new EmbedCmdResponse()
                 .setColor(FAIL_COLOR)
                 .setTitle(":negative_squared_cross_mark: Kick failed.")
