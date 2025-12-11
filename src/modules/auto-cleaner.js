@@ -14,6 +14,10 @@
 */
 const {Guild, EmbedBuilder} = require("discord.js");
 let intervalManager = null;
+
+// Locking mechanism to prevent concurrent cleans of the same channel
+const cleaningLocks = new Set();
+
 module.exports.modulename = "auto-cleaner";
 let setupCleaners = async function(Yuno) {
     let dcom = Yuno.dbCommands,
@@ -24,6 +28,12 @@ let setupCleaners = async function(Yuno) {
             return this.prompt.error("Cannot (auto-)clean a channel: guild doesn't exists! GuildId: " + el.guildId);
         if (!intervalManager._has("autocleaner-clean-" + el.guildId + "-" + el.channelName))
             intervalManager.setInterval("autocleaner-clean-" + el.guildId + "-" + el.channelName, (async function(clean) {
+                // Check if bot is connected before proceeding
+                if (!Yuno.dC.isReady()) {
+                    Yuno.prompt.log("[AutoClean] Skipping - bot not connected");
+                    return;
+                }
+
                 let actualClean = await Yuno.dbCommands.getClean(Yuno.database, el.guildId, el.channelName);
                 if (actualClean === null)
                     return;
@@ -36,15 +46,55 @@ let setupCleaners = async function(Yuno) {
                     ch.send({embeds: [new EmbedBuilder()
                         .setAuthor({name: "Yuno is going to clean this channel in " + actualClean.timeBeforeClean + " minutes. Speak now or forever hold your peace."})]})
                 if (actualClean.remainingTime <= 0) {
-                    (await Yuno.UTIL.clean(ch)).send({embeds: [new EmbedBuilder()
-                        .setImage("https://vignette3.wikia.nocookie.net/futurediary/images/9/94/Mirai_Nikki_-_06_-_Large_05.jpg")
-                        .setAuthor({name: "Auto-clean: Yuno is done cleaning.", iconURL: Yuno.dC.user.avatarURL()})
-                        .setColor("#ff51ff")]});
-                    actualClean.remainingTime = actualClean.timeFEachClean * 60;
+                    // Create lock key to prevent concurrent cleans
+                    const lockKey = el.guildId + "-" + el.channelName;
+
+                    // Check if already cleaning this channel
+                    if (cleaningLocks.has(lockKey)) {
+                        Yuno.prompt.log("[AutoClean] Channel " + el.channelName + " already being cleaned, skipping");
+                        return;
+                    }
+
+                    // Acquire lock
+                    cleaningLocks.add(lockKey);
+
+                    try {
+                        // Double-check connection before expensive operation
+                        if (!Yuno.dC.isReady()) {
+                            Yuno.prompt.log("[AutoClean] Aborting clean - bot disconnected");
+                            return;
+                        }
+
+                        // Clone the channel (this creates the new channel)
+                        const newChannel = await Yuno.UTIL.clean(ch);
+
+                        // CRITICAL: Update database IMMEDIATELY after clone succeeds
+                        // This prevents the loop where old channel keeps getting selected
+                        actualClean.remainingTime = actualClean.timeFEachClean * 60;
+                        await Yuno.dbCommands.setClean(Yuno.database, actualClean.guildId, el.channelName, actualClean.timeFEachClean, actualClean.timeBeforeClean, actualClean.remainingTime);
+
+                        // Send success message (non-critical)
+                        try {
+                            await newChannel.send({embeds: [new EmbedBuilder()
+                                .setImage("https://vignette3.wikia.nocookie.net/futurediary/images/9/94/Mirai_Nikki_-_06_-_Large_05.jpg")
+                                .setAuthor({name: "Auto-clean: Yuno is done cleaning.", iconURL: Yuno.dC.user.avatarURL()})
+                                .setColor("#ff51ff")]});
+                        } catch (msgErr) {
+                            Yuno.prompt.error("[AutoClean] Warning: Failed to send clean message: " + msgErr.message);
+                        }
+
+                        Yuno.prompt.log("[AutoClean] Successfully cleaned channel: " + el.channelName);
+                    } catch (cleanErr) {
+                        Yuno.prompt.error("[AutoClean] Failed to clean channel " + el.channelName + ": " + cleanErr.message);
+                        // Don't update remaining time - will retry next minute
+                    } finally {
+                        // Always release lock
+                        cleaningLocks.delete(lockKey);
+                    }
                 } else {
                     actualClean.remainingTime = actualClean.remainingTime - 1;
+                    await Yuno.dbCommands.setClean(Yuno.database, actualClean.guildId, el.channelName, actualClean.timeFEachClean, actualClean.timeBeforeClean, actualClean.remainingTime);
                 }
-                await Yuno.dbCommands.setClean(Yuno.database, actualClean.guildId, el.channelName, actualClean.timeFEachClean, actualClean.timeBeforeClean, actualClean.remainingTime)
             }).bind(Yuno, el), 60 * 1000);
     });
 }
