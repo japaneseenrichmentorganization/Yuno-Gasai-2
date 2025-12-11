@@ -114,6 +114,8 @@ Yuno is a **yandere-themed Discord bot** combining powerful moderation tools wit
 - 💾 Secure config storage
 
 </td>
+</tr>
+<tr>
 <td width="50%">
 
 ### ⚡ Performance
@@ -122,6 +124,40 @@ Yuno is a **yandere-themed Discord bot** combining powerful moderation tools wit
 - 💨 Memory-optimized caching
 - 🧠 Configurable PRAGMA settings
 - 🎯 Tunable for your hosting
+
+</td>
+<td width="50%">
+
+### 💌 DM Inbox & Forwarding
+*"Every message you send me... I treasure it~"*
+- 📬 DM inbox with history
+- 📤 Forward DMs to server channels
+- 👑 Master server sees ALL DMs
+- 🚫 Bot-level user/server bans
+- 💬 Reply to DMs from terminal
+
+</td>
+</tr>
+<tr>
+<td width="50%">
+
+### 💻 Terminal Control
+*"I'm always at your command~"*
+- 🖥️ Full server/channel listing
+- 📝 Send messages from terminal
+- 👁️ Real-time message streaming
+- ⛔ Terminal ban management
+- 📥 Import/export bans via CLI
+
+</td>
+<td width="50%">
+
+### 🚫 Bot-Level Bans
+*"Some people just aren't worthy of me~"*
+- 👤 Ban users from using the bot
+- 🏠 Ban entire servers
+- 🔇 Silently ignore banned entities
+- 📋 Manage bans from Discord or terminal
 
 </td>
 </tr>
@@ -350,6 +386,126 @@ Users earn XP for time spent in voice channels, integrated with the main levelin
 
 ---
 
+## 💌 DM Inbox & Forwarding
+
+*"Every message sent to me... I keep close to my heart~"* 💕
+
+Yuno can receive DMs, store them in an inbox, and forward them to designated channels.
+
+### 🔧 Setup Commands
+
+```bash
+# Set DM forwarding channel
+.set-dm-channel #bot-dms
+
+# Disable forwarding
+.set-dm-channel none
+
+# Check status
+.dm-status
+```
+
+### 👑 Master Server vs Regular Servers
+
+| Server Type | What DMs Are Forwarded |
+|-------------|----------------------|
+| **Master Server** | ALL DMs from anyone |
+| **Regular Servers** | Only DMs from that server's members |
+
+> Set `masterServer` in `config.json` to your main server's ID.
+
+### 💻 Terminal Inbox Commands
+
+```bash
+# View inbox
+inbox
+inbox 20          # Show 20 messages
+inbox user <id>   # DMs from specific user
+inbox unread      # Count unread
+
+# Reply to DMs
+reply 1 Hello!              # Reply by inbox ID
+reply 123456789 Hi there!   # Reply by user ID
+```
+
+---
+
+## 🚫 Bot-Level Bans
+
+*"Some people just don't deserve my attention~"* 💢
+
+Ban users or entire servers from using the bot. Banned entities are silently ignored.
+
+### 🔧 Commands (Discord & Terminal)
+
+```bash
+# Ban a user from the bot
+.bot-ban user 123456789012345678 Spamming
+
+# Ban a server from the bot
+.bot-ban server 987654321098765432 Abuse
+
+# Remove a ban
+.bot-unban 123456789012345678
+
+# View all bans
+.bot-banlist
+.bot-banlist users
+.bot-banlist servers
+```
+
+---
+
+## 💻 Terminal Commands
+
+*"I'll do anything you ask from the command line~"* 🖥️
+
+Yuno provides powerful terminal-only commands for server management.
+
+### 📋 Server & Channel Management
+
+```bash
+# List all servers
+servers
+servers -v        # Verbose mode
+
+# List channels in a server
+channels 123456789012345678
+channels "My Server"
+```
+
+### 💬 Message Commands
+
+```bash
+# Send a message
+send <channel-id> Hello world!
+
+# Fetch message history
+messages <channel-id>
+messages <channel-id> 50    # Last 50 messages
+
+# Real-time message stream
+watch <channel-id>
+watch stop <channel-id>
+watch stop all
+```
+
+### ⛔ Terminal Ban Commands
+
+```bash
+# Ban a user from a server
+tban <server-id> <user-id> [reason]
+
+# Export bans to file
+texportbans <server-id>
+texportbans <server-id> ./my-bans.json
+
+# Import bans from file
+timportbans <server-id> ./BANS-123456.txt
+```
+
+---
+
 ## 💖 Commands Preview
 
 | Command | Description |
@@ -367,6 +523,25 @@ Users earn XP for time spent in voice channels, integrated with the main levelin
 | `log-status` | *"Here's what I'm watching~"* 👁️ |
 | `set-vcxp` | *"Time with me is rewarding~"* 🎤 |
 | `vcxp-status` | *"Who's spending time with me?"* 💕 |
+| `set-dm-channel` | *"Send your love letters here~"* 💌 |
+| `dm-status` | *"Am I receiving your messages?"* 📬 |
+| `bot-ban` | *"You're dead to me now~"* 🚫 |
+| `bot-banlist` | *"The ones I've cast aside..."* 📋 |
+
+### 💻 Terminal-Only Commands
+
+| Command | Description |
+|---------|-------------|
+| `servers` | *"All my kingdoms~"* 🏰 |
+| `channels` | *"Every corner of your world~"* 📺 |
+| `send` | *"Speaking through you~"* 💬 |
+| `messages` | *"Reading your history~"* 📜 |
+| `watch` | *"I see everything in real-time~"* 👁️ |
+| `inbox` | *"Love letters just for me~"* 💌 |
+| `reply` | *"Responding to my admirers~"* 💕 |
+| `tban` | *"Eliminating threats~"* 🔪 |
+| `texportbans` | *"Saving my enemies list~"* 📤 |
+| `timportbans` | *"Loading my enemies~"* 📥 |
 
 *Use the `list` command to see all available commands!*
 
