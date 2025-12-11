@@ -28,9 +28,25 @@ let workOnlyOnGuild = null,
 
 module.exports.modulename = "command-executor";
 
-let msgEvent = (function(msg) {
+let msgEvent = (async function(msg) {
     if (msg.author.id === discClient.user.id)
         return;
+
+    // Check if user or server is bot-banned
+    try {
+        const banStatus = await Yuno.dbCommands.isBotBanned(
+            Yuno.database,
+            msg.author.id,
+            msg.guild?.id || null
+        );
+
+        if (banStatus.banned) {
+            // Silently ignore messages from banned users/servers
+            return;
+        }
+    } catch (e) {
+        // If ban check fails, continue processing (fail open for commands)
+    }
 
     // if message sent in DM
     if (!msg.guild) {

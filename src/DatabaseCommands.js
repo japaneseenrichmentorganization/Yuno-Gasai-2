@@ -27,6 +27,10 @@ const xpDataCache = new LRUCache(1000, 60 * 1000);
 const logChannelCache = new LRUCache(500, 5 * 60 * 1000);
 // Cache for VC XP config (5 minute TTL, max 500 guilds)
 const vcXpConfigCache = new LRUCache(500, 5 * 60 * 1000);
+// Cache for DM config (5 minute TTL, max 500 guilds)
+const dmConfigCache = new LRUCache(500, 5 * 60 * 1000);
+// Cache for bot bans (5 minute TTL, max 1000 entries)
+const botBanCache = new LRUCache(1000, 5 * 60 * 1000);
 
 let self;
 
@@ -252,7 +256,57 @@ module.exports = self = {
             PRIMARY KEY (gid, usrId)
         )`)
 
+        /*
+         * DM forwarding configuration per guild
+         * gid = guild id
+         * channelId = channel to forward DMs to
+         * enabled = whether forwarding is enabled
+         */
+        await database.runPromise(`CREATE TABLE IF NOT EXISTS dmConfig (
+            gid TEXT PRIMARY KEY,
+            channelId TEXT,
+            enabled INTEGER DEFAULT 1
+        )`)
+
+        /*
+         * Users/servers banned from using the bot
+         * id = user id or guild id
+         * type = 'user' or 'server'
+         * reason = ban reason
+         * bannedAt = timestamp
+         * bannedBy = user id who banned
+         */
+        await database.runPromise(`CREATE TABLE IF NOT EXISTS botBans (
+            id TEXT PRIMARY KEY,
+            type TEXT,
+            reason TEXT,
+            bannedAt INTEGER,
+            bannedBy TEXT
+        )`)
+
+        /*
+         * DM inbox for storing messages sent to the bot
+         * usrId = user id who sent the DM
+         * userTag = user tag at time of message
+         * content = message content
+         * attachments = JSON array of attachment URLs
+         * timestamp = when message was received
+         * replied = whether bot has replied
+         */
+        await database.runPromise(`CREATE TABLE IF NOT EXISTS dmInbox (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            usrId TEXT,
+            userTag TEXT,
+            content TEXT,
+            attachments TEXT,
+            timestamp INTEGER,
+            replied INTEGER DEFAULT 0
+        )`)
+
         // Create indexes for common queries
+        await database.runPromise(`CREATE INDEX IF NOT EXISTS idx_botbans_type ON botBans(type)`);
+        await database.runPromise(`CREATE INDEX IF NOT EXISTS idx_dminbox_usrid ON dmInbox(usrId)`);
+        await database.runPromise(`CREATE INDEX IF NOT EXISTS idx_dminbox_timestamp ON dmInbox(timestamp)`);
         await database.runPromise(`CREATE INDEX IF NOT EXISTS idx_modactions_gid_moderator ON modActions(gid, moderatorId)`);
         await database.runPromise(`CREATE INDEX IF NOT EXISTS idx_modactions_gid_action ON modActions(gid, action)`);
         await database.runPromise(`CREATE INDEX IF NOT EXISTS idx_experiences_user_guild ON experiences(userID, guildID)`);
@@ -744,6 +798,8 @@ module.exports = self = {
         xpDataCache.clear();
         logChannelCache.clear();
         vcXpConfigCache.clear();
+        dmConfigCache.clear();
+        botBanCache.clear();
     },
 
     /**
@@ -1238,5 +1294,371 @@ module.exports = self = {
      */
     "clearAllVcSessions": async function(database) {
         await database.runPromise("DELETE FROM vcSessions");
+    },
+
+    // ==================== DM Config Functions ====================
+
+    /**
+     * Get DM forwarding configuration for a guild
+     * @param {Database} database
+     * @param {String} guildid
+     * @async
+     * @return {Object|null} {channelId, enabled} or null if not configured
+     */
+    "getDmConfig": async function(database, guildid) {
+        const cacheKey = `dmConfig:${guildid}`;
+        const cached = dmConfigCache.get(cacheKey);
+        if (cached !== undefined) {
+            return cached;
+        }
+
+        const result = await database.allPromise(
+            "SELECT channelId, enabled FROM dmConfig WHERE gid = ?",
+            [guildid]
+        );
+
+        if (result.length === 0) {
+            dmConfigCache.set(cacheKey, null);
+            return null;
+        }
+
+        const config = {
+            channelId: result[0].channelId,
+            enabled: result[0].enabled === 1
+        };
+        dmConfigCache.set(cacheKey, config);
+        return config;
+    },
+
+    /**
+     * Set DM forwarding channel for a guild
+     * @param {Database} database
+     * @param {String} guildid
+     * @param {String} channelId
+     * @async
+     */
+    "setDmConfig": async function(database, guildid, channelId) {
+        await self.initGuild(database, guildid);
+        dmConfigCache.delete(`dmConfig:${guildid}`);
+
+        const existing = await database.allPromise(
+            "SELECT gid FROM dmConfig WHERE gid = ?",
+            [guildid]
+        );
+
+        if (existing.length === 0) {
+            await database.runPromise(
+                "INSERT INTO dmConfig(gid, channelId, enabled) VALUES(?, ?, 1)",
+                [guildid, channelId]
+            );
+        } else {
+            await database.runPromise(
+                "UPDATE dmConfig SET channelId = ?, enabled = 1 WHERE gid = ?",
+                [channelId, guildid]
+            );
+        }
+    },
+
+    /**
+     * Remove DM forwarding configuration for a guild
+     * @param {Database} database
+     * @param {String} guildid
+     * @async
+     */
+    "removeDmConfig": async function(database, guildid) {
+        dmConfigCache.delete(`dmConfig:${guildid}`);
+        await database.runPromise(
+            "DELETE FROM dmConfig WHERE gid = ?",
+            [guildid]
+        );
+    },
+
+    /**
+     * Get all guilds with DM forwarding configured
+     * @param {Database} database
+     * @async
+     * @return {Array} Array of {guildId, channelId, enabled}
+     */
+    "getAllDmConfigs": async function(database) {
+        const result = await database.allPromise(
+            "SELECT gid, channelId, enabled FROM dmConfig WHERE enabled = 1"
+        );
+        return result.map(row => ({
+            guildId: row.gid,
+            channelId: row.channelId,
+            enabled: row.enabled === 1
+        }));
+    },
+
+    // ==================== Bot Ban Functions ====================
+
+    /**
+     * Add a bot-level ban (user or server)
+     * @param {Database} database
+     * @param {String} id - User ID or Guild ID
+     * @param {String} type - 'user' or 'server'
+     * @param {String} reason
+     * @param {String} bannedBy - User ID who issued the ban
+     * @async
+     */
+    "addBotBan": async function(database, id, type, reason, bannedBy) {
+        botBanCache.delete(`botBan:${id}`);
+        const existing = await database.allPromise(
+            "SELECT id FROM botBans WHERE id = ?",
+            [id]
+        );
+
+        if (existing.length === 0) {
+            await database.runPromise(
+                "INSERT INTO botBans(id, type, reason, bannedAt, bannedBy) VALUES(?, ?, ?, ?, ?)",
+                [id, type, reason || null, Date.now(), bannedBy]
+            );
+        } else {
+            await database.runPromise(
+                "UPDATE botBans SET type = ?, reason = ?, bannedAt = ?, bannedBy = ? WHERE id = ?",
+                [type, reason || null, Date.now(), bannedBy, id]
+            );
+        }
+    },
+
+    /**
+     * Remove a bot-level ban
+     * @param {Database} database
+     * @param {String} id - User ID or Guild ID
+     * @async
+     */
+    "removeBotBan": async function(database, id) {
+        botBanCache.delete(`botBan:${id}`);
+        await database.runPromise(
+            "DELETE FROM botBans WHERE id = ?",
+            [id]
+        );
+    },
+
+    /**
+     * Check if a user or server is bot-banned
+     * @param {Database} database
+     * @param {String} id - User ID or Guild ID
+     * @async
+     * @return {Object|null} Ban info or null if not banned
+     */
+    "getBotBan": async function(database, id) {
+        const cacheKey = `botBan:${id}`;
+        const cached = botBanCache.get(cacheKey);
+        if (cached !== undefined) {
+            return cached;
+        }
+
+        const result = await database.allPromise(
+            "SELECT id, type, reason, bannedAt, bannedBy FROM botBans WHERE id = ?",
+            [id]
+        );
+
+        if (result.length === 0) {
+            botBanCache.set(cacheKey, null);
+            return null;
+        }
+
+        const ban = {
+            id: result[0].id,
+            type: result[0].type,
+            reason: result[0].reason,
+            bannedAt: result[0].bannedAt,
+            bannedBy: result[0].bannedBy
+        };
+        botBanCache.set(cacheKey, ban);
+        return ban;
+    },
+
+    /**
+     * Get all bot bans (optionally filtered by type)
+     * @param {Database} database
+     * @param {String} type - 'user', 'server', or null for all
+     * @async
+     * @return {Array}
+     */
+    "getAllBotBans": async function(database, type) {
+        let result;
+        if (type) {
+            result = await database.allPromise(
+                "SELECT id, type, reason, bannedAt, bannedBy FROM botBans WHERE type = ? ORDER BY bannedAt DESC",
+                [type]
+            );
+        } else {
+            result = await database.allPromise(
+                "SELECT id, type, reason, bannedAt, bannedBy FROM botBans ORDER BY bannedAt DESC"
+            );
+        }
+
+        return result.map(row => ({
+            id: row.id,
+            type: row.type,
+            reason: row.reason,
+            bannedAt: row.bannedAt,
+            bannedBy: row.bannedBy
+        }));
+    },
+
+    /**
+     * Check if user or their server is bot-banned
+     * @param {Database} database
+     * @param {String} userId
+     * @param {String} guildId - Optional guild ID to check
+     * @async
+     * @return {Object} {banned: boolean, reason?: string, type?: string}
+     */
+    "isBotBanned": async function(database, userId, guildId) {
+        const userBan = await self.getBotBan(database, userId);
+        if (userBan) {
+            return { banned: true, reason: userBan.reason, type: 'user' };
+        }
+
+        if (guildId) {
+            const serverBan = await self.getBotBan(database, guildId);
+            if (serverBan) {
+                return { banned: true, reason: serverBan.reason, type: 'server' };
+            }
+        }
+
+        return { banned: false };
+    },
+
+    // ==================== DM Inbox Functions ====================
+
+    /**
+     * Save a DM to the inbox
+     * @param {Database} database
+     * @param {String} usrId
+     * @param {String} userTag
+     * @param {String} content
+     * @param {Array} attachments - Array of attachment URLs
+     * @async
+     * @return {number} The inserted row ID
+     */
+    "saveDm": async function(database, usrId, userTag, content, attachments) {
+        const attachmentsJson = JSON.stringify(attachments || []);
+        const result = await database.runPromise(
+            "INSERT INTO dmInbox(usrId, userTag, content, attachments, timestamp, replied) VALUES(?, ?, ?, ?, ?, 0)",
+            [usrId, userTag, content, attachmentsJson, Date.now()]
+        );
+        return result.lastID;
+    },
+
+    /**
+     * Get inbox messages
+     * @param {Database} database
+     * @param {number} limit - Max messages to return
+     * @param {number} offset - Offset for pagination
+     * @async
+     * @return {Array}
+     */
+    "getInbox": async function(database, limit = 20, offset = 0) {
+        const result = await database.allPromise(
+            "SELECT id, usrId, userTag, content, attachments, timestamp, replied FROM dmInbox ORDER BY timestamp DESC LIMIT ? OFFSET ?",
+            [limit, offset]
+        );
+
+        return result.map(row => ({
+            id: row.id,
+            usrId: row.usrId,
+            userTag: row.userTag,
+            content: row.content,
+            attachments: JSON.parse(row.attachments || '[]'),
+            timestamp: row.timestamp,
+            replied: row.replied === 1
+        }));
+    },
+
+    /**
+     * Get inbox messages from a specific user
+     * @param {Database} database
+     * @param {String} usrId
+     * @param {number} limit
+     * @async
+     * @return {Array}
+     */
+    "getInboxByUser": async function(database, usrId, limit = 20) {
+        const result = await database.allPromise(
+            "SELECT id, usrId, userTag, content, attachments, timestamp, replied FROM dmInbox WHERE usrId = ? ORDER BY timestamp DESC LIMIT ?",
+            [usrId, limit]
+        );
+
+        return result.map(row => ({
+            id: row.id,
+            usrId: row.usrId,
+            userTag: row.userTag,
+            content: row.content,
+            attachments: JSON.parse(row.attachments || '[]'),
+            timestamp: row.timestamp,
+            replied: row.replied === 1
+        }));
+    },
+
+    /**
+     * Get a specific inbox message by ID
+     * @param {Database} database
+     * @param {number} id
+     * @async
+     * @return {Object|null}
+     */
+    "getInboxMessage": async function(database, id) {
+        const result = await database.allPromise(
+            "SELECT id, usrId, userTag, content, attachments, timestamp, replied FROM dmInbox WHERE id = ?",
+            [id]
+        );
+
+        if (result.length === 0) return null;
+
+        return {
+            id: result[0].id,
+            usrId: result[0].usrId,
+            userTag: result[0].userTag,
+            content: result[0].content,
+            attachments: JSON.parse(result[0].attachments || '[]'),
+            timestamp: result[0].timestamp,
+            replied: result[0].replied === 1
+        };
+    },
+
+    /**
+     * Mark a DM as replied
+     * @param {Database} database
+     * @param {number} id
+     * @async
+     */
+    "markDmReplied": async function(database, id) {
+        await database.runPromise(
+            "UPDATE dmInbox SET replied = 1 WHERE id = ?",
+            [id]
+        );
+    },
+
+    /**
+     * Clear old DMs (cleanup)
+     * @param {Database} database
+     * @param {number} days - Delete DMs older than this many days
+     * @async
+     * @return {number} Number of deleted rows
+     */
+    "clearOldDms": async function(database, days = 30) {
+        const cutoff = Date.now() - (days * 24 * 60 * 60 * 1000);
+        const result = await database.runPromise(
+            "DELETE FROM dmInbox WHERE timestamp < ?",
+            [cutoff]
+        );
+        return result.changes || 0;
+    },
+
+    /**
+     * Get count of unread (unreplied) DMs
+     * @param {Database} database
+     * @async
+     * @return {number}
+     */
+    "getUnreadDmCount": async function(database) {
+        const result = await database.allPromise(
+            "SELECT COUNT(*) as count FROM dmInbox WHERE replied = 0"
+        );
+        return result[0]?.count || 0;
     }
 }
