@@ -518,6 +518,7 @@ timportbans <server-id> ./BANS-123456.txt
 | `scold` | *"Bad! But I still love you..."* 💢 |
 | `8ball` | *"Let fate decide~"* 🎱 |
 | `neko` | *"Nya~"* 🐱 |
+| `set-presence` | *"Let me show you how I'm feeling~"* 🎭 |
 | `db-encrypt` | *"Your secrets are mine to keep~"* 🔐 |
 | `set-logchannel` | *"I'll watch over everything~"* 📋 |
 | `log-status` | *"Here's what I'm watching~"* 👁️ |
@@ -542,6 +543,7 @@ timportbans <server-id> ./BANS-123456.txt
 | `tban` | *"Eliminating threats~"* 🔪 |
 | `texportbans` | *"Saving my enemies list~"* 📤 |
 | `timportbans` | *"Loading my enemies~"* 📥 |
+| `set-presence` | *"Changing my mood~"* 🎭 |
 
 *Use the `list` command to see all available commands!*
 

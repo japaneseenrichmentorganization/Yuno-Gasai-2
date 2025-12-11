@@ -38,6 +38,15 @@ let ModuleExporter = (require("./ModuleExporter.js")).init(),
 
 let ONETIME_EVENT = false
 
+// Connection state tracking for auto-reconnection
+let connectionState = {
+    isConnected: false,
+    reconnectCount: 0,
+    lastDisconnect: null,
+    reconnectTimer: null,
+    monitorInterval: null
+};
+
 /**
  * Main Yuno Gasai 2 Class
  * @extends EventEmitter
@@ -542,6 +551,9 @@ ${YUNO_PINK}           "I'll protect this server forever... just for you~"${RESE
 
         this.prompt.info("Shutdowning... Reason: " + reasonStr);
 
+        // Stop connection monitor
+        this._stopConnectionMonitor();
+
         this.interactiveTerm.stop();
 
 
@@ -731,7 +743,139 @@ ${YUNO_PINK}           "I'll protect this server forever... just for you~"${RESE
 
         this.emit("discord-connected", this);
         this.prompt.success("Successfully connected to Discord as " + this.dC.user.tag);
+
+        // Setup auto-reconnection handlers
+        this._setupReconnectionHandlers();
+
         this.prompt.info("Bot launched.");
+    }
+
+    /**
+     * Sets up event handlers for automatic reconnection
+     * @private
+     */
+    _setupReconnectionHandlers() {
+        // Clear any existing handlers to prevent duplicates
+        this.dC.removeAllListeners('ready');
+        this.dC.removeAllListeners('disconnect');
+        this.dC.removeAllListeners('reconnecting');
+        this.dC.removeAllListeners('resume');
+        this.dC.removeAllListeners('shardReady');
+        this.dC.removeAllListeners('shardDisconnect');
+        this.dC.removeAllListeners('shardReconnecting');
+        this.dC.removeAllListeners('shardResume');
+        this.dC.removeAllListeners('shardError');
+
+        // Handle successful connection/ready
+        this.dC.on('ready', () => {
+            connectionState.isConnected = true;
+            if (connectionState.reconnectCount > 0) {
+                this.prompt.success(`✓ Reconnected successfully (attempt #${connectionState.reconnectCount})`);
+                connectionState.reconnectCount = 0;
+            }
+            connectionState.lastDisconnect = null;
+        });
+
+        // Handle shard ready (for sharded bots)
+        this.dC.on('shardReady', (shardId) => {
+            connectionState.isConnected = true;
+            this.prompt.info(`✓ Shard ${shardId} connected`);
+        });
+
+        // Handle disconnection
+        this.dC.on('shardDisconnect', (event, shardId) => {
+            connectionState.isConnected = false;
+            connectionState.lastDisconnect = Date.now();
+            this.prompt.warning(`⚠️  Shard ${shardId} disconnected (code: ${event.code})`);
+        });
+
+        // Handle reconnecting
+        this.dC.on('shardReconnecting', (shardId) => {
+            connectionState.reconnectCount++;
+            this.prompt.info(`🔄 Shard ${shardId} reconnecting (attempt #${connectionState.reconnectCount})...`);
+        });
+
+        // Handle resumed connection
+        this.dC.on('shardResume', (shardId, replayedEvents) => {
+            connectionState.isConnected = true;
+            this.prompt.success(`✓ Shard ${shardId} resumed (replayed ${replayedEvents} events)`);
+            connectionState.reconnectCount = 0;
+            connectionState.lastDisconnect = null;
+        });
+
+        // Handle shard errors
+        this.dC.on('shardError', (error, shardId) => {
+            this.prompt.error(`❌ Shard ${shardId} error: ${error.message}`);
+        });
+
+        // Start connection monitor for fallback reconnection
+        this._startConnectionMonitor();
+
+        this.prompt.info("✓ Auto-reconnection handlers initialized");
+    }
+
+    /**
+     * Starts a background monitor that forces reconnection if Discord.js fails to reconnect
+     * @private
+     */
+    _startConnectionMonitor() {
+        // Clear existing monitor
+        if (connectionState.monitorInterval) {
+            clearInterval(connectionState.monitorInterval);
+        }
+
+        // Check connection every 30 seconds
+        connectionState.monitorInterval = setInterval(async () => {
+            // If we've been disconnected for more than 2 minutes and Discord.js hasn't reconnected
+            if (!connectionState.isConnected && connectionState.lastDisconnect) {
+                const disconnectDuration = Date.now() - connectionState.lastDisconnect;
+
+                if (disconnectDuration > 2 * 60 * 1000) { // 2 minutes
+                    connectionState.reconnectCount++;
+                    this.prompt.warning(`⚠️  Connection lost for >2 minutes, forcing reconnect #${connectionState.reconnectCount}...`);
+
+                    try {
+                        // Destroy and recreate the connection
+                        await this.dC.destroy();
+
+                        // Wait before reconnecting with exponential backoff
+                        const backoff = Math.min(connectionState.reconnectCount * 10, 120) * 1000;
+                        this.prompt.info(`⏳ Waiting ${backoff / 1000}s before reconnecting...`);
+
+                        await new Promise(resolve => setTimeout(resolve, backoff));
+
+                        // Attempt to login again
+                        const token = this.config.get("discord.token");
+                        await this.dC.login(token);
+
+                        this.prompt.success("✓ Forced reconnection successful");
+                        connectionState.isConnected = true;
+                        connectionState.lastDisconnect = null;
+
+                    } catch (error) {
+                        this.prompt.error(`❌ Forced reconnection failed: ${error.message}`);
+                        // Will retry on next interval
+                    }
+                }
+            }
+        }, 30 * 1000); // Check every 30 seconds
+
+        this.prompt.info("✓ Connection monitor started (checks every 30s)");
+    }
+
+    /**
+     * Stops the connection monitor
+     * @private
+     */
+    _stopConnectionMonitor() {
+        if (connectionState.monitorInterval) {
+            clearInterval(connectionState.monitorInterval);
+            connectionState.monitorInterval = null;
+        }
+        if (connectionState.reconnectTimer) {
+            clearTimeout(connectionState.reconnectTimer);
+            connectionState.reconnectTimer = null;
+        }
     }
 }
 

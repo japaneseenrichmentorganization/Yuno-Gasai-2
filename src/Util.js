@@ -16,23 +16,38 @@ module.exports = {
      */
     "clean": async function(channel) {
         let nsfw = channel.nsfw,
-            pos = channel.position;
+            pos = channel.position,
+            oldId = channel.id;
 
         // Clone the channel
         let n = await channel.clone({
             "reason": "Cleaning by Yuno."
         });
 
-        // Delete the old channel
-        await channel.delete();
+        // Try to delete the old channel, but don't fail if it doesn't work
+        // The new channel is already created and functional
+        try {
+            await channel.delete();
+        } catch (deleteErr) {
+            console.log(`[AutoClean] Warning: Failed to delete old channel ${oldId}: ${deleteErr.message} (new channel ${n.id} is active)`);
+            // Don't throw - the new channel is ready to use
+        }
 
         // Restore position
-        await n.setPosition(pos);
+        try {
+            await n.setPosition(pos);
+        } catch (posErr) {
+            console.log(`[AutoClean] Warning: Failed to restore position: ${posErr.message}`);
+        }
 
         // Restore NSFW/age-restricted setting using setNSFW method (Discord.js v14)
         // This ensures both NSFW and age-restricted flags are properly carried over
         if (nsfw) {
-            await n.setNSFW(true, "Restoring NSFW setting after channel clean");
+            try {
+                await n.setNSFW(true, "Restoring NSFW setting after channel clean");
+            } catch (nsfwErr) {
+                console.log(`[AutoClean] Warning: Failed to restore NSFW setting: ${nsfwErr.message}`);
+            }
         }
 
         return n;
