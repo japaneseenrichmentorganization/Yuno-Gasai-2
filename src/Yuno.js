@@ -58,6 +58,9 @@ class Yuno extends EventEmitter {
     constructor() {
         super();
 
+        // Increase max listeners to accommodate all modules
+        this.setMaxListeners(20);
+
         this.prompt = ModuleExporter.singletonPreset(this, "prompt")
 
         // Not hot-reloading this one: it's the core of interactivity => essential.
@@ -85,7 +88,9 @@ class Yuno extends EventEmitter {
                 GatewayIntentBits.GuildMessages,
                 GatewayIntentBits.MessageContent,
                 GatewayIntentBits.DirectMessages,
-                GatewayIntentBits.GuildBans
+                GatewayIntentBits.GuildBans,
+                GatewayIntentBits.GuildVoiceStates,
+                GatewayIntentBits.GuildPresences
             ]
         });
         this.dC = this.discordClient;

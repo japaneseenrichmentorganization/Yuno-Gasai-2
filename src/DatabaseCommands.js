@@ -23,6 +23,10 @@ const LRUCache = require("./lib/lruCache");
 const guildSettingsCache = new LRUCache(500, 5 * 60 * 1000);
 // Cache for XP data (1 minute TTL, max 1000 entries)
 const xpDataCache = new LRUCache(1000, 60 * 1000);
+// Cache for log channel settings (5 minute TTL, max 500 guilds)
+const logChannelCache = new LRUCache(500, 5 * 60 * 1000);
+// Cache for VC XP config (5 minute TTL, max 500 guilds)
+const vcXpConfigCache = new LRUCache(500, 5 * 60 * 1000);
 
 let self;
 
@@ -188,6 +192,66 @@ module.exports = self = {
             timestamp INTEGER
         )`)
 
+        /*
+         * Log channel configuration per guild
+         * gid = guild id
+         * logType = 'unified', 'voice', 'nickname', 'avatar', 'presence'
+         * channelId = channel id to send logs to
+         * enabled = whether this log type is enabled
+         */
+        await database.runPromise(`CREATE TABLE IF NOT EXISTS logChannels (
+            gid TEXT,
+            logType TEXT,
+            channelId TEXT,
+            enabled INTEGER DEFAULT 1,
+            PRIMARY KEY (gid, logType)
+        )`)
+
+        /*
+         * Log settings per guild
+         * gid = guild id
+         * flushInterval = seconds between log flushes (min 10, max 300)
+         * maxBufferSize = max entries before force flush (min 10, max 100)
+         */
+        await database.runPromise(`CREATE TABLE IF NOT EXISTS logSettings (
+            gid TEXT PRIMARY KEY,
+            flushInterval INTEGER DEFAULT 30,
+            maxBufferSize INTEGER DEFAULT 50
+        )`)
+
+        /*
+         * Voice channel XP configuration per guild
+         * gid = guild id
+         * enabled = whether VC XP is enabled
+         * xpPerInterval = XP amount granted per interval
+         * intervalSeconds = time interval in seconds
+         * ignoreAfkChannel = whether to ignore AFK channel
+         */
+        await database.runPromise(`CREATE TABLE IF NOT EXISTS vcXpConfig (
+            gid TEXT PRIMARY KEY,
+            enabled INTEGER DEFAULT 0,
+            xpPerInterval INTEGER DEFAULT 10,
+            intervalSeconds INTEGER DEFAULT 300,
+            ignoreAfkChannel INTEGER DEFAULT 1
+        )`)
+
+        /*
+         * Active voice channel sessions for XP tracking
+         * gid = guild id
+         * usrId = user id
+         * channelId = current voice channel id
+         * joinedAt = timestamp when user joined VC
+         * lastXpGrant = timestamp of last XP grant
+         */
+        await database.runPromise(`CREATE TABLE IF NOT EXISTS vcSessions (
+            gid TEXT,
+            usrId TEXT,
+            channelId TEXT,
+            joinedAt INTEGER,
+            lastXpGrant INTEGER,
+            PRIMARY KEY (gid, usrId)
+        )`)
+
         // Create indexes for common queries
         await database.runPromise(`CREATE INDEX IF NOT EXISTS idx_modactions_gid_moderator ON modActions(gid, moderatorId)`);
         await database.runPromise(`CREATE INDEX IF NOT EXISTS idx_modactions_gid_action ON modActions(gid, action)`);
@@ -196,6 +260,8 @@ module.exports = self = {
         await database.runPromise(`CREATE INDEX IF NOT EXISTS idx_channelcleans_gid_cname ON channelcleans(gid, cname)`);
         await database.runPromise(`CREATE INDEX IF NOT EXISTS idx_mentionresponses_gid_trigger ON mentionResponses(gid, trigger)`);
         await database.runPromise(`CREATE INDEX IF NOT EXISTS idx_banimages_gid_banner ON banImages(gid, banner)`);
+        await database.runPromise(`CREATE INDEX IF NOT EXISTS idx_logchannels_gid ON logChannels(gid)`);
+        await database.runPromise(`CREATE INDEX IF NOT EXISTS idx_vcsessions_gid ON vcSessions(gid)`);
     },
 
     /**
@@ -676,6 +742,8 @@ module.exports = self = {
     "clearCaches": function() {
         guildSettingsCache.clear();
         xpDataCache.clear();
+        logChannelCache.clear();
+        vcXpConfigCache.clear();
     },
 
     /**
@@ -772,5 +840,403 @@ module.exports = self = {
             [guildid]
         );
         return result[0]?.count || 0;
+    },
+
+    // ==================== Log Channel Functions ====================
+
+    /**
+     * Get all log channel configurations for a guild
+     * @param {Database} database
+     * @param {String} guildid
+     * @async
+     * @return {Object} Object with logType as keys and {channelId, enabled} as values
+     */
+    "getLogChannels": async function(database, guildid) {
+        const cacheKey = `logChannels:${guildid}`;
+        const cached = logChannelCache.get(cacheKey);
+        if (cached !== undefined) {
+            return cached;
+        }
+
+        const result = await database.allPromise(
+            "SELECT logType, channelId, enabled FROM logChannels WHERE gid = ?",
+            [guildid]
+        );
+
+        const channels = {};
+        result.forEach(row => {
+            channels[row.logType] = {
+                channelId: row.channelId,
+                enabled: row.enabled === 1
+            };
+        });
+
+        logChannelCache.set(cacheKey, channels);
+        return channels;
+    },
+
+    /**
+     * Set a log channel for a specific log type
+     * @param {Database} database
+     * @param {String} guildid
+     * @param {String} logType - 'unified', 'voice', 'nickname', 'avatar', 'presence'
+     * @param {String} channelId
+     * @async
+     */
+    "setLogChannel": async function(database, guildid, logType, channelId) {
+        await self.initGuild(database, guildid);
+        logChannelCache.delete(`logChannels:${guildid}`);
+
+        const existing = await database.allPromise(
+            "SELECT channelId FROM logChannels WHERE gid = ? AND logType = ?",
+            [guildid, logType]
+        );
+
+        if (existing.length === 0) {
+            await database.runPromise(
+                "INSERT INTO logChannels(gid, logType, channelId, enabled) VALUES(?, ?, ?, 1)",
+                [guildid, logType, channelId]
+            );
+        } else {
+            await database.runPromise(
+                "UPDATE logChannels SET channelId = ?, enabled = 1 WHERE gid = ? AND logType = ?",
+                [channelId, guildid, logType]
+            );
+        }
+    },
+
+    /**
+     * Remove a log channel configuration
+     * @param {Database} database
+     * @param {String} guildid
+     * @param {String} logType
+     * @async
+     */
+    "removeLogChannel": async function(database, guildid, logType) {
+        logChannelCache.delete(`logChannels:${guildid}`);
+        await database.runPromise(
+            "DELETE FROM logChannels WHERE gid = ? AND logType = ?",
+            [guildid, logType]
+        );
+    },
+
+    /**
+     * Toggle a log channel enabled/disabled
+     * @param {Database} database
+     * @param {String} guildid
+     * @param {String} logType
+     * @param {boolean} enabled
+     * @async
+     */
+    "setLogChannelEnabled": async function(database, guildid, logType, enabled) {
+        logChannelCache.delete(`logChannels:${guildid}`);
+        await database.runPromise(
+            "UPDATE logChannels SET enabled = ? WHERE gid = ? AND logType = ?",
+            [enabled ? 1 : 0, guildid, logType]
+        );
+    },
+
+    /**
+     * Get log settings for a guild
+     * @param {Database} database
+     * @param {String} guildid
+     * @async
+     * @return {Object} {flushInterval, maxBufferSize}
+     */
+    "getLogSettings": async function(database, guildid) {
+        const result = await database.allPromise(
+            "SELECT flushInterval, maxBufferSize FROM logSettings WHERE gid = ?",
+            [guildid]
+        );
+
+        if (result.length === 0) {
+            return {
+                flushInterval: 30,
+                maxBufferSize: 50
+            };
+        }
+
+        return {
+            flushInterval: result[0].flushInterval,
+            maxBufferSize: result[0].maxBufferSize
+        };
+    },
+
+    /**
+     * Set log settings for a guild
+     * @param {Database} database
+     * @param {String} guildid
+     * @param {Object} settings - {flushInterval, maxBufferSize}
+     * @async
+     */
+    "setLogSettings": async function(database, guildid, settings) {
+        await self.initGuild(database, guildid);
+
+        // Enforce limits (respect Discord API)
+        const flushInterval = Math.max(10, Math.min(300, settings.flushInterval || 30));
+        const maxBufferSize = Math.max(10, Math.min(100, settings.maxBufferSize || 50));
+
+        const existing = await database.allPromise(
+            "SELECT gid FROM logSettings WHERE gid = ?",
+            [guildid]
+        );
+
+        if (existing.length === 0) {
+            await database.runPromise(
+                "INSERT INTO logSettings(gid, flushInterval, maxBufferSize) VALUES(?, ?, ?)",
+                [guildid, flushInterval, maxBufferSize]
+            );
+        } else {
+            await database.runPromise(
+                "UPDATE logSettings SET flushInterval = ?, maxBufferSize = ? WHERE gid = ?",
+                [flushInterval, maxBufferSize, guildid]
+            );
+        }
+    },
+
+    // ==================== VC XP Config Functions ====================
+
+    /**
+     * Get VC XP configuration for a guild
+     * @param {Database} database
+     * @param {String} guildid
+     * @async
+     * @return {Object} Config object with enabled, xpPerInterval, intervalSeconds, ignoreAfkChannel
+     */
+    "getVcXpConfig": async function(database, guildid) {
+        const cacheKey = `vcXpConfig:${guildid}`;
+        const cached = vcXpConfigCache.get(cacheKey);
+        if (cached !== undefined) {
+            return cached;
+        }
+
+        const result = await database.allPromise(
+            "SELECT enabled, xpPerInterval, intervalSeconds, ignoreAfkChannel FROM vcXpConfig WHERE gid = ?",
+            [guildid]
+        );
+
+        if (result.length === 0) {
+            const defaultConfig = {
+                enabled: false,
+                xpPerInterval: 10,
+                intervalSeconds: 300,
+                ignoreAfkChannel: true
+            };
+            vcXpConfigCache.set(cacheKey, defaultConfig);
+            return defaultConfig;
+        }
+
+        const config = {
+            enabled: result[0].enabled === 1,
+            xpPerInterval: result[0].xpPerInterval,
+            intervalSeconds: result[0].intervalSeconds,
+            ignoreAfkChannel: result[0].ignoreAfkChannel === 1
+        };
+
+        vcXpConfigCache.set(cacheKey, config);
+        return config;
+    },
+
+    /**
+     * Set VC XP configuration for a guild
+     * @param {Database} database
+     * @param {String} guildid
+     * @param {Object} config - {enabled, xpPerInterval, intervalSeconds, ignoreAfkChannel}
+     * @async
+     */
+    "setVcXpConfig": async function(database, guildid, config) {
+        await self.initGuild(database, guildid);
+        vcXpConfigCache.delete(`vcXpConfig:${guildid}`);
+
+        const existing = await database.allPromise(
+            "SELECT gid FROM vcXpConfig WHERE gid = ?",
+            [guildid]
+        );
+
+        if (existing.length === 0) {
+            await database.runPromise(
+                "INSERT INTO vcXpConfig(gid, enabled, xpPerInterval, intervalSeconds, ignoreAfkChannel) VALUES(?, ?, ?, ?, ?)",
+                [
+                    guildid,
+                    config.enabled ? 1 : 0,
+                    config.xpPerInterval || 10,
+                    config.intervalSeconds || 300,
+                    config.ignoreAfkChannel !== false ? 1 : 0
+                ]
+            );
+        } else {
+            await database.runPromise(
+                "UPDATE vcXpConfig SET enabled = ?, xpPerInterval = ?, intervalSeconds = ?, ignoreAfkChannel = ? WHERE gid = ?",
+                [
+                    config.enabled ? 1 : 0,
+                    config.xpPerInterval || 10,
+                    config.intervalSeconds || 300,
+                    config.ignoreAfkChannel !== false ? 1 : 0,
+                    guildid
+                ]
+            );
+        }
+    },
+
+    // ==================== VC Session Functions ====================
+
+    /**
+     * Start a VC session for a user
+     * @param {Database} database
+     * @param {String} guildid
+     * @param {String} userId
+     * @param {String} channelId
+     * @async
+     */
+    "startVcSession": async function(database, guildid, userId, channelId) {
+        const now = Date.now();
+        const existing = await database.allPromise(
+            "SELECT usrId FROM vcSessions WHERE gid = ? AND usrId = ?",
+            [guildid, userId]
+        );
+
+        if (existing.length === 0) {
+            await database.runPromise(
+                "INSERT INTO vcSessions(gid, usrId, channelId, joinedAt, lastXpGrant) VALUES(?, ?, ?, ?, ?)",
+                [guildid, userId, channelId, now, now]
+            );
+        } else {
+            await database.runPromise(
+                "UPDATE vcSessions SET channelId = ?, joinedAt = ?, lastXpGrant = ? WHERE gid = ? AND usrId = ?",
+                [channelId, now, now, guildid, userId]
+            );
+        }
+    },
+
+    /**
+     * Update the channel for an existing VC session (for channel moves)
+     * @param {Database} database
+     * @param {String} guildid
+     * @param {String} userId
+     * @param {String} channelId
+     * @async
+     */
+    "updateVcSessionChannel": async function(database, guildid, userId, channelId) {
+        await database.runPromise(
+            "UPDATE vcSessions SET channelId = ? WHERE gid = ? AND usrId = ?",
+            [channelId, guildid, userId]
+        );
+    },
+
+    /**
+     * End a VC session and return the duration
+     * @param {Database} database
+     * @param {String} guildid
+     * @param {String} userId
+     * @async
+     * @return {Object|null} {joinedAt, lastXpGrant, duration} or null if no session
+     */
+    "endVcSession": async function(database, guildid, userId) {
+        const session = await database.allPromise(
+            "SELECT joinedAt, lastXpGrant FROM vcSessions WHERE gid = ? AND usrId = ?",
+            [guildid, userId]
+        );
+
+        if (session.length === 0) {
+            return null;
+        }
+
+        const now = Date.now();
+        const result = {
+            joinedAt: session[0].joinedAt,
+            lastXpGrant: session[0].lastXpGrant,
+            duration: now - session[0].joinedAt
+        };
+
+        await database.runPromise(
+            "DELETE FROM vcSessions WHERE gid = ? AND usrId = ?",
+            [guildid, userId]
+        );
+
+        return result;
+    },
+
+    /**
+     * Get a specific VC session
+     * @param {Database} database
+     * @param {String} guildid
+     * @param {String} userId
+     * @async
+     * @return {Object|null}
+     */
+    "getVcSession": async function(database, guildid, userId) {
+        const result = await database.allPromise(
+            "SELECT channelId, joinedAt, lastXpGrant FROM vcSessions WHERE gid = ? AND usrId = ?",
+            [guildid, userId]
+        );
+
+        if (result.length === 0) return null;
+
+        return {
+            channelId: result[0].channelId,
+            joinedAt: result[0].joinedAt,
+            lastXpGrant: result[0].lastXpGrant
+        };
+    },
+
+    /**
+     * Get all active VC sessions (for recovery on bot restart)
+     * @param {Database} database
+     * @async
+     * @return {Array}
+     */
+    "getAllVcSessions": async function(database) {
+        const result = await database.allPromise("SELECT * FROM vcSessions");
+        return result.map(row => ({
+            guildId: row.gid,
+            oderId: row.usrId,
+            channelId: row.channelId,
+            joinedAt: row.joinedAt,
+            lastXpGrant: row.lastXpGrant
+        }));
+    },
+
+    /**
+     * Update the last XP grant timestamp for a session
+     * @param {Database} database
+     * @param {String} guildid
+     * @param {String} userId
+     * @param {number} timestamp
+     * @async
+     */
+    "updateVcSessionXpTime": async function(database, guildid, userId, timestamp) {
+        await database.runPromise(
+            "UPDATE vcSessions SET lastXpGrant = ? WHERE gid = ? AND usrId = ?",
+            [timestamp, guildid, userId]
+        );
+    },
+
+    /**
+     * Get all active sessions for a guild
+     * @param {Database} database
+     * @param {String} guildid
+     * @async
+     * @return {Array}
+     */
+    "getGuildVcSessions": async function(database, guildid) {
+        const result = await database.allPromise(
+            "SELECT usrId, channelId, joinedAt, lastXpGrant FROM vcSessions WHERE gid = ?",
+            [guildid]
+        );
+        return result.map(row => ({
+            oderId: row.usrId,
+            channelId: row.channelId,
+            joinedAt: row.joinedAt,
+            lastXpGrant: row.lastXpGrant
+        }));
+    },
+
+    /**
+     * Clear all VC sessions (useful for cleanup)
+     * @param {Database} database
+     * @async
+     */
+    "clearAllVcSessions": async function(database) {
+        await database.runPromise("DELETE FROM vcSessions");
     }
 }
