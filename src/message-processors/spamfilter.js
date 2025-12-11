@@ -85,8 +85,8 @@ module.exports.message = async function(content, msg) {
         msg.member = await msg.guild.members.fetch(msg.author);
     }
     // Obtain the member for the ClientUser if it doesn't already exist
-    if(msg.guild && !msg.guild.members.cache.has(Yuno.dC.user.id)) {
-        await msg.guild.members.fetch(Yuno.dC.user.id);
+    if(msg.guild && !msg.guild.members.cache.has(msg.client.user.id)) {
+        await msg.guild.members.fetch(msg.client.user.id);
     }
 
 

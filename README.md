@@ -61,6 +61,7 @@ Yuno is a **yandere-themed Discord bot** combining powerful moderation tools wit
 - 📈 Mass XP commands
 - 🔄 Level role syncing
 - 🏆 Server leaderboards
+- 🎤 Voice channel XP rewards
 
 </td>
 </tr>
@@ -91,6 +92,18 @@ Yuno is a **yandere-themed Discord bot** combining powerful moderation tools wit
 </td>
 </tr>
 <tr>
+<td width="50%">
+
+### 📋 Activity Logging
+*"I see everything that happens here~"*
+- 🎤 Voice channel join/leave/move
+- 📝 Nickname changes
+- 🖼️ Avatar/profile changes
+- 🟢 Presence status tracking
+- ⚡ Smart batching (rate limit safe)
+- ⏱️ Configurable flush intervals
+
+</td>
 <td width="50%">
 
 ### 🔐 Database Security
@@ -251,6 +264,92 @@ Configure database optimizations in `DEFAULT_CONFIG.json` based on your hosting:
 
 ---
 
+## 📋 Activity Logging
+
+*"I see everything... every move, every change~"* 👁️💕
+
+Yuno can log server activity to designated channels with smart batching to respect Discord's rate limits.
+
+### 🎯 What Can Be Logged
+
+| Log Type | Events |
+|----------|--------|
+| `voice` | Voice channel joins, leaves, moves |
+| `nickname` | Member nickname changes |
+| `avatar` | Profile picture changes |
+| `presence` | Online/offline/idle/DND status changes |
+| `unified` | Fallback channel for all log types |
+
+### 🔧 Setup Commands
+
+```bash
+# Set a log channel
+.set-logchannel voice #voice-logs
+.set-logchannel presence #status-logs
+.set-logchannel unified #all-logs
+
+# Remove a log channel
+.set-logchannel voice none
+
+# View current configuration
+.log-status
+```
+
+### ⚡ Batching Configuration
+
+Logs are batched together and sent at intervals to avoid rate limits:
+
+```bash
+# View current settings
+.set-logsettings
+
+# Set flush interval (10-300 seconds)
+.set-logsettings interval 60
+
+# Set max buffer size (10-100 entries)
+.set-logsettings buffer 25
+```
+
+> ⚠️ **Note:** The `PRESENCE INTENT` must be enabled in the Discord Developer Portal for presence logging.
+
+---
+
+## 🎤 Voice Channel XP
+
+*"Spend time with me... and I'll reward you~"* 💕
+
+Users earn XP for time spent in voice channels, integrated with the main leveling system.
+
+### 🔧 Setup Commands
+
+```bash
+# Enable/disable VC XP
+.set-vcxp enable
+.set-vcxp disable
+
+# Set XP amount per interval (default: 10)
+.set-vcxp rate 15
+
+# Set interval in seconds (default: 300 = 5 min)
+.set-vcxp interval 300
+
+# Ignore AFK channel (default: true)
+.set-vcxp ignore-afk true
+
+# View current config and active sessions
+.vcxp-status
+```
+
+### 💡 How It Works
+
+- XP is granted based on time spent in voice channels
+- Uses the same XP/level system as chat XP
+- Level-up roles are automatically assigned
+- AFK channel can be excluded from earning XP
+- Sessions are recovered if the bot restarts
+
+---
+
 ## 💖 Commands Preview
 
 | Command | Description |
@@ -264,6 +363,10 @@ Configure database optimizations in `DEFAULT_CONFIG.json` based on your hosting:
 | `8ball` | *"Let fate decide~"* 🎱 |
 | `neko` | *"Nya~"* 🐱 |
 | `db-encrypt` | *"Your secrets are mine to keep~"* 🔐 |
+| `set-logchannel` | *"I'll watch over everything~"* 📋 |
+| `log-status` | *"Here's what I'm watching~"* 👁️ |
+| `set-vcxp` | *"Time with me is rewarding~"* 🎤 |
+| `vcxp-status` | *"Who's spending time with me?"* 💕 |
 
 *Use the `list` command to see all available commands!*
 
