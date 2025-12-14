@@ -214,6 +214,59 @@ module.exports.run = async function(yuno, author, args, msg) {
         }
     }
 
+    // Handle notify toggle
+    if (subcommand === "notify") {
+        const setting = args[1]?.toLowerCase();
+        const checker = require("../modules/auto-update-checker");
+
+        if (setting === "on" || setting === "enable" || setting === "true") {
+            checker.setNotifyDiscord(true);
+            yuno.config.set("autoupdate.notify-discord", true);
+            await yuno.config.save();
+            return msg.channel.send(":white_check_mark: Discord notifications **enabled**. Updates will be posted to the errors channel.");
+        }
+
+        if (setting === "off" || setting === "disable" || setting === "false") {
+            checker.setNotifyDiscord(false);
+            yuno.config.set("autoupdate.notify-discord", false);
+            await yuno.config.save();
+            return msg.channel.send(":white_check_mark: Discord notifications **disabled**. Updates will only be logged to console.");
+        }
+
+        const currentStatus = checker.getNotifyDiscord() ? "enabled" : "disabled";
+        return msg.channel.send(`:information_source: Discord notifications are currently **${currentStatus}**.\nUse \`.auto-update notify on\` or \`.auto-update notify off\` to change.`);
+    }
+
+    // Handle interval setting
+    if (subcommand === "interval") {
+        const hours = parseInt(args[1], 10);
+        const checker = require("../modules/auto-update-checker");
+
+        if (isNaN(hours) || hours < 1 || hours > 24) {
+            const currentInterval = checker.getIntervalHours();
+            return msg.channel.send(`:information_source: Current check interval: **${currentInterval} hour(s)**\nUse \`.auto-update interval <1-24>\` to change.`);
+        }
+
+        const newInterval = checker.setIntervalHours(hours);
+        yuno.config.set("autoupdate.interval-hours", newInterval);
+        await yuno.config.save();
+        return msg.channel.send(`:white_check_mark: Check interval set to **${newInterval} hour(s)**.`);
+    }
+
+    // Handle status
+    if (subcommand === "status") {
+        const checker = require("../modules/auto-update-checker");
+        const notifyEnabled = checker.getNotifyDiscord();
+        const interval = checker.getIntervalHours();
+
+        let response = `:information_source: **Auto-Update Status**\n\n`;
+        response += `**Discord Notifications:** ${notifyEnabled ? "Enabled" : "Disabled"}\n`;
+        response += `**Check Interval:** Every ${interval} hour(s)\n`;
+        response += `**Checks on Startup:** Yes\n`;
+
+        return msg.channel.send(response);
+    }
+
     // Show help
     return msg.channel.send(`:information_source: **Auto-Update Command**
 
@@ -222,10 +275,15 @@ module.exports.run = async function(yuno, author, args, msg) {
 \`.auto-update pull\` - Download updates from git
 \`.auto-update reload\` - Apply changes via hot-reload
 \`.auto-update full\` - Check, pull, and reload automatically
+\`.auto-update status\` - View current auto-update settings
+\`.auto-update notify <on|off>\` - Toggle Discord notifications
+\`.auto-update interval <hours>\` - Set check interval (1-24 hours)
 
 **Examples:**
 \`.auto-update check\` - See if there are new commits
-\`.auto-update full\` - One-command update process`);
+\`.auto-update full\` - One-command update process
+\`.auto-update notify on\` - Enable Discord notifications
+\`.auto-update interval 12\` - Check every 12 hours`);
 }
 
 module.exports.runTerminal = async function(yuno, args) {
@@ -346,18 +404,82 @@ module.exports.runTerminal = async function(yuno, args) {
         return;
     }
 
+    // Handle notify toggle
+    if (subcommand === "notify") {
+        const setting = args[1]?.toLowerCase();
+        const checker = require("../modules/auto-update-checker");
+
+        if (setting === "on" || setting === "enable" || setting === "true") {
+            checker.setNotifyDiscord(true);
+            yuno.config.set("autoupdate.notify-discord", true);
+            await yuno.config.save();
+            console.log("Discord notifications enabled.");
+            return;
+        }
+
+        if (setting === "off" || setting === "disable" || setting === "false") {
+            checker.setNotifyDiscord(false);
+            yuno.config.set("autoupdate.notify-discord", false);
+            await yuno.config.save();
+            console.log("Discord notifications disabled.");
+            return;
+        }
+
+        const currentStatus = checker.getNotifyDiscord() ? "enabled" : "disabled";
+        console.log(`Discord notifications are currently: ${currentStatus}`);
+        console.log("Use 'auto-update notify on' or 'auto-update notify off' to change.");
+        return;
+    }
+
+    // Handle interval setting
+    if (subcommand === "interval") {
+        const hours = parseInt(args[1], 10);
+        const checker = require("../modules/auto-update-checker");
+
+        if (isNaN(hours) || hours < 1 || hours > 24) {
+            const currentInterval = checker.getIntervalHours();
+            console.log(`Current check interval: ${currentInterval} hour(s)`);
+            console.log("Use 'auto-update interval <1-24>' to change.");
+            return;
+        }
+
+        const newInterval = checker.setIntervalHours(hours);
+        yuno.config.set("autoupdate.interval-hours", newInterval);
+        await yuno.config.save();
+        console.log(`Check interval set to ${newInterval} hour(s).`);
+        return;
+    }
+
+    // Handle status
+    if (subcommand === "status") {
+        const checker = require("../modules/auto-update-checker");
+        const notifyEnabled = checker.getNotifyDiscord();
+        const interval = checker.getIntervalHours();
+
+        console.log("\n=== Auto-Update Status ===");
+        console.log(`Discord Notifications: ${notifyEnabled ? "Enabled" : "Disabled"}`);
+        console.log(`Check Interval: Every ${interval} hour(s)`);
+        console.log(`Checks on Startup: Yes`);
+        return;
+    }
+
     // Show help
     console.log("Auto-Update Command");
     console.log("");
     console.log("Usage:");
-    console.log("  auto-update check    - Check if updates are available");
-    console.log("  auto-update pull     - Download updates from git");
-    console.log("  auto-update reload   - Apply changes via hot-reload");
-    console.log("  auto-update full     - Check, pull, and reload automatically");
+    console.log("  auto-update check         - Check if updates are available");
+    console.log("  auto-update pull          - Download updates from git");
+    console.log("  auto-update reload        - Apply changes via hot-reload");
+    console.log("  auto-update full          - Check, pull, and reload automatically");
+    console.log("  auto-update status        - View current settings");
+    console.log("  auto-update notify <on|off> - Toggle Discord notifications");
+    console.log("  auto-update interval <hrs>  - Set check interval (1-24 hours)");
     console.log("");
     console.log("Examples:");
     console.log("  auto-update check");
     console.log("  auto-update full");
+    console.log("  auto-update notify on");
+    console.log("  auto-update interval 12");
 }
 
 module.exports.about = {
