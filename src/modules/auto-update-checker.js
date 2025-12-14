@@ -190,12 +190,12 @@ async function resolveErrorChannel() {
     }
 }
 
-module.exports.init = function(Yuno, hotReloaded) {
+module.exports.init = async function(Yuno, hotReloaded) {
     yuno = Yuno;
 
     if (hotReloaded) {
         // Re-resolve channel and restart schedule on hot-reload
-        resolveErrorChannel();
+        await resolveErrorChannel();
         startSchedule();
     } else {
         Yuno.on("discord-connected", async () => {

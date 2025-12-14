@@ -332,9 +332,9 @@ async function discordConnected(yuno) {
     ONE_TIME_EVENT = true;
 }
 
-module.exports.init = function(yuno, hotReloaded) {
+module.exports.init = async function(yuno, hotReloaded) {
     if (hotReloaded) {
-        discordConnected(yuno);
+        await discordConnected(yuno);
     } else {
         yuno.on("discord-connected", discordConnected);
     }

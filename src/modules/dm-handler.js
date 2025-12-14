@@ -225,9 +225,9 @@ let discordConnected = async function(Yuno) {
     }, 24 * 60 * 60 * 1000);
 };
 
-module.exports.init = function(Yuno, hotReloaded) {
+module.exports.init = async function(Yuno, hotReloaded) {
     if (hotReloaded)
-        discordConnected(Yuno);
+        await discordConnected(Yuno);
     else
         Yuno.on("discord-connected", discordConnected);
 };

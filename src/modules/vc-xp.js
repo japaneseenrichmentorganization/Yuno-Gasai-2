@@ -277,9 +277,9 @@ let discordConnected = async function(Yuno) {
     await recoverSessions();
 };
 
-module.exports.init = function(Yuno, hotReloaded) {
+module.exports.init = async function(Yuno, hotReloaded) {
     if (hotReloaded)
-        discordConnected(Yuno);
+        await discordConnected(Yuno);
     else
         Yuno.on("discord-connected", discordConnected);
 };

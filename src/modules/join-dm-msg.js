@@ -28,10 +28,10 @@ let DISCORD_EVENTED = false,
 module.exports.modulename = "join-dm-msg";
 
 let discordConnected = async function(Yuno) {
-    DBCmds = Yuno.dbCommands,
-    discord = Yuno.dC
-    jdmmsg = await DBCmds.getJoinDMMessages(Yuno.database),
-    jdmmsgt = await DBCmds.getJoinDMMessagesTitles(Yuno.database)
+    DBCmds = Yuno.dbCommands;
+    discord = Yuno.dC;
+    jdmmsg = await DBCmds.getJoinDMMessages(Yuno.database);
+    jdmmsgt = await DBCmds.getJoinDMMessagesTitles(Yuno.database);
 
     eventDiscord();
 };
@@ -69,11 +69,11 @@ let eventDiscord = function() {
     })
 }
 
-module.exports.init = function(Yuno, hotReloaded) {
+module.exports.init = async function(Yuno, hotReloaded) {
     if (hotReloaded)
-        discordConnected(Yuno);
+        await discordConnected(Yuno);
     else
-        Yuno.on("discord-connected", discordConnected)
+        Yuno.on("discord-connected", discordConnected);
 }
 
 module.exports.configLoaded = function() {}
