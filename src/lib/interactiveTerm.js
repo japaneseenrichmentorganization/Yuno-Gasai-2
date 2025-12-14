@@ -85,12 +85,8 @@ class InteractiveTerminal extends EventEmitter {
                     // enter
                     process.stdout.write("> " + this._input);
                     process.stdout.write("\n");
-                    this._command().then(() => {
-                        this._commandinp();
-                    });
-                    this._input = "";
+                    this._handleCommand();
                     return;
-                    break;
 
                 case "\u0003":
                     // ctrl+c
@@ -117,13 +113,11 @@ class InteractiveTerminal extends EventEmitter {
         process.stdout.write("> " + this._input);
     }
 
-    _command() {
-        let command = this._input;
-
-        return new Promise(async (res, rej) => {
-            await this.handler(command);
-            res();
-        });
+    async _handleCommand() {
+        const command = this._input;
+        this._input = "";
+        await this.handler(command);
+        this._commandinp();
     }
 
     /**

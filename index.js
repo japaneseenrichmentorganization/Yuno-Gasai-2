@@ -16,14 +16,8 @@
 // Consoling (to be sure that the right file is being executed: debug)
 console.log("Starting Yuno-Gasai-2");
 
-
-if(process.env.NODE_ENV !== 'production') {
-    const longjohn = require('longjohn'); 
-    global.Promise = require("bluebird"); 
-    process.env.BLUEBIRD_LONG_STACK_TRACES = 1; 
-}
-
-
+// Increase stack trace depth natively (Node.js handles this more efficiently than longjohn)
+Error.stackTraceLimit = 50;
 
 let Yuno = require("./src/Yuno"),
     instance = new Yuno();
@@ -31,19 +25,16 @@ let Yuno = require("./src/Yuno"),
 instance.parseArguments(process.argv);
 
 //custom colors  [custom color code][console color reset]
-// \x1b[35m - magenta 
+// \x1b[35m - magenta
 // \x1b[31m - red
 
-
-if(process.env.NODE_ENV !== 'production') {
 process.on('uncaughtException', (err) => {
-    console.log('\x1b[35m', "Stack-Trace: " + err.stack); 
+    console.log('\x1b[35m', "Stack-Trace: " + err.stack);
 });
 
 process.on('unhandledRejection', (err) => {
-    console.log('\x1b[35m', "Stack-Trace: " + err.stack); 
+    console.log('\x1b[35m', "Stack-Trace: " + err.stack);
 });
-}
 
 process.on("SIGTERM", () => instance.shutdown(-1))
 process.on("SIGINT", () => instance.shutdown(-1))
