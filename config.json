@@ -1,8 +1,8 @@
 {
-    "discord.token": "TOKEN_HERE",
+    "discord.token": "",
     "errors.dropon": {
-        "guild": "GUILD_ID",
-        "channel": "CHANNEL_ID"
+        "guild": "447665600135823361",
+        "channel": "712583229495836672"
     },
     "logging.hidden-groups": "[]",
     "logging.show-time": true,
