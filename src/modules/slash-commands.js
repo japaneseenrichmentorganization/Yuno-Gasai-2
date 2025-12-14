@@ -193,147 +193,127 @@ async function registerSlashCommands() {
     }
 }
 
-// Handle slash command interactions
-async function handleInteraction(interaction) {
-    if (!interaction.isChatInputCommand()) return;
+// Command handler map - maps command names to their execution logic
+const COMMAND_HANDLERS = {
+    delay: (interaction) => "delay",
 
-    const { commandName } = interaction;
+    clean: (interaction) => {
+        const channel = interaction.options.getChannel("channel") || interaction.channel;
+        return `clean <#${channel.id}>`;
+    },
 
-    // Create a fake message object for compatibility with existing commands
+    ban: (interaction) => {
+        const user = interaction.options.getUser("user");
+        const reason = interaction.options.getString("reason") || "";
+        return `ban <@${user.id}> ${reason}`;
+    },
+
+    kick: (interaction) => {
+        const user = interaction.options.getUser("user");
+        const reason = interaction.options.getString("reason") || "";
+        return `kick <@${user.id}> ${reason}`;
+    },
+
+    unban: (interaction) => {
+        const userId = interaction.options.getString("user");
+        const reason = interaction.options.getString("reason") || "";
+        return `unban ${userId} ${reason}`;
+    },
+
+    timeout: (interaction) => {
+        const user = interaction.options.getUser("user");
+        const duration = interaction.options.getInteger("duration");
+        const reason = interaction.options.getString("reason") || "";
+        return `timeout <@${user.id}> ${duration} ${reason}`;
+    },
+
+    "mod-stats": () => "mod-stats",
+
+    "scan-bans": (interaction) => {
+        const mode = interaction.options.getString("mode") || "bans";
+        return `scan-bans ${mode}`;
+    },
+
+    "auto-clean": (interaction) => {
+        const subcommand = interaction.options.getSubcommand();
+        const channel = interaction.options.getChannel("channel");
+
+        const subcommandHandlers = {
+            add: () => {
+                const hours = interaction.options.getInteger("hours");
+                const warning = interaction.options.getInteger("warning");
+                return `auto-clean add <#${channel.id}> ${hours} ${warning}`;
+            },
+            remove: () => `auto-clean remove <#${channel.id}>`,
+            list: () => channel ? `auto-clean list <#${channel.id}>` : "auto-clean list"
+        };
+
+        return subcommandHandlers[subcommand]?.() ?? null;
+    },
+
+    prefix: (interaction) => {
+        const prefix = interaction.options.getString("prefix");
+        return `prefix ${prefix}`;
+    },
+
+    help: (interaction) => {
+        const cmd = interaction.options.getString("command");
+        return cmd ? `help ${cmd}` : "help";
+    }
+};
+
+// Create fake message object for command compatibility
+const createFakeMessage = (interaction) => {
+    let hasReplied = false;
+
     const fakeMsg = {
         channel: interaction.channel,
         guild: interaction.guild,
         member: interaction.member,
         author: interaction.user,
         mentions: {
-            channels: {
-                first: () => interaction.options.getChannel("channel")
-            },
-            users: {
-                first: () => interaction.options.getUser("user")
-            }
+            channels: { first: () => interaction.options.getChannel("channel") },
+            users: { first: () => interaction.options.getUser("user") }
         },
         content: "",
         reply: async (content) => interaction.reply(content),
         deletable: false
     };
 
-    // Override channel.send to use interaction.reply
-    let hasReplied = false;
-    const originalSend = fakeMsg.channel.send.bind(fakeMsg.channel);
+    // Override channel.send to use interaction.reply/followUp
     fakeMsg.channel.send = async (content) => {
         if (!hasReplied) {
             hasReplied = true;
             return interaction.reply(content);
-        } else {
-            return interaction.followUp(content);
         }
+        return interaction.followUp(content);
     };
 
+    return { fakeMsg, hasReplied: () => hasReplied };
+};
+
+// Handle slash command interactions
+async function handleInteraction(interaction) {
+    if (!interaction.isChatInputCommand()) return;
+
+    const { commandName } = interaction;
+    const handler = COMMAND_HANDLERS[commandName];
+
+    if (!handler) {
+        return interaction.reply({ content: "Unknown command.", ephemeral: true });
+    }
+
+    const { fakeMsg, hasReplied } = createFakeMessage(interaction);
+
     try {
-        switch (commandName) {
-            case "delay":
-                await Yuno.commandMan.execute(Yuno, interaction.member, "delay", fakeMsg);
-                break;
-
-            case "clean": {
-                const channel = interaction.options.getChannel("channel") || interaction.channel;
-                await Yuno.commandMan.execute(Yuno, interaction.member, `clean <#${channel.id}>`, fakeMsg);
-                break;
-            }
-
-            case "ban": {
-                const user = interaction.options.getUser("user");
-                const reason = interaction.options.getString("reason") || "";
-                await Yuno.commandMan.execute(Yuno, interaction.member, `ban <@${user.id}> ${reason}`, fakeMsg);
-                break;
-            }
-
-            case "kick": {
-                const user = interaction.options.getUser("user");
-                const reason = interaction.options.getString("reason") || "";
-                await Yuno.commandMan.execute(Yuno, interaction.member, `kick <@${user.id}> ${reason}`, fakeMsg);
-                break;
-            }
-
-            case "unban": {
-                const userId = interaction.options.getString("user");
-                const reason = interaction.options.getString("reason") || "";
-                await Yuno.commandMan.execute(Yuno, interaction.member, `unban ${userId} ${reason}`, fakeMsg);
-                break;
-            }
-
-            case "timeout": {
-                const user = interaction.options.getUser("user");
-                const duration = interaction.options.getInteger("duration");
-                const reason = interaction.options.getString("reason") || "";
-                await Yuno.commandMan.execute(Yuno, interaction.member, `timeout <@${user.id}> ${duration} ${reason}`, fakeMsg);
-                break;
-            }
-
-            case "mod-stats":
-                await Yuno.commandMan.execute(Yuno, interaction.member, "mod-stats", fakeMsg);
-                break;
-
-            case "scan-bans": {
-                const mode = interaction.options.getString("mode") || "bans";
-                await Yuno.commandMan.execute(Yuno, interaction.member, `scan-bans ${mode}`, fakeMsg);
-                break;
-            }
-
-            case "auto-clean": {
-                const subcommand = interaction.options.getSubcommand();
-                const channel = interaction.options.getChannel("channel");
-
-                switch (subcommand) {
-                    case "add": {
-                        const hours = interaction.options.getInteger("hours");
-                        const warning = interaction.options.getInteger("warning");
-                        await Yuno.commandMan.execute(Yuno, interaction.member, `auto-clean add <#${channel.id}> ${hours} ${warning}`, fakeMsg);
-                        break;
-                    }
-                    case "remove":
-                        await Yuno.commandMan.execute(Yuno, interaction.member, `auto-clean remove <#${channel.id}>`, fakeMsg);
-                        break;
-                    case "list":
-                        if (channel) {
-                            await Yuno.commandMan.execute(Yuno, interaction.member, `auto-clean list <#${channel.id}>`, fakeMsg);
-                        } else {
-                            await Yuno.commandMan.execute(Yuno, interaction.member, "auto-clean list", fakeMsg);
-                        }
-                        break;
-                }
-                break;
-            }
-
-            case "prefix": {
-                const prefix = interaction.options.getString("prefix");
-                await Yuno.commandMan.execute(Yuno, interaction.member, `prefix ${prefix}`, fakeMsg);
-                break;
-            }
-
-            case "help": {
-                const cmd = interaction.options.getString("command");
-                if (cmd) {
-                    await Yuno.commandMan.execute(Yuno, interaction.member, `help ${cmd}`, fakeMsg);
-                } else {
-                    await Yuno.commandMan.execute(Yuno, interaction.member, "help", fakeMsg);
-                }
-                break;
-            }
-
-            default:
-                if (!hasReplied) {
-                    await interaction.reply({ content: "Unknown command.", ephemeral: true });
-                }
+        const commandString = handler(interaction);
+        if (commandString) {
+            await Yuno.commandMan.execute(Yuno, interaction.member, commandString, fakeMsg);
         }
     } catch (error) {
         Yuno.prompt.error(`Error handling slash command ${commandName}:`, error);
-        if (!hasReplied) {
-            await interaction.reply({ content: "An error occurred while executing this command.", ephemeral: true });
-        } else {
-            await interaction.followUp({ content: "An error occurred while executing this command.", ephemeral: true });
-        }
+        const errorMsg = { content: "An error occurred while executing this command.", ephemeral: true };
+        hasReplied() ? await interaction.followUp(errorMsg) : await interaction.reply(errorMsg);
     }
 }
 

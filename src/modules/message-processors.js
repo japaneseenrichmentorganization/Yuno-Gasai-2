@@ -28,33 +28,31 @@ let workOnlyOnGuild = null,
 
 module.exports.modulename = "message-processors";
 
-let readModule = function(file) {
-    return new Promise(function(res, rej) {
-        try {
-            let path = require.resolve("../message-processors/" + file);
-            delete require.cache[path]
-            messageProcsorsPaths.push(path);
-            messageProcsors.push(require(path));
-        } catch(e) {
-            // adding more information to the error
-            e.message = "Error thrown in message-processors.js : " + e.message;
-            e.from = typeof path !== "undefined" ? path : null;
-            rej(e);
-        }
-        res();
-    })
-}
+// Using arrow function and async/await instead of Promise constructor
+const readModule = async (file) => {
+    try {
+        const path = require.resolve("../message-processors/" + file);
+        delete require.cache[path];
+        messageProcsorsPaths.push(path);
+        messageProcsors.push(require(path));
+    } catch (e) {
+        e.message = `Error thrown in message-processors.js: ${e.message}`;
+        e.from = null;
+        throw e;
+    }
+};
 
-let readModules = async function() {
+const readModules = async function() {
     messageProcsors = [];
     messageProcsorsPaths = [];
-    let messageProcessorsPath = await fsPromises.readdir("src/message-processors", "utf8");
+    const messageProcessorsPath = await fsPromises.readdir("src/message-processors", "utf8");
 
     for (const el of messageProcessorsPath) {
-        if (el.indexOf(".js") === el.length - ".js".length)
+        if (el.endsWith(".js")) {
             await readModule(el);
+        }
     }
-}
+};
 
 let discordConnected = async function(Yuno) {
     await readModules();

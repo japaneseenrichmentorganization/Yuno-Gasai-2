@@ -75,11 +75,14 @@ let ban = function(msg, banreason, warningmsg) {
 
 
 module.exports.message = async function(content, msg) {
-    if (new String(spamfilt[msg.guild.id]).toLowerCase() === "false")
-        return;
+    // Check if spam filter is disabled for this guild
+    const filterSetting = spamfilt[msg.guild.id];
+    if (filterSetting === false || filterSetting === "false") return;
 
-    if (Object.prototype.hasOwnProperty.call(customspamrules, msg.guild.id))
+    // Delegate to custom rules if they exist for this guild
+    if (Object.prototype.hasOwnProperty.call(customspamrules, msg.guild.id)) {
         return customspamrules[msg.guild.id].message(content, msg);
+    }
 // Obtain the member if we don't have it
     if(msg.guild && !msg.guild.members.cache.has(msg.author.id) && !msg.webhookID) {
         msg.member = await msg.guild.members.fetch(msg.author);

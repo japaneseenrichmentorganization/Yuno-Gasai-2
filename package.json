@@ -19,7 +19,7 @@
   },
   "dependencies": {
     "bluebird": "^3.7.2",
-    "discord.js": "^14.24.2",
+    "discord.js": "^14.25.1",
     "he": "^1.2.0",
     "longjohn": "^0.2.12",
     "moment": "^2.30.1",

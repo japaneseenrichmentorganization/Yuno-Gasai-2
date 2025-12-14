@@ -16,57 +16,74 @@
     along with this program.  If not, see https://www.gnu.org/licenses/.
 */
 
-let say = function(yuno, isTerminal, msg, tosay) {
-    if (isTerminal)
-        yuno.prompt.info(tosay);
-    else
-        msg.channel.send(tosay);
-}
+const say = (yuno, isTerminal, msg, tosay) =>
+    isTerminal ? yuno.prompt.info(tosay) : msg.channel.send(tosay);
+
+const tryParseJSON = (str) => {
+    try { return JSON.parse(str); }
+    catch { return str; }
+};
+
+const tryStringifyJSON = (obj) => {
+    if (typeof obj !== "object") return obj;
+    try { return JSON.stringify(obj); }
+    catch { return obj; }
+};
+
+// Action handlers using handler object pattern
+const ACTION_HANDLERS = {
+    set: (config, key, value, yuno) => {
+        const parsedValue = tryParseJSON(value);
+        config.set(key, parsedValue);
+        return `Value with the key \`${key}\` has been set with the value: \`${parsedValue}\``;
+    },
+    get: (config, key, value, yuno) => {
+        const result = tryStringifyJSON(config.get(key));
+        return String(result).replace(new RegExp(yuno.dC.token, "gi"), "[token]");
+    }
+};
+
+// Argument parsing strategies
+const parseArgs = (args) => {
+    const [first, second, ...rest] = args;
+
+    // Explicit get/set
+    if (first === "get") {
+        if (args.length < 2) throw new Error("No key given with `config get`.");
+        return { action: "get", key: second };
+    }
+
+    if (first === "set") {
+        if (args.length < 3) throw new Error("Not enough arguments for `config set`.");
+        return { action: "set", key: second, value: rest.join(" ") };
+    }
+
+    // Implicit: if 2+ args, assume set; otherwise get
+    return args.length >= 2
+        ? { action: "set", key: first, value: [second, ...rest].join(" ") }
+        : { action: "get", key: first };
+};
 
 module.exports.run = async function(yuno, author, args, msg) {
-    if (args.length === 0)
-        return say(yuno, author === 0, msg, "Maybe some arguments ? :thinking:");
-    
-    let action = args[0],
-        key = args[1],
-        value;
+    const isTerminal = author === 0;
 
-    if (action === "get")
-        if (args.length >= 2)
-            key = args[1]
-        else
-            return say(yuno, author === 0, msg, "No key given with `config get`.");
-    else if (action === "set")
-        if (args.length >= 3) {
-            key = args[1];
-            value = args.slice(2).join(" ");
-        } else
-            return say(yuno, author === 0, msg, "Not enough arguments for `config set`.");
-    else {
-        if (args.length >= 2) {
-            action = "set";
-            key = args[0];
-            value = (args.slice(1)).join(" ");
-        } else {
-            key = action;
-            action = "get";
+    if (args.length === 0) {
+        return say(yuno, isTerminal, msg, "Maybe some arguments ? :thinking:");
+    }
+
+    try {
+        const { action, key, value } = parseArgs(args);
+        const handler = ACTION_HANDLERS[action];
+
+        if (!handler) {
+            return say(yuno, isTerminal, msg, "Nothing to do.");
         }
+
+        const result = handler(yuno.config, key, value, yuno);
+        return say(yuno, isTerminal, msg, result);
+    } catch (e) {
+        return say(yuno, isTerminal, msg, e.message);
     }
-
-    let config = yuno.config;
-
-    if (action === "set") {
-        try {let temp = JSON.parse(value); value = temp;} catch(e) {}
-        config.set(key, value);
-        return say(yuno, author === 0, msg, "Value with the key " + "`" + key + "`" + " has been set with the value : " + "`" + value + "`")
-    } else if (action === "get") {
-        let r = config.get(key);
-        if (typeof r === "object")
-            try {r = JSON.stringify(r)} catch(e) {}
-
-        return say(yuno, author === 0, msg, new String(r).replace(new RegExp(Yuno.dC.token, "gi"), "[token]"));
-    }
-    return say(yuno, author === 0, msg, "Nothing to do.");
 }
 
 module.exports.about = {

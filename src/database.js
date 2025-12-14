@@ -28,14 +28,11 @@ try {
     encryptionAvailable = false;
 }
 
-let instance = null;
-
 /**
  * A sqlite3 database with optional encryption and PRAGMA optimization support.
  * @constructor
- * @singleton
  */
-let Database = function() {
+function Database() {
     this.db = null;
     this.isEncrypted = false;
 }
@@ -46,7 +43,7 @@ let Database = function() {
  */
 Database.prototype.isEncryptionAvailable = function() {
     return encryptionAvailable;
-}
+};
 
 /**
  * Opens a file as a sqlite3 database.
@@ -62,13 +59,11 @@ Database.prototype.isEncryptionAvailable = function() {
  * @return {Promise}
  * @async
  */
-Database.prototype.open = function(file, options) {
-    options = options || {};
-
-    return new Promise((function(resolve, reject) {
-        this.db = new sqlite.Database(file, (async function(err) {
+Database.prototype.open = function(file, options = {}) {
+    return new Promise((resolve, reject) => {
+        this.db = new sqlite.Database(file, async (err) => {
             if (err) {
-                reject(new Error("Impossible to connect to the database " + file + ". " + err.message));
+                reject(new Error(`Impossible to connect to the database ${file}. ${err.message}`));
                 return;
             }
 
@@ -88,11 +83,11 @@ Database.prototype.open = function(file, options) {
 
                 resolve(this);
             } catch (pragmaErr) {
-                reject(new Error("Failed to configure database: " + pragmaErr.message));
+                reject(new Error(`Failed to configure database: ${pragmaErr.message}`));
             }
-        }).bind(this));
-    }).bind(this));
-}
+        });
+    });
+};
 
 /**
  * Apply PRAGMA settings for optimization
@@ -116,7 +111,7 @@ Database.prototype._applyPragmas = async function(pragmas) {
 
     // Individual settings (override performanceMode if set)
     if (typeof pragmas.cacheSize === "number") {
-        await this.runPromise("PRAGMA cache_size = " + pragmas.cacheSize);
+        await this.runPromise(`PRAGMA cache_size = ${pragmas.cacheSize}`);
     }
 
     if (pragmas.memoryTemp === true) {
@@ -124,9 +119,9 @@ Database.prototype._applyPragmas = async function(pragmas) {
     }
 
     if (typeof pragmas.mmapSize === "number") {
-        await this.runPromise("PRAGMA mmap_size = " + pragmas.mmapSize);
+        await this.runPromise(`PRAGMA mmap_size = ${pragmas.mmapSize}`);
     }
-}
+};
 
 /**
  * Change the encryption key on an open database
@@ -138,42 +133,46 @@ Database.prototype.rekey = function(newPassword) {
     if (!encryptionAvailable) {
         return Promise.reject(new Error("Encryption not available. Install @journeyapps/sqlcipher"));
     }
-
     return this.runPromise(`PRAGMA rekey = '${newPassword.replace(/'/g, "''")}'`);
-}
+};
 
 /**
  * Runs a SQL command
  * @throws {Error} When method is triggered but the db is not opened.
  * @param {String} sqlCommand
- * @param {array|Object} [param] The ? and $value in the SQL command. See https://github.com/mapbox/node-sqlite3/wiki/API#databaserunsql-param--callback
+ * @param {array|Object} [param] The ? and $value in the SQL command.
  * @param {function(e)?} [callback] Error is null on success, otherwise, it contains the error
  */
 Database.prototype.run = function(sqlCommand, param, callback) {
-    if (this.db === null)
-        throw new Error("Tryied to access database, but not opened!");
+    if (this.db === null) {
+        throw new Error("Tried to access database, but not opened!");
+    }
     return this.db.run(sqlCommand, param, callback);
-}
+};
 
 /**
- * Runs a SQL command but returns a Promise instead of {@link Database.prototype.run}
+ * Runs a SQL command but returns a Promise
  * @throws {Error} When method is triggered but the db is not opened.
  * @param {String} sqlCommand
- * @param {array|Object} [param] The ? and $value in the SQL command. See https://github.com/mapbox/node-sqlite3/wiki/API#databaserunsql-param--callback
- * @returns {Promise}
+ * @param {array|Object} [param] The ? and $value in the SQL command.
+ * @returns {Promise<{lastID: number, changes: number}>}
  */
 Database.prototype.runPromise = function(sqlCommand, param) {
-    if (this.db === null)
-        throw new Error("Tryied to access database, but not opened!");
-    return new Promise((function(resolve, reject) {
-        this.run(sqlCommand, param, (function(err) {
-            if (err)
+    if (this.db === null) {
+        throw new Error("Tried to access database, but not opened!");
+    }
+    return new Promise((resolve, reject) => {
+        // Note: Must use regular function here to access sqlite3's 'this' context
+        this.db.run(sqlCommand, param, function(err) {
+            if (err) {
                 reject(err);
-            else
-                resolve();
-        }))
-    }).bind(this));
-}
+            } else {
+                // 'this' inside sqlite3 callback contains lastID and changes
+                resolve({ lastID: this.lastID, changes: this.changes });
+            }
+        });
+    });
+};
 
 /**
  * Retriggers callback for every row returned by the SQL command
@@ -184,73 +183,74 @@ Database.prototype.runPromise = function(sqlCommand, param) {
  * @param {function} [complete] Executed when the iteration is done.
  */
 Database.prototype.each = function(sql, param, callback, complete) {
-    if (this.db === null)
-        throw new Error("Tryied to access database, but not opened!");
+    if (this.db === null) {
+        throw new Error("Tried to access database, but not opened!");
+    }
     return this.db.each(sql, param, callback, complete);
-}
+};
 
 /**
- * Executes a SQL command and returns the given rows :
- * Triggers callback with all returned row of the SQL Command.
+ * Executes a SQL command and returns the given rows
  * @throws {Error} When method is triggered but the db is not opened.
  * @param {String} sql The SQL command
  * @param {array|Object} [param] The placeholders.
  * @param {function(err, rows)} [callback]
  */
 Database.prototype.all = function(sql, param, callback) {
-    if (this.db === null)
-        throw new Error("Tryied to access database, but not opened!");
+    if (this.db === null) {
+        throw new Error("Tried to access database, but not opened!");
+    }
     return this.db.all(sql, param, callback);
-}
+};
 
 /**
- * Executes a SQL command and returns the given rows through the callback and the Promise's onfulfilled
+ * Executes a SQL command and returns the given rows through a Promise
  * @throws {Error} When method is triggered but the db is not opened.
  * @param {String} sql The SQL command
  * @param {array|Object} [param] The placeholders.
- * @return {Promise} onfulfilled(err|rows)
+ * @return {Promise<Array>}
  */
 Database.prototype.allPromise = function(sql, param) {
-    if (this.db === null)
-        throw new Error("Tryied to access database, but not opened!");
-    return new Promise((function(resolve, reject) {
-        this.db.all(sql, param, function(err, rows) {
-            if (err)
-                reject(err);
-            else
-                resolve(rows);
+    if (this.db === null) {
+        throw new Error("Tried to access database, but not opened!");
+    }
+    return new Promise((resolve, reject) => {
+        this.db.all(sql, param, (err, rows) => {
+            err ? reject(err) : resolve(rows);
         });
-    }).bind(this));
-}
+    });
+};
 
 /**
  * Close the database.
+ * @param {function} [callback]
  */
 Database.prototype.close = function(callback) {
-    if (this.db === null)
-        return callback();
+    if (this.db === null) {
+        return callback?.();
+    }
 
-    let callback_ = (function() {
+    return this.db.close(() => {
         this.db = null;
-        return callback();
-    }).bind(this);
-
-    return this.db.close(callback_);
-}
+        callback?.();
+    });
+};
 
 /**
  * Close the database but with a promise.
+ * @return {Promise<void>}
  */
 Database.prototype.closePromise = function() {
-    if (this.db === null)
+    if (this.db === null) {
         return Promise.resolve();
+    }
 
-    return new Promise((function(resolve, reject) {
-        this.db.close((function() {
+    return new Promise((resolve) => {
+        this.db.close(() => {
             this.db = null;
             resolve();
-        }).bind(this))
-    }).bind(this));
-}
+        });
+    });
+};
 
 module.exports = Database;
