@@ -38,7 +38,7 @@ module.exports.run = async function(yuno, author, args, msg) {
     }
 
     result = typeof result === "string"
-        ? result.replace(new RegExp(yuno.dC.token, "gi"), "[token]")
+        ? result.replace(new RegExp(RegExp.escape(yuno.dC.token), "gi"), "[token]")
         : util.inspect(result, { depth: 0 });
 
     if (isSilent && author !== 0) {

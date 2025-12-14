@@ -341,7 +341,7 @@ class CommandManager extends EventEmitter {
                     _error = e;
                 }
 
-                if (_error instanceof Error)
+                if (Error.isError(_error))
                     throw _error; // let yuno handle the error.
             } else {
                 // command execution failed due to insufficient permissions

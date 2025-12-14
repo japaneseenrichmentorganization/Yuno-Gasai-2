@@ -7,7 +7,7 @@
 <img src="https://i.imgur.com/jF8Szfr.png" alt="Yuno Gasai" width="300"/>
 
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-pink.svg)](https://www.gnu.org/licenses/agpl-3.0)
-[![Node.js](https://img.shields.io/badge/Node.js-22.x%20LTS-ff69b4.svg)](https://nodejs.org/)
+[![Node.js](https://img.shields.io/badge/Node.js-24.x-ff69b4.svg)](https://nodejs.org/)
 [![Discord.js](https://img.shields.io/badge/Discord.js-v14-ff1493.svg)](https://discord.js.org/)
 
 *A devoted Discord bot for moderation, leveling, and anime~ ♥*
@@ -172,30 +172,30 @@ Yuno is a **yandere-themed Discord bot** combining powerful moderation tools wit
 
 > *"Let me prepare everything for you~"* 💗
 
-- **Node.js** 22.x LTS or higher
+- **Node.js** 24.x or higher
 - **node-gyp** & **build-essential** (make)
 - **SQLite3**
 - **Git**
 - **tmux** *(optional, for interactive shell)*
 
-### 🔧 Installing Node.js 22
+### 🔧 Installing Node.js 24
 
 <details>
 <summary><b>🐧 Linux (Ubuntu/Debian)</b></summary>
 
 ```bash
 # Using NodeSource repository (recommended)
-curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
+curl -fsSL https://deb.nodesource.com/setup_24.x | sudo -E bash -
 sudo apt-get install -y nodejs
 
 # Or using nvm (Node Version Manager)
 curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash
 source ~/.bashrc
-nvm install 22
-nvm use 22
+nvm install 24
+nvm use 24
 
 # Verify installation
-node --version  # Should show v22.x.x
+node --version  # Should show v24.x.x
 ```
 
 **Also install build tools:**
@@ -210,31 +210,31 @@ sudo apt-get install -y build-essential python3
 
 **Option 1: Direct Download (Recommended)**
 1. Go to [Node.js Downloads](https://nodejs.org/en/download/)
-2. Download the **Windows Installer (.msi)** for version 22.x LTS
+2. Download the **Windows Installer (.msi)** for version 24.x
 3. Run the installer and follow the prompts
 4. Ensure "Automatically install necessary tools" is checked
 
 **Option 2: Using winget**
 ```powershell
-winget install OpenJS.NodeJS.LTS
+winget install OpenJS.NodeJS
 ```
 
 **Option 3: Using Chocolatey**
 ```powershell
-choco install nodejs-lts
+choco install nodejs
 ```
 
 **Option 4: Using nvm-windows**
 1. Download [nvm-windows](https://github.com/coreybutler/nvm-windows/releases)
 2. Install and run:
 ```powershell
-nvm install 22
-nvm use 22
+nvm install 24
+nvm use 24
 ```
 
 **Verify installation:**
 ```powershell
-node --version  # Should show v22.x.x
+node --version  # Should show v24.x.x
 ```
 
 </details>
@@ -244,16 +244,16 @@ node --version  # Should show v22.x.x
 
 ```bash
 # Using Homebrew (recommended)
-brew install node@22
+brew install node@24
 
 # Or using nvm
 curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash
 source ~/.zshrc
-nvm install 22
-nvm use 22
+nvm install 24
+nvm use 24
 
 # Verify installation
-node --version  # Should show v22.x.x
+node --version  # Should show v24.x.x
 ```
 
 </details>

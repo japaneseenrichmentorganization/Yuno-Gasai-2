@@ -26,10 +26,10 @@ module.exports.run = async function(yuno, author, args, msg) {
         guildid = msg.guild.id;
 
     if (args.length === 1) {
-        desc = args[0].replace(new RegExp("_", "gi"), " ");
-        msg.channel.send(":warning: No title given. The given title will be the description's embed.");
+        desc = args[0].replaceAll("_", " ");
+        await msg.channel.send(":warning: No title given. The given title will be the description's embed.");
     } else {
-        title = args[0].replace(new RegExp("_", "gi"), " ");
+        title = args[0].replaceAll("_", " ");
         desc = args.slice(1).join(" ");
     }
 
@@ -45,7 +45,7 @@ module.exports.run = async function(yuno, author, args, msg) {
 
     yuno._refreshMod("join-dm-msg");
 
-    msg.channel.send({embeds: [new EmbedBuilder()
+    await msg.channel.send({embeds: [new EmbedBuilder()
         .setTitle(":white_check_mark:")
         .addFields([
             {name: "DM Message's title", value: typeof title === "string" ? title : "none", inline: true},

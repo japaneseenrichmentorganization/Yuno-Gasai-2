@@ -166,7 +166,7 @@ class Prompt {
      * @param {String} [textColor]
      */
     error(text, error, textColor) {
-        if (error instanceof Error) {
+        if (Error.isError(error)) {
             text += " : ";
 
             if (error.code)
