@@ -94,7 +94,7 @@ module.exports.runTerminal = async function(yuno, args) {
     }
 
     // Default: show inbox
-    const count = Math.min(Math.max(parseInt(args[0]) || 10, 1), 50);
+    const count = Math.min(Math.max(parseInt(args[0], 10) || 10, 1), 50);
     const messages = await yuno.dbCommands.getInbox(yuno.database, count);
 
     if (messages.length === 0) {

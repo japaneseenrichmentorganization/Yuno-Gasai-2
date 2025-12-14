@@ -29,10 +29,10 @@ module.exports.runTerminal = async function(yuno, args) {
             return yuno.prompt.info("Timeout cleared! Shutdown aborted.");
         }
 
-    let force = args.includes("-f");
+    const force = args.includes("-f");
 
     if (args.includes("-t")) {
-        let time = parseInt(args[args.indexOf("-t") + 1])
+        const time = parseInt(args[args.indexOf("-t") + 1], 10)
 
         if (isNaN(time))
             return yuno.prompt.warning("The time argument isn't an int as expected.");
@@ -72,10 +72,10 @@ module.exports.run = async function(yuno, author, args, msg) {
             return msg.channel.send("Timeout cleared! Shutdown aborted.");
         }
 
-    let force = args.includes("-f");
+    const force = args.includes("-f");
 
     if (args.includes("-t")) {
-        let time = parseInt(args[args.indexOf("-t") + 1])
+        const time = parseInt(args[args.indexOf("-t") + 1], 10)
 
         if (isNaN(time))
             return msg.channel.send("The time argument isn't an int as expected.");

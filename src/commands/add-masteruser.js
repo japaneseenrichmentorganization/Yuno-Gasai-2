@@ -20,7 +20,7 @@ module.exports.runTerminal = async function(yuno, args) {
     if (args.length === 0)
         return yuno.prompt.error("May you give some arguments?");
 
-    if (isNaN(parseInt(args[0])))
+    if (isNaN(parseInt(args[0], 10)))
         return yuno.prompt.error("You have to give the ID of the new master user as first and only argument.");
 
     const mu = yuno.config.get("commands.master-users");

@@ -88,7 +88,7 @@ module.exports.run = async function(yuno, author, args, msg) {
             for (let [level, roleId] of Object.entries(levelRoleMap)) {
                 if (member.roles.cache.has(roleId)) {
                     hasLevelRole = true;
-                    let levelNum = parseInt(level);
+                    const levelNum = parseInt(level, 10);
                     if (levelNum > highestLevel) {
                         highestLevel = levelNum;
                         let role = msg.guild.roles.cache.get(roleId);
@@ -139,7 +139,7 @@ module.exports.run = async function(yuno, author, args, msg) {
         
         // Build level distribution text
         let distributionText = "";
-        let sortedLevels = Object.keys(levelDistribution).sort((a, b) => parseInt(a) - parseInt(b));
+        const sortedLevels = Object.keys(levelDistribution).sort((a, b) => parseInt(a, 10) - parseInt(b, 10));
         for (let level of sortedLevels) {
             let role = msg.guild.roles.cache.get(levelRoleMap[level]);
             let roleName = role ? role.name : `Level ${level}`;

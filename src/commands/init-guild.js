@@ -17,7 +17,7 @@
 */
 
 module.exports.runTerminal = async function(yuno, args) {
-    if (args.length === 0 || isNaN(parseInt(args[0])))
+    if (args.length === 0 || isNaN(parseInt(args[0], 10)))
         return yuno.prompt.error("Please give the id of the guild in argument.")
 
     await yuno.dbCommands.initGuild(yuno.database, args[0]);

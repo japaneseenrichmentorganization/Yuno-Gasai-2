@@ -46,7 +46,7 @@ Users will earn **${config.xpPerInterval} XP** every **${config.intervalSeconds}
             if (args.length < 2) {
                 return msg.channel.send(":negative_squared_cross_mark: Please specify the XP amount. Usage: `set-vcxp rate <xp>`");
             }
-            const xp = parseInt(args[1]);
+            const xp = parseInt(args[1], 10);
             if (isNaN(xp) || xp < 1 || xp > 1000) {
                 return msg.channel.send(":negative_squared_cross_mark: XP must be a number between 1 and 1000.");
             }
@@ -58,7 +58,7 @@ Users will earn **${config.xpPerInterval} XP** every **${config.intervalSeconds}
             if (args.length < 2) {
                 return msg.channel.send(":negative_squared_cross_mark: Please specify the interval in seconds. Usage: `set-vcxp interval <seconds>`");
             }
-            const interval = parseInt(args[1]);
+            const interval = parseInt(args[1], 10);
             if (isNaN(interval) || interval < 60 || interval > 3600) {
                 return msg.channel.send(":negative_squared_cross_mark: Interval must be between 60 and 3600 seconds (1 minute to 1 hour).");
             }

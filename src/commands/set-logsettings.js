@@ -40,7 +40,7 @@ Higher interval = more grouped logs (more efficient)`);
             if (args.length < 2) {
                 return msg.channel.send(":negative_squared_cross_mark: Please specify the flush interval in seconds (10-300).");
             }
-            const interval = parseInt(args[1]);
+            const interval = parseInt(args[1], 10);
             if (isNaN(interval)) {
                 return msg.channel.send(":negative_squared_cross_mark: Please provide a valid number.");
             }
@@ -57,7 +57,7 @@ Higher interval = more grouped logs (more efficient)`);
             if (args.length < 2) {
                 return msg.channel.send(":negative_squared_cross_mark: Please specify the max buffer size (10-100).");
             }
-            const size = parseInt(args[1]);
+            const size = parseInt(args[1], 10);
             if (isNaN(size)) {
                 return msg.channel.send(":negative_squared_cross_mark: Please provide a valid number.");
             }

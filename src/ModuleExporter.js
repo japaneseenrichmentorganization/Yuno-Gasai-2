@@ -204,7 +204,7 @@ class ModuleExporter extends EventEmitter {
      * @description Hot reload a specific module.
      */
     hotreload(file) {
-        if (file == null) return this._hotreloadAllFiles();
+        if (file === null) return this._hotreloadAllFiles();
 
         this.emit("hot-reload", file);
         const path = require.resolve(file);

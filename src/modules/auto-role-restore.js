@@ -41,7 +41,7 @@ let discordConnected = async function(Yuno) {
 
                         // Find all roles for user's level and below
                         for (let [level, roleId] of Object.entries(levelRoleMap)) {
-                            let levelNum = parseInt(level);
+                            const levelNum = parseInt(level, 10);
                             if (levelNum <= xpData.level) {
                                 try {
                                     let role = await member.guild.roles.fetch(roleId);

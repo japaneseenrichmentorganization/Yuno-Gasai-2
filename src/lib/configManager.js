@@ -156,7 +156,7 @@ class Config extends Map {
      */
     object() {
         const obj = {};
-        this.forEach((v, k) => { obj[k] = v; });
+        for (const [k, v] of this) { obj[k] = v; }
         return obj;
     }
 

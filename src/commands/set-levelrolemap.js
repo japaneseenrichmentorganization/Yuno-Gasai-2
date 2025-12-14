@@ -21,7 +21,7 @@ module.exports.run = async function(yuno, author, args, msg) {
         return msg.channel.send(":negative_squared_cross_mark: Not enough arguments. Usage: `set-levelrolemap <level> <@role>`");
 
     // Parse the level number
-    let level = parseInt(args[0]);
+    const level = parseInt(args[0], 10);
     if (isNaN(level) || level < 0) {
         return msg.channel.send(":negative_squared_cross_mark: Level must be a positive number.");
     }

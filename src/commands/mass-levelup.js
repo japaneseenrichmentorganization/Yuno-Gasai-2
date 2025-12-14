@@ -10,7 +10,7 @@ module.exports.run = async function(yuno, author, args, trigger) {
     if (args.length < 2) 
         return send("❌ Usage: `mass-levelup <target-level> <@role/ID>` — absolute obedience~ ♥");
 
-    const targetLevel = parseInt(args[0]);
+    const targetLevel = parseInt(args[0], 10);
     if (isNaN(targetLevel) || targetLevel < 0) 
         return send("❌ Target level must be non-negative... don't make me repeat myself~ ♥");
 

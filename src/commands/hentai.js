@@ -31,8 +31,8 @@ module.exports.run = async function(yuno, author, args, msg) {
     }
 
     let targetPosts = 2;
-    if (parseInt(args[0])) {
-        targetPosts = parseInt(args[0]);
+    if (parseInt(args[0], 10)) {
+        targetPosts = parseInt(args[0], 10);
         if (targetPosts < 1 || targetPosts > 25) {
             return msg.channel.send("You cannot request less than 1 or over 25 results");
         }

@@ -37,7 +37,7 @@ module.exports.runTerminal = async function(yuno, args, rawInput, rl) {
     // Determine if target is inbox ID or user ID
     if (/^\d{1,10}$/.test(target) && target.length < 15) {
         // Small number = inbox ID
-        inboxId = parseInt(target);
+        inboxId = parseInt(target, 10);
         const inboxMsg = await yuno.dbCommands.getInboxMessage(yuno.database, inboxId);
 
         if (!inboxMsg) {

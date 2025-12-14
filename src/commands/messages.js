@@ -88,7 +88,7 @@ module.exports.runTerminal = async function(yuno, args) {
         return;
     }
 
-    const count = Math.min(Math.max(parseInt(args[1]) || 20, 1), 100);
+    const count = Math.min(Math.max(parseInt(args[1], 10) || 20, 1), 100);
 
     const channel = findChannel(yuno.dC, channelId);
     if (!channel) {
