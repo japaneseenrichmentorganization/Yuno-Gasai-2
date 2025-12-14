@@ -18,35 +18,28 @@
 
 module.exports.runTerminal = async function(yuno, args) {
     if (args.length === 0)
-        return yuno.prompt.error("May you give some arguments ?");
+        return yuno.prompt.error("May you give some arguments?");
 
     if (isNaN(parseInt(args[0])))
         return yuno.prompt.error("You have to give the ID of the new master user as first and only argument.");
 
-    let mu = yuno.config.get("commands.master-users");
+    const mu = yuno.config.get("commands.master-users");
     mu.push(args[0]);
     yuno.config.set("commands.master-users", mu);
 
     yuno.config.save();
     yuno.commandMan.configLoaded(yuno, yuno.config);
 
-    msg.channel.send("User with id " + args[0] + " added to master users!");
+    yuno.prompt.info(`User with id ${args[0]} added to master users!`);
 }
 
 module.exports.run = async function(yuno, author, args, msg) {
     if (args.length === 0)
         return msg.channel.send(":negative_squared_cross_mark: Not enough arguments.");
 
-    let user = null,
-        g = msg.guild.id;
+    const user = msg.mentions.members.first()?.id ?? args[0];
 
-    if (msg.mentions.members.size)
-        user = msg.mentions.members.first().id;
-
-    if (user === null)
-        user = args[0];
-
-    let mu = yuno.config.get("commands.master-users");
+    const mu = yuno.config.get("commands.master-users");
     mu.push(user);
     yuno.config.set("commands.master-users", mu);
 

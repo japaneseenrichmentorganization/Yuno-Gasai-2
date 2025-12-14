@@ -36,23 +36,23 @@ module.exports.run = async function(yuno, author, args, msg) {
                 { name: 'Type', value: item.type, inline: true },
                 { name: 'Status', value: item.status, inline: true },
                 { name: 'Start date', value: item.start_date === '0000-00-00' ? 'TBD' : item.start_date, inline: true },
-                { name: 'End date', value: item.end_date === '0000-00-00' ? 'TBD' : item_end_date, inline : true },
+                { name: 'End date', value: item.end_date === '0000-00-00' ? 'TBD' : item.end_date, inline: true },
                 { name: 'Chapters', value: item.chapters === 0 ? 'TBD' : item.volumes, inline: true },
                 { name: 'Volumes', value: item.episodes === 0 ? 'TBD' : item.volumes, inline: true },
                 { name: 'Score', value: `${item.score}`, inline: true }
             ])
             .setDescription(Yuno.Util.cleanSynopsis(he.decode(item.synopsis), item.id, 'manga'))
             .setThumbnail(item.image)
-            .setFooter({ text: `Use the reaction to browse | Page1${res.length}`});
+            .setFooter({ text: `Use the reactions to browse | Page 1/${res.length}`});
         return embed;
     }));
     let currentPage = 0;
     const pageMsg = await msg.channel.send({embeds: [res[0]]});
     await pageMsg.react('◀');
     await pageMsg.react('▶');
-    pageMsg.React('X');
+    await pageMsg.react('❌');
 
-    const RC = new ReactionCollectior(pageMsg, (r) => r.user.last().id === msg.author.id);
+    const RC = new ReactionCollector(pageMsg, { filter: (r, u) => u.id === msg.author.id });
 
     const switchPages = (direction) => {
         if (['◀', '▶'].includes(direction)) {
@@ -74,7 +74,7 @@ module.exports.run = async function(yuno, author, args, msg) {
     });
 
     setTimeout(() => {
-        if (!Rc.ended) {
+        if (!RC.ended) {
             switchPages('❌');
         }
     }, 120000);

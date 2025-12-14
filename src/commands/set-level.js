@@ -20,57 +20,47 @@ const {EmbedBuilder} = require("discord.js");
 
 let whereExpIsEnabled = [];
 
+async function fetchWhereExpIsEnabled(yuno) {
+    if (whereExpIsEnabled.length > 0) return;
+    whereExpIsEnabled = await yuno.dbCommands.getGuildsWhereExpIsEnabled(yuno.database);
+}
+
 module.exports.run = async function(yuno, author, args, msg) {
     await fetchWhereExpIsEnabled(yuno);
 
-    if (!whereExpIsEnabled.includes(msg.guild.id))
+    const { id: guildId } = msg.guild;
+
+    if (!whereExpIsEnabled.includes(guildId))
         return msg.channel.send("Experience counting is __disabled__ on the server.");
-    // to edit the database after that experience.js has made any changes.
-    setTimeout(async function() {
-        if (args.length === 0)
-            return msg.channel.send(":negative_squared_cross_mark: Not enough arguments.");
 
-        let givenLvl;
+    if (args.length === 0)
+        return msg.channel.send(":negative_squared_cross_mark: Not enough arguments.");
 
-        try {
-            givenLvl = parseInt(args[0]);
-        } catch(e) {
-            return msg.channel.send("The first argument you gave (level) is not an int as expected.");
-        }
+    const givenLvl = parseInt(args[0]);
+    if (isNaN(givenLvl))
+        return msg.channel.send("The first argument you gave (level) is not an int as expected.");
 
-        let user = msg.member,
-            g = msg.guild.id;
+    const user = msg.mentions.members.first() ?? msg.member;
 
-        if (msg.mentions.members.size)
-            user = msg.mentions.members.first();
-        
-        if (user.user.bot)
-            return msg.channel.send(":robot: Bots doesn't have xp!")
+    if (user.user.bot)
+        return msg.channel.send(":robot: Bots doesn't have xp!");
 
-        await yuno.dbCommands.setXPData(yuno.database, g, user.id, 0, givenLvl);
+    const { database, dbCommands, UTIL } = yuno;
 
+    await dbCommands.setXPData(database, guildId, user.id, 0, givenLvl);
 
-        let xpdata = await yuno.dbCommands.getXPData(yuno.database, msg.guild.id, user.id),
-            neededExp = 5 * Math.pow(xpdata.level, 2) + 50 * xpdata.level + 100;
+    const xpdata = await dbCommands.getXPData(database, guildId, user.id);
+    const neededExp = 5 * Math.pow(xpdata.level, 2) + 50 * xpdata.level + 100;
 
-        return msg.channel.send({embeds: [new EmbedBuilder()
-            .setAuthor({name: user.displayName + "'s experience card", iconURL: yuno.UTIL.getAvatarURL(user.user)})
-            .setTitle("Level has been changed.")
-            .setColor("#ff51ff")
-            .addFields([
-                {name: "Current level", value: xpdata.level.toString(), inline: true},
-                {name: "Current exp", value: xpdata.xp.toString(), inline: true},
-                {name: "Exp needed until next level (" + (xpdata.level + 1) + ")", value: (neededExp - xpdata.xp).toString()}
-            ])]});
-
-    }, 350);
-}
-
-let fetchWhereExpIsEnabled = async function(yuno) {
-    if (whereExpIsEnabled.length > 0)
-        return;
-
-    whereExpIsEnabled = await yuno.dbCommands.getGuildsWhereExpIsEnabled(yuno.database)
+    return msg.channel.send({embeds: [new EmbedBuilder()
+        .setAuthor({name: `${user.displayName}'s experience card`, iconURL: UTIL.getAvatarURL(user.user)})
+        .setTitle("Level has been changed.")
+        .setColor("#ff51ff")
+        .addFields([
+            {name: "Current level", value: xpdata.level.toString(), inline: true},
+            {name: "Current exp", value: xpdata.xp.toString(), inline: true},
+            {name: `Exp needed until next level (${xpdata.level + 1})`, value: (neededExp - xpdata.xp).toString()}
+        ])]});
 }
 
 
