@@ -49,7 +49,7 @@ module.exports.run = async function(yuno, author, args, msg) {
         (function(el) {
             if (el.indexOf("<") === 0 && el.indexOf(">") === el.length -1)
                 if (el.length >= 17 + 3 && el.length <= 19 + 3)
-                    if (!isNaN(parseInt(el[5])))
+                    if (!isNaN(parseInt(el[5], 10)))
                         return;
 
             let temp = msg.guild.members.cache.get(el);

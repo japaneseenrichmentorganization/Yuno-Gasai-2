@@ -36,7 +36,7 @@ module.exports.run = async function(yuno, author, args, msg) {
     if (args.length === 0)
         return msg.channel.send(":negative_squared_cross_mark: Not enough arguments.");
 
-    const givenLvl = parseInt(args[0]);
+    const givenLvl = parseInt(args[0], 10);
     if (isNaN(givenLvl))
         return msg.channel.send("The first argument you gave (level) is not an int as expected.");
 

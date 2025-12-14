@@ -44,7 +44,7 @@ module.exports.run = async function(yuno, author, args, msg) {
 
     for(let i = 0; i < toBanThings.length; i++) {
         let e = toBanThings[i];
-        if (!(e.indexOf("<") > -1) && e.trim() != "") {
+        if (!(e.indexOf("<") > -1) && e.trim() !== "") {
             let wantedUser = await msg.guild.members.fetch(e);
 
             if (wantedUser)

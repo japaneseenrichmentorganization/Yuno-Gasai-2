@@ -9,7 +9,7 @@ module.exports.run = async function(yuno, author, args, trigger) {
 
     if (args.length < 2) return send("❌ Usage: `mass-addxp <xp amount> <@role/ID>` — I'll make them stronger for you~ ♥");
 
-    const xpToAdd = parseInt(args[0]);
+    const xpToAdd = parseInt(args[0], 10);
     if (isNaN(xpToAdd) || xpToAdd <= 0) return send("❌ XP amount must be positive, silly~ ♥");
 
     const role = trigger.mentions?.roles?.first() || await trigger.guild.roles.fetch(args[1]).catch(() => null);

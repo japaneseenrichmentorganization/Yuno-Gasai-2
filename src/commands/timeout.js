@@ -28,7 +28,7 @@ module.exports.run = async function(yuno, author, args, msg) {
         return msg.channel.send(":negative_squared_cross_mark: Please mention a user to timeout.");
     }
 
-    const duration = parseInt(args[1]);
+    const duration = parseInt(args[1], 10);
     if (isNaN(duration) || duration < 1) {
         return msg.channel.send(":negative_squared_cross_mark: Please provide a valid duration in minutes (minimum 1).");
     }

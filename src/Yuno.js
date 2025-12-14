@@ -114,7 +114,7 @@ class Yuno extends EventEmitter {
         this.interactivity = true;
 
         this.version = PACKAGE.version;
-        this.intVersion = parseInt(PACKAGE.version.replace(new RegExp("[.]", "gi"), ""));
+        this.intVersion = parseInt(PACKAGE.version.replace(new RegExp("[.]", "gi"), ""), 10);
 
         this.prompt.info("Yuno " + this.version + " initialised.")
 
@@ -777,7 +777,7 @@ ${YUNO_PINK}           "I'll protect this server forever... just for you~"${RESE
             'clientReady', 'disconnect', 'reconnecting', 'resume',
             'shardReady', 'shardDisconnect', 'shardReconnecting', 'shardResume', 'shardError'
         ];
-        eventsToRemove.forEach(event => dC.removeAllListeners(event));
+        for (const event of eventsToRemove) dC.removeAllListeners(event);
 
         // Handle successful connection/ready (clientReady replaces deprecated 'ready' in v15)
         dC.on('clientReady', () => {

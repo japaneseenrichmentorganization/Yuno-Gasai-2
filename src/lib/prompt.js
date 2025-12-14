@@ -260,7 +260,7 @@ class Prompt {
 
         let sidestr = " ".repeat(side);
 
-        return (side % 1 != 0 ? sidestr : " ".repeat(side - 1)) + group + sidestr;
+        return (side % 1 !== 0 ? sidestr : " ".repeat(side - 1)) + group + sidestr;
     }
 
     /**
@@ -283,14 +283,15 @@ class Prompt {
         ${Prompt.COLORS.FGGREEN}Yuno Gasai 2${Prompt.COLORS.RESET} - ${Prompt.COLORS.FGCYAN}Help${Prompt.COLORS.RESET}
     `);
 
-        args.forEach(element => {
+        for (const element of args) {
             console.log("      " + element.argument + " - " + element.description)
-            if (element.aliases)
-                element.aliases.forEach(alias => {
+            if (element.aliases) {
+                for (const alias of element.aliases) {
                     console.log("        aka " + alias)
-                });
+                }
+            }
             console.log("");
-        });
+        }
     }
 
     /**

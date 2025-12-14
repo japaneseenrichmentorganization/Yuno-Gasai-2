@@ -17,24 +17,24 @@
 */
 
 module.exports.runTerminal = async function(yuno, args) {
-    let commands = yuno.commandMan.commands;
-    let uniqueCommands = {};
-    let terminalCommands = [];
-    let discordCommands = [];
-    let bothCommands = [];
+    const commands = yuno.commandMan.commands;
+    const uniqueCommands = {};
+    const terminalCommands = [];
+    const discordCommands = [];
+    const bothCommands = [];
 
     // Get unique commands (avoid showing aliases multiple times)
-    for (let [name, cmd] of Object.entries(commands)) {
+    for (const [name, cmd] of Object.entries(commands)) {
         if (!uniqueCommands[cmd.about.command]) {
             uniqueCommands[cmd.about.command] = cmd;
         }
     }
 
     // Categorize commands
-    for (let [name, cmd] of Object.entries(uniqueCommands)) {
-        let about = cmd.about;
-        let isTerminal = about.terminal !== false;
-        let isDiscord = about.discord === true;
+    for (const [name, cmd] of Object.entries(uniqueCommands)) {
+        const about = cmd.about;
+        const isTerminal = about.terminal !== false;
+        const isDiscord = about.discord === true;
 
         // Handle examples that might be a string or array
         let examples = about.examples || [];
@@ -42,7 +42,7 @@ module.exports.runTerminal = async function(yuno, args) {
             examples = [examples];
         }
 
-        let commandInfo = {
+        const commandInfo = {
             name: about.command,
             description: about.description || "No description",
             aliases: about.aliases || [],
@@ -68,13 +68,13 @@ module.exports.runTerminal = async function(yuno, args) {
     // Display terminal-only commands
     if (terminalCommands.length > 0) {
         yuno.prompt.info("=== TERMINAL ONLY COMMANDS ===");
-        terminalCommands.forEach(cmd => {
+        for (const cmd of terminalCommands) {
             let aliasStr = '';
             if (cmd.aliases.length > 0) {
-                let aliases = Array.isArray(cmd.aliases) ? cmd.aliases : [cmd.aliases];
+                const aliases = Array.isArray(cmd.aliases) ? cmd.aliases : [cmd.aliases];
                 aliasStr = ` (aliases: ${aliases.join(', ')})`;
             }
-            let masterStr = cmd.masterOnly ? ' [MASTER ONLY]' : '';
+            const masterStr = cmd.masterOnly ? ' [MASTER ONLY]' : '';
             yuno.prompt.info(`  ${cmd.name}${aliasStr}${masterStr}`);
             yuno.prompt.info(`    ${cmd.description}`);
             if (cmd.usage !== cmd.name) {
@@ -84,19 +84,19 @@ module.exports.runTerminal = async function(yuno, args) {
                 yuno.prompt.info(`    Examples: ${cmd.examples.join(', ')}`);
             }
             console.log('');
-        });
+        }
     }
 
     // Display commands available in both
     if (bothCommands.length > 0) {
         yuno.prompt.info("=== TERMINAL & DISCORD COMMANDS ===");
-        bothCommands.forEach(cmd => {
+        for (const cmd of bothCommands) {
             let aliasStr = '';
             if (cmd.aliases.length > 0) {
-                let aliases = Array.isArray(cmd.aliases) ? cmd.aliases : [cmd.aliases];
+                const aliases = Array.isArray(cmd.aliases) ? cmd.aliases : [cmd.aliases];
                 aliasStr = ` (aliases: ${aliases.join(', ')})`;
             }
-            let masterStr = cmd.masterOnly ? ' [MASTER ONLY]' : '';
+            const masterStr = cmd.masterOnly ? ' [MASTER ONLY]' : '';
             yuno.prompt.info(`  ${cmd.name}${aliasStr}${masterStr}`);
             yuno.prompt.info(`    ${cmd.description}`);
             if (cmd.usage !== cmd.name) {
@@ -106,7 +106,7 @@ module.exports.runTerminal = async function(yuno, args) {
                 yuno.prompt.info(`    Examples: ${cmd.examples.join(', ')}`);
             }
             console.log('');
-        });
+        }
     }
 
     // Summary
@@ -116,24 +116,24 @@ module.exports.runTerminal = async function(yuno, args) {
 
 module.exports.run = async function(yuno, author, args, msg) {
     // This is for Discord usage
-    let commands = yuno.commandMan.commands;
-    let uniqueCommands = {};
-    let terminalCommands = [];
-    let discordCommands = [];
-    let bothCommands = [];
+    const commands = yuno.commandMan.commands;
+    const uniqueCommands = {};
+    const terminalCommands = [];
+    const discordCommands = [];
+    const bothCommands = [];
 
     // Get unique commands
-    for (let [name, cmd] of Object.entries(commands)) {
+    for (const [name, cmd] of Object.entries(commands)) {
         if (!uniqueCommands[cmd.about.command]) {
             uniqueCommands[cmd.about.command] = cmd;
         }
     }
 
     // Categorize
-    for (let [name, cmd] of Object.entries(uniqueCommands)) {
-        let about = cmd.about;
-        let isTerminal = about.terminal !== false;
-        let isDiscord = about.discord === true;
+    for (const [name, cmd] of Object.entries(uniqueCommands)) {
+        const about = cmd.about;
+        const isTerminal = about.terminal !== false;
+        const isDiscord = about.discord === true;
 
         if (isTerminal && isDiscord) {
             bothCommands.push(about.command);

@@ -69,7 +69,7 @@ class EmbedCmdResponse extends EmbedBuilder {
         let things = Array.from(arguments),
             description = "";
 
-        things.forEach(el => description += el + " ");
+        for (const el of things) description += el + " ";
 
         description.substring(0, -1);
 

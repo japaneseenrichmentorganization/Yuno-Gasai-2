@@ -31,7 +31,7 @@ module.exports.run = async function(yuno, author, args, msg) {
     }
 
     // Parse the level number
-    let targetLevel = parseInt(args[0]);
+    const targetLevel = parseInt(args[0], 10);
     if (isNaN(targetLevel) || targetLevel < 0) {
         return msg.channel.send(":negative_squared_cross_mark: Level must be a positive number.");
     }
@@ -69,7 +69,7 @@ module.exports.run = async function(yuno, author, args, msg) {
             let rolesToAssign = [];
 
             for (let [level, roleId] of Object.entries(levelRoleMap)) {
-                let levelNum = parseInt(level);
+                const levelNum = parseInt(level, 10);
                 if (levelNum <= targetLevel) {
                     try {
                         let role = await msg.guild.roles.fetch(roleId);

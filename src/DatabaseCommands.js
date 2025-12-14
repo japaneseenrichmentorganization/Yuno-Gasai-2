@@ -335,7 +335,7 @@ module.exports = self = {
         let guilds = await database.allPromise("SELECT id, prefix FROM guilds"),
             finalObj = {};
 
-        guilds.forEach(el => finalObj[el.id] = el.prefix);
+        for (const el of guilds) finalObj[el.id] = el.prefix;
 
         return finalObj;
     },
@@ -362,7 +362,7 @@ module.exports = self = {
         let messages = await database.allPromise("SELECT id, onJoinDMMsg FROM guilds"),
             finalObj = {};
 
-        messages.forEach(el => finalObj[el.id] = el.onJoinDMMsg);
+        for (const el of messages) finalObj[el.id] = el.onJoinDMMsg;
 
         return finalObj;
     },
@@ -389,7 +389,7 @@ module.exports = self = {
         let messages = await database.allPromise("SELECT id, onJoinDMMsgTitle FROM guilds"),
             finalObj = {};
 
-        messages.forEach(el => finalObj[el.id] = el.onJoinDMMsgTitle);
+        for (const el of messages) finalObj[el.id] = el.onJoinDMMsgTitle;
 
         return finalObj;
     },
@@ -416,7 +416,7 @@ module.exports = self = {
         let spam = await database.allPromise("SELECT id, spamFilter FROM guilds"),
             finalObj = {};
 
-        spam.forEach(el => finalObj[el.id] = el.spamFilter);
+        for (const el of spam) finalObj[el.id] = el.spamFilter;
 
         return finalObj;
     },
@@ -443,10 +443,10 @@ module.exports = self = {
         let sql = await database.allPromise("SELECT id, measureXP FROM guilds"),
             arr = [];
 
-        sql.forEach(el => {
+        for (const el of sql) {
             if (el.measureXP === "true" || el.measureXP === true)
                 arr.push(el.id);
-        })
+        }
 
         return arr;
     },
@@ -538,8 +538,8 @@ module.exports = self = {
         let ret = sql[0];
 
         const result = {
-            "xp": parseInt(ret.exp),
-            "level": parseInt(ret.level)
+            "xp": parseInt(ret.exp, 10),
+            "level": parseInt(ret.level, 10)
         };
         xpDataCache.set(cacheKey, result);
         return result;
@@ -571,15 +571,15 @@ module.exports = self = {
         let cleans = await database.allPromise("SELECT * FROM channelcleans"),
             finalObj = [];
 
-        cleans.forEach(el => {
+        for (const el of cleans) {
             finalObj.push({
                 "guildId": el.gid,
                 "channelName": el.cname,
-                "timeFEachClean": parseInt(el.cleantime),
-                "timeBeforeClean": parseInt(el.warningtime),
-                "remainingTime": parseInt(el.remainingtime)
+                "timeFEachClean": parseInt(el.cleantime, 10),
+                "timeBeforeClean": parseInt(el.warningtime, 10),
+                "remainingTime": parseInt(el.remainingtime, 10)
             });
-        });
+        }
 
         return finalObj;
     },
@@ -601,9 +601,9 @@ module.exports = self = {
         return {
             "guildId": guildid,
             "channelName": clean.cname,
-            "timeFEachClean": parseInt(clean.cleantime),
-            "timeBeforeClean": parseInt(clean.warningtime),
-            "remainingTime": parseInt(clean.remainingtime)
+            "timeFEachClean": parseInt(clean.cleantime, 10),
+            "timeBeforeClean": parseInt(clean.warningtime, 10),
+            "remainingTime": parseInt(clean.remainingtime, 10)
         }
     },
 
@@ -626,13 +626,13 @@ module.exports = self = {
             return;
 
         if (typeof timeFEachClean === "string")
-            timeFEachClean = parseInt(timeFEachClean);
+            timeFEachClean = parseInt(timeFEachClean, 10);
 
         if (typeof timeBeforeClean === "string")
-            timeBeforeClean = parseInt(timeBeforeClean);
+            timeBeforeClean = parseInt(timeBeforeClean, 10);
 
         if (typeof remainingTime === "string")
-            remainingTime = parseInt(remainingTime);
+            remainingTime = parseInt(remainingTime, 10);
 
         if (remainingTime > timeFEachClean * 60)
             remainingTime = timeFEachClean;
@@ -688,7 +688,7 @@ module.exports = self = {
         let mentionResponses = await database.allPromise("SELECT * FROM mentionResponses"),
             r = [];
 
-        mentionResponses.forEach(el => {
+        for (const el of mentionResponses) {
             r.push({
                 "id": el.id,
                 "guildId": el.gid,
@@ -696,7 +696,7 @@ module.exports = self = {
                 "response": el.response,
                 "image": el.image
             })
-        })
+        }
 
         return r;
     },
@@ -914,12 +914,12 @@ module.exports = self = {
         );
 
         const channels = {};
-        result.forEach(row => {
+        for (const row of result) {
             channels[row.logType] = {
                 channelId: row.channelId,
                 enabled: row.enabled === 1
             };
-        });
+        }
 
         logChannelCache.set(cacheKey, channels);
         return channels;
