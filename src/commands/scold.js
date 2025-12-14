@@ -23,7 +23,7 @@ module.exports.run = async function(yuno, author, args, msg) {
         return msg.channel.send('Who do you want me to scold?');
     }
 
-    msg.channel.send(msg.mentions.users.first().toString() + scold[Math.floor(Math.random() * scold.length)])
+    await msg.channel.send(msg.mentions.users.first().toString() + scold[Math.floor(Math.random() * scold.length)])
 };
 
 module.exports.about = {

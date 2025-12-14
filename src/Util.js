@@ -15,12 +15,12 @@ module.exports = {
      * @return {TextChannel} The new and empty channel.
      */
     "clean": async function(channel) {
-        let nsfw = channel.nsfw,
-            pos = channel.position,
-            oldId = channel.id;
+        const nsfw = channel.nsfw;
+        const pos = channel.position;
+        const oldId = channel.id;
 
         // Clone the channel
-        let n = await channel.clone({
+        const n = await channel.clone({
             "reason": "Cleaning by Yuno."
         });
 
@@ -60,19 +60,19 @@ module.exports = {
      * @return {String}
      */
     "formatDuration": function(seconds) {
-        let h = Math.floor(seconds / 3600),
-            min = Math.floor((seconds - (h * 3600)) / 60),
-            sec = seconds - (h * 3600) - (min * 60),
-            r = "";
+        const h = Math.floor(seconds / 3600);
+        const min = Math.floor((seconds - (h * 3600)) / 60);
+        const sec = seconds - (h * 3600) - (min * 60);
+        let r = "";
 
         if (h > 0)
-            r += ("00" + h).slice(-2) + "h "
+            r += String(h).padStart(2, '0') + "h ";
 
         if (min > 0)
-            r += ("00" + min).slice(-2) + "min "
+            r += String(min).padStart(2, '0') + "min ";
 
-        if (sec > 0)
-            r += ("00" + sec).slice(-2) + "s"
+        if (sec > 0 || r === "")
+            r += String(sec).padStart(2, '0') + "s";
 
         return r;
     },
@@ -83,9 +83,12 @@ module.exports = {
      * @return {boolean}
      */
     "checkIfUrl": function(url) {
-        return (
-            /(http|https):\/\/(\w+:{0,1}\w*)?(\S+)(:[0-9]+)?(\/|\/([\w#!:.?+=&%!\-\/]))?/
-        ).test(url)
+        try {
+            const parsed = new URL(url);
+            return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+        } catch {
+            return false;
+        }
     },
 
     /**

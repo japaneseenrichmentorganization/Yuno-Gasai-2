@@ -24,8 +24,9 @@ module.exports.run = async function(yuno, author, args, msg) {
     else
         prefix = args[0];
 
-    let oldPrefixes = await yuno.dbCommands.getPrefixes(yuno.database);
+    const oldPrefixes = await yuno.dbCommands.getPrefixes(yuno.database);
 
+    let oldPrefix;
     if (Object.keys(oldPrefixes).includes(msg.guild.id))
         oldPrefix = oldPrefixes[msg.guild.id];
     else
@@ -37,7 +38,7 @@ module.exports.run = async function(yuno, author, args, msg) {
     await yuno.dbCommands.setPrefix(yuno.database, msg.guild.id, prefix);
 
     yuno._refreshMod("command-executor");
-    return msg.channel.send(":white_check_mark: Prefix changed to : `"+ prefix +" `\n:arrow_right: Hot reloading the command-executor module... Bot may be unresponsive for a few secs.");
+    return await msg.channel.send(":white_check_mark: Prefix changed to : `"+ prefix +" `\n:arrow_right: Hot reloading the command-executor module... Bot may be unresponsive for a few secs.");
 }
 
 module.exports.about = {

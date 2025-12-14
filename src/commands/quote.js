@@ -19,7 +19,7 @@
 const quote = require('../data/quotes.json')
 
 module.exports.run = async function(yuno, author, args, msg) {
-    msg.channel.send(quote[Math.floor(Math.random() * quote.length)])
+    await msg.channel.send(quote[Math.floor(Math.random() * quote.length)])
 };
 
 module.exports.about = {
