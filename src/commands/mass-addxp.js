@@ -25,16 +25,18 @@ module.exports.run = async function(yuno, author, args, trigger) {
     await proc.edit(`⢿⡷ Giving **${targets.size}** members **+${xpToAdd}** XP each... feel my affection~ ♥`);
 
     let ok = 0, fail = 0;
+    const stmt = await yuno.database.prepare(`
+        INSERT INTO experiences (userID, guildID, exp, level)
+        VALUES (?, ?, ?, 0)
+        ON CONFLICT(userID, guildID) DO UPDATE SET exp = exp + ?
+    `);
     for (const member of targets.values()) {
         try {
-            await yuno.database.runPromise(`
-                INSERT INTO experiences (userID, guildID, expCount, level)
-                VALUES (?, ?, ?, 0)
-                ON CONFLICT(userID, guildID) DO UPDATE SET expCount = expCount + ?
-            `, [member.id, trigger.guild.id, xpToAdd, xpToAdd]);
+            await stmt.run([member.id, trigger.guild.id, xpToAdd, xpToAdd]);
             ok++;
         } catch (e) { fail++; console.error(e); }
     }
+    await stmt.finalize();
 
     if (yuno._refreshMod) yuno._refreshMod("message-processors");
 

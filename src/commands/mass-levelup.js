@@ -41,12 +41,21 @@ module.exports.run = async function(yuno, author, args, trigger) {
     let failed = 0;
     let totalGifted = 0;
 
+    // Prepare statements for repeated execution
+    const selectStmt = await yuno.database.prepare(
+        `SELECT level, exp FROM experiences WHERE userID = ? AND guildID = ?`
+    );
+    const upsertStmt = await yuno.database.prepare(`
+        INSERT INTO experiences (userID, guildID, exp, level)
+        VALUES (?, ?, ?, ?)
+        ON CONFLICT(userID, guildID) DO UPDATE SET
+            exp = excluded.exp,
+            level = excluded.level
+    `);
+
     for (const member of targets.values()) {
         try {
-            const row = await yuno.database.getPromise?.(
-                `SELECT level, exp FROM experiences WHERE userID = ? AND guildID = ?`,
-                [member.id, trigger.guild.id]
-            ) || { level: 0, exp: 0 };
+            const row = await selectStmt.get([member.id, trigger.guild.id]) || { level: 0, exp: 0 };
 
             const currentLevel = row.level || 0;
             const currentExp = row.exp || 0;
@@ -59,13 +68,7 @@ module.exports.run = async function(yuno, author, args, trigger) {
 
             const xpToAdd = neededTotal - currentTotal;
 
-            await yuno.database.runPromise(`
-                INSERT INTO experiences (userID, guildID, exp, level) 
-                VALUES (?, ?, ?, ?)
-                ON CONFLICT(userID, guildID) DO UPDATE SET
-                    exp = excluded.exp,
-                    level = excluded.level
-            `, [member.id, trigger.guild.id, xpToAdd, targetLevel]);
+            await upsertStmt.run([member.id, trigger.guild.id, xpToAdd, targetLevel]);
 
             totalGifted += xpToAdd;
             updated++;
@@ -74,6 +77,9 @@ module.exports.run = async function(yuno, author, args, trigger) {
             console.error(`Failed for ${member.user.tag}:`, e);
         }
     }
+
+    await selectStmt.finalize();
+    await upsertStmt.finalize();
 
     if (yuno._refreshMod) yuno._refreshMod("message-processors");
 

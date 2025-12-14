@@ -29,6 +29,97 @@ try {
 }
 
 /**
+ * A wrapper for sqlite3 Statement with Promise support.
+ * Prepared statements are more efficient for repeated queries.
+ * @constructor
+ * @param {sqlite3.Statement} stmt The underlying sqlite3 statement
+ */
+function Statement(stmt) {
+    this.stmt = stmt;
+}
+
+/**
+ * Binds parameters to the statement
+ * @param {array|Object} [param] The parameters to bind
+ * @return {Promise<Statement>}
+ */
+Statement.prototype.bind = function(param) {
+    return new Promise((resolve, reject) => {
+        this.stmt.bind(param, (err) => {
+            err ? reject(err) : resolve(this);
+        });
+    });
+};
+
+/**
+ * Resets the statement to its initial state, ready to be re-executed
+ * @return {Promise<Statement>}
+ */
+Statement.prototype.reset = function() {
+    return new Promise((resolve, reject) => {
+        this.stmt.reset((err) => {
+            err ? reject(err) : resolve(this);
+        });
+    });
+};
+
+/**
+ * Runs the statement with optional parameters
+ * @param {array|Object} [param] The parameters
+ * @return {Promise<{lastID: number, changes: number}>}
+ */
+Statement.prototype.run = function(param) {
+    return new Promise((resolve, reject) => {
+        this.stmt.run(param, function(err) {
+            if (err) {
+                reject(err);
+            } else {
+                resolve({ lastID: this.lastID, changes: this.changes });
+            }
+        });
+    });
+};
+
+/**
+ * Runs the statement and returns the first row
+ * @param {array|Object} [param] The parameters
+ * @return {Promise<Object|undefined>}
+ */
+Statement.prototype.get = function(param) {
+    return new Promise((resolve, reject) => {
+        this.stmt.get(param, (err, row) => {
+            err ? reject(err) : resolve(row);
+        });
+    });
+};
+
+/**
+ * Runs the statement and returns all rows
+ * @param {array|Object} [param] The parameters
+ * @return {Promise<Array>}
+ */
+Statement.prototype.all = function(param) {
+    return new Promise((resolve, reject) => {
+        this.stmt.all(param, (err, rows) => {
+            err ? reject(err) : resolve(rows);
+        });
+    });
+};
+
+/**
+ * Finalizes the statement, releasing resources.
+ * The statement cannot be used after this.
+ * @return {Promise<void>}
+ */
+Statement.prototype.finalize = function() {
+    return new Promise((resolve, reject) => {
+        this.stmt.finalize((err) => {
+            err ? reject(err) : resolve();
+        });
+    });
+};
+
+/**
  * A sqlite3 database with optional encryption and PRAGMA optimization support.
  * @constructor
  */
@@ -134,6 +225,31 @@ Database.prototype.rekey = function(newPassword) {
         return Promise.reject(new Error("Encryption not available. Install @journeyapps/sqlcipher"));
     }
     return this.runPromise(`PRAGMA rekey = '${newPassword.replace(/'/g, "''")}'`);
+};
+
+/**
+ * Prepares a SQL statement for repeated execution.
+ * More efficient than run/all for queries executed multiple times.
+ * IMPORTANT: Always call finalize() when done to release resources.
+ * @throws {Error} When method is triggered but the db is not opened.
+ * @param {String} sql The SQL command to prepare
+ * @param {array|Object} [param] Optional parameters to bind immediately
+ * @return {Promise<Statement>}
+ * @example
+ * const stmt = await db.prepare("INSERT INTO users VALUES (?, ?)");
+ * await stmt.run(["user1", "email1"]);
+ * await stmt.run(["user2", "email2"]);
+ * await stmt.finalize();
+ */
+Database.prototype.prepare = function(sql, param) {
+    if (this.db === null) {
+        throw new Error("Tried to access database, but not opened!");
+    }
+    return new Promise((resolve, reject) => {
+        const stmt = this.db.prepare(sql, param, (err) => {
+            err ? reject(err) : resolve(new Statement(stmt));
+        });
+    });
 };
 
 /**
