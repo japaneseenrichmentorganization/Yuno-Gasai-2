@@ -1,6 +1,6 @@
 {
   "name": "yuno-gasai-2",
-  "version": "2.6.3",
+  "version": "2.7.0",
   "description": "The remade of Yuno Gasai, flawless & bugless",
   "main": "index.js",
   "scripts": {
@@ -11,7 +11,7 @@
     "generate-doc-notheme": "jsdoc .\\src -r -p -d docs"
   },
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=24.0.0"
   },
   "devDependencies": {
     "docdash": "^2.0.2",

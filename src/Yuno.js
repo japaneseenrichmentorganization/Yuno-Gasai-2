@@ -114,7 +114,7 @@ class Yuno extends EventEmitter {
         this.interactivity = true;
 
         this.version = PACKAGE.version;
-        this.intVersion = parseInt(PACKAGE.version.replace(new RegExp("[.]", "gi"), ""), 10);
+        this.intVersion = parseInt(PACKAGE.version.replaceAll(".", ""), 10);
 
         this.prompt.info("Yuno " + this.version + " initialised.")
 

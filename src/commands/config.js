@@ -39,7 +39,7 @@ const ACTION_HANDLERS = {
     },
     get: (config, key, value, yuno) => {
         const result = tryStringifyJSON(config.get(key));
-        return String(result).replace(new RegExp(yuno.dC.token, "gi"), "[token]");
+        return String(result).replace(new RegExp(RegExp.escape(yuno.dC.token), "gi"), "[token]");
     }
 };
 
