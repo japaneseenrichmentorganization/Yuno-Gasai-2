@@ -75,14 +75,15 @@ class CommandManager extends EventEmitter {
      * @returns {String} The path to the file, resolved.
      */
     _clearCache(file) {
-        if (file.indexOf(".js"))
-            file = file.substring(0, file.lastIndexOf(".js"));
+        if (file.endsWith(".js")) {
+            file = file.slice(0, -3);
+        }
 
-        file = `${this.directory}/${file}`;
-        file = require.resolve(file);
+        file = require.resolve(`${this.directory}/${file}`);
 
-        if (require.cache[file])
+        if (require.cache[file]) {
             delete require.cache[file];
+        }
 
         return file;
     }
@@ -182,16 +183,16 @@ class CommandManager extends EventEmitter {
      */
     configLoaded(Yuno, config) {
         const insufficientPermissionsMessage_ = config.get("chat.insufficient-permissions");
-        let masterusers_ = config.get("commands.master-users");
+        const masterusers_ = config.get("commands.master-users");
 
-        if (typeof insufficientPermissionsMessage_ === "string")
-            insufficientPermissionsMessage = insufficientPermissionsMessage_;
+        // Use ternary for type-guarded assignment
+        insufficientPermissionsMessage = typeof insufficientPermissionsMessage_ === "string"
+            ? insufficientPermissionsMessage_
+            : insufficientPermissionsMessage;
 
-        if (typeof masterusers_ === "string")
-            masterusers_ = [masterusers_];
-
-        if (Array.isArray(masterusers_))
-            masterusers = masterusers_;
+        // Normalize to array and assign if valid
+        const normalizedUsers = typeof masterusers_ === "string" ? [masterusers_] : masterusers_;
+        masterusers = Array.isArray(normalizedUsers) ? normalizedUsers : masterusers;
     }
 
     /**
@@ -256,18 +257,16 @@ class CommandManager extends EventEmitter {
      * @return {Boolean}
      */
     isDMCommand(command) {
+        const { commands } = this;
         const parsedCommand = this._parse(command);
         command = parsedCommand.command;
 
         if (!this._commandExists(command))
             return false;
 
-        const commandObject = this.commands[command].about;
+        const { isDMPossible, discord } = commands[command].about;
 
-        if (commandObject.isDMPossible === true && commandObject.discord === true)
-            return true;
-
-        return false;
+        return isDMPossible === true && discord === true;
     }
 
     /**
@@ -278,13 +277,15 @@ class CommandManager extends EventEmitter {
      * @param {Message} msg
      */
     async executeDM(Yuno, author, command, msg) {
+        const { commands } = this;
         const parsedCommand = this._parse(command);
-        const commandObject = this.commands[command];
+        const commandObject = commands[command];
+        const { about } = commandObject;
 
-        if (!(commandObject.about.isDMPossible === true && commandObject.about.discord === true))
+        if (!(about.isDMPossible === true && about.discord === true))
             return;
 
-        if (commandObject.about.onlyMasterUsers === true && !this._isUserMaster(author.id))
+        if (about.onlyMasterUsers === true && !this._isUserMaster(author.id))
             return;
 
         await commandObject.run(Yuno, author, parsedCommand.args, msg);
@@ -299,42 +300,43 @@ class CommandManager extends EventEmitter {
      * @returns {any} Null if no permission; else, the command result
      */
     async execute(Yuno, source, commandStr, message) {
+        const { commands } = this;
+
         if (commandStr === "" && source === null)
             return prompt.info("Please at least, write something.");
 
         const parsedCommand = this._parse(commandStr);
         const command = parsedCommand.command;
 
-        if (!this._commandExists(parsedCommand.command)) {
-            if (source === null)
-                return prompt.error(`Command ${parsedCommand.command} doesn't exist!`);
-            else
-                return;
+        if (!this._commandExists(command)) {
+            return source === null
+                ? prompt.error(`Command ${command} doesn't exist!`)
+                : undefined;
         }
 
-        const commandObject = this.commands[command];
+        const commandObject = commands[command];
+        const { about } = commandObject;
 
-        if (typeof commandObject.about.terminal === "boolean" && commandObject.about.terminal === false && source === null)
+        if (about.terminal === false && source === null)
             return prompt.error(`The command ${command} isn't accessible through terminal. Please use Discord's chat.`);
 
         if (source instanceof GuildMember || source === null) {
-            if (commandObject.about.discord === false && source instanceof GuildMember)
+            if (about.discord === false && source instanceof GuildMember)
                 return;
 
-            if (commandObject.about.onlyMasterUsers === true && source !== null) {
-                if (!this._isUserMaster(source.id))
-                    return;
-            }
+            if (about.onlyMasterUsers === true && source !== null && !this._isUserMaster(source.id))
+                return;
 
-            if (source === null || (source instanceof GuildMember && (this._isUserMaster(source.id) || this._hasPermissions(source, commandObject.about.requiredPermissions)))) {
+            const hasPermission = source === null ||
+                (source instanceof GuildMember && (this._isUserMaster(source.id) || this._hasPermissions(source, about.requiredPermissions)));
+
+            if (hasPermission) {
                 let _error;
 
                 try {
-                    if (source === null && commandObject.runTerminal) {
-                        await commandObject.runTerminal(Yuno, parsedCommand.args);
-                    } else {
-                        await commandObject.run(Yuno, source === null ? 0 : source, parsedCommand.args, message);
-                    }
+                    source === null && commandObject.runTerminal
+                        ? await commandObject.runTerminal(Yuno, parsedCommand.args)
+                        : await commandObject.run(Yuno, source ?? 0, parsedCommand.args, message);
                 } catch (e) {
                     _error = e;
                 }
@@ -343,16 +345,14 @@ class CommandManager extends EventEmitter {
                     throw _error; // let yuno handle the error.
             } else {
                 // command execution failed due to insufficient permissions
-                if (commandObject.about.dangerous === true) {
-                    return message.member.ban({
+                return about.dangerous === true
+                    ? message.member.ban({
                         deleteMessageSeconds: 86400,
                         reason: "User tried to execute a command for which they are underprivileged."
-                    });
-                } else {
-                    return message.channel.send(
+                    })
+                    : message.channel.send(
                         insufficientPermissionsMessage.replace("${author}", `<@!${source.id}>`)
                     );
-                }
             }
         } else {
             await commandObject.run(Yuno, source === null);

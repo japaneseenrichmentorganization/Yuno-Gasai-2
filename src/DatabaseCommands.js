@@ -34,9 +34,9 @@ const botBanCache = new LRUCache(1000, 5 * 60 * 1000);
 
 let self;
 
-let zeroPadding = function(num, places) {
-  var zero = places - num.toString().length + 1;
-  return Array(+(zero > 0 && zero)).join("0") + num;
+const zeroPadding = (num, places) => {
+    const zero = places - num.toString().length + 1;
+    return Array(+(zero > 0 && zero)).join("0") + num;
 };
 
 module.exports = self = {
@@ -48,52 +48,47 @@ module.exports = self = {
      * @param {String} destination The filename of the destination file.
      * @return {Promise}
      */
-    "upgrade": function(Yuno, prompt, file, to) {
-        return new Promise((async function(resolve, reject) {
-            // still check if the extension is here and remove it
-            if (to.indexOf(".db") === -1)
-                to += ".db";
+    "upgrade": async function(Yuno, prompt, file, to) {
+        // Ensure .db extension
+        if (!to.endsWith(".db")) to += ".db";
 
-            try { fs.unlinkSync(to) } catch(e) {}
+        try { require("fs").unlinkSync(to); } catch {}
 
-            let olddb = await (new Database).open(file),
-                olddbVers = await olddb.allPromise("PRAGMA user_version;");
-                isItReallyFromV1 = olddbVers instanceof Array,
-                newdb = await (new Database).open(to);
+        const olddb = await (new Database).open(file);
+        const olddbVers = await olddb.allPromise("PRAGMA user_version;");
+        const isItReallyFromV1 = Array.isArray(olddbVers);
+        const newdb = await (new Database).open(to);
 
-            if (!isItReallyFromV1) {
-                return yuno.prompt.error("Database isn't from Yuno Gasai v1. If it's really from v1, why is then a user_version PRAGMA ? :thinking:");
-            }
+        if (!isItReallyFromV1) {
+            Yuno.prompt.error("Database isn't from Yuno Gasai v1. If it's really from v1, why is then a user_version PRAGMA ? :thinking:");
+            return;
+        }
 
-            let experiences = await olddb.allPromise("SELECT * FROM exp"),
-                guilds = await olddb.allPromise("SELECT * FROM guilds");
+        const experiences = await olddb.allPromise("SELECT * FROM exp");
+        const guilds = await olddb.allPromise("SELECT * FROM guilds");
 
-            await self.initDB(newdb, Yuno, true)
+        await self.initDB(newdb, Yuno, true);
 
-            prompt.info("Exporting experiences... 1/2");
+        prompt.info("Exporting experiences... 1/2");
+        for (let i = 0; i < experiences.length; i++) {
+            const el = experiences[i];
+            await newdb.runPromise("INSERT INTO experiences VALUES(?, ?, ?, ?)",
+                [el.level, el.userID, el.guildID, el.expCount]);
+            prompt.writeWithoutJumpingLine(`${i}/${experiences.length} values inserted into table experiences.`);
+        }
+        prompt.success("Experiences exported...");
 
-            for(let i = 0; i < experiences.length; i++) {
-                let el = experiences[i];
-                await newdb.runPromise("INSERT INTO experiences VALUES(?, ?, ?, ?)",
-                [ el.level, el.userID, el.guildID, el.expCount ])
-                prompt.writeWithoutJumpingLine(i + "/" + experiences.length + " values inserted into table experiences.");
-            }
-            prompt.success("Experiences exported...");
+        prompt.info("Exporting guild settings... 2/2");
+        for (let i = 0; i < guilds.length; i++) {
+            const el = guilds[i]; // Fixed: was experiences[i]
+            await newdb.runPromise("INSERT INTO guilds VALUES(?, ?, ?, NULL, true)",
+                [el.guildID, el.prefix, el.joinDMMessage]);
+            prompt.writeWithoutJumpingLine(`${zeroPadding(i, guilds.length.toString().length)}/${guilds.length} values inserted into table guild settings.`);
+        }
+        prompt.success("Guild settings exported");
 
-            prompt.info("Exporting guild settings... 2/2");
-            for(let i = 0; i < guilds.length; i++) {
-                let el = experiences[i];
-                await newdb.runPromise("INSERT INTO guilds VALUES(?, ?, ?, NULL, true)",
-                [ el.guildID, el.prefix, el.joinDMMessage ])
-                prompt.writeWithoutJumpingLine(zeroPadding(i, experiences.length.toString().length) + "/" + experiences.length + " values inserted into table guild settings.");
-            }
-            prompt.success("Guild settings exported");
-
-            await newdb.closePromise();
-            prompt.success("The database has been updated!");
-
-            resolve();
-        }));
+        await newdb.closePromise();
+        prompt.success("The database has been updated!");
     },
 
     /**

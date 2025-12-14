@@ -17,6 +17,9 @@
 */
 
 module.exports.run = async function(yuno, author, args, msg) {
+    // Cache discord client reference
+    const { users, guilds } = yuno.dC;
+
     if (args.length < 2) {
         return msg.channel.send(`:negative_squared_cross_mark: Usage: \`bot-ban <user|server> <id> [reason]\`
 
@@ -52,13 +55,13 @@ module.exports.run = async function(yuno, author, args, msg) {
     let targetInfo = id;
     if (type === "user") {
         try {
-            const user = await yuno.dC.users.fetch(id);
+            const user = await users.fetch(id);
             targetInfo = `${user.tag} (${id})`;
         } catch (e) {
             targetInfo = id;
         }
     } else {
-        const guild = yuno.dC.guilds.cache.get(id);
+        const guild = guilds.cache.get(id);
         if (guild) {
             targetInfo = `${guild.name} (${id})`;
         }
@@ -71,6 +74,9 @@ This ${type} can no longer use the bot.`);
 }
 
 module.exports.runTerminal = async function(yuno, args) {
+    // Cache discord client reference
+    const { users, guilds } = yuno.dC;
+
     if (args.length < 2) {
         console.log("Usage: bot-ban <user|server> <id> [reason]");
         console.log("");
@@ -110,13 +116,13 @@ module.exports.runTerminal = async function(yuno, args) {
     let targetInfo = id;
     if (type === "user") {
         try {
-            const user = await yuno.dC.users.fetch(id);
+            const user = await users.fetch(id);
             targetInfo = `${user.tag} (${id})`;
         } catch (e) {
             targetInfo = id;
         }
     } else {
-        const guild = yuno.dC.guilds.cache.get(id);
+        const guild = guilds.cache.get(id);
         if (guild) {
             targetInfo = `${guild.name} (${id})`;
         }

@@ -16,31 +16,31 @@
     along with this program.  If not, see https://www.gnu.org/licenses/.
 */
 
+// Lookup table for enable/disable patterns
+const TOGGLE_PATTERNS = [
+    { prefix: "enab", value: true },
+    { prefix: "tru", value: true },
+    { prefix: "disab", value: false },
+    { prefix: "fa", value: false }
+];
+
 module.exports.run = async function(yuno, author, args, msg) {
-    if (args.length === 0)
+    if (args.length === 0) {
         return msg.channel.send(":negative_squared_cross_mark: Not enough arguments.");
+    }
 
-    let thing = args[0],
-        to = null;
+    const thing = args[0].toLowerCase();
+    const match = TOGGLE_PATTERNS.find(({ prefix }) => thing.startsWith(prefix));
+    const to = match?.value ?? null;
 
-    if (thing.indexOf("enab") === 0)
-        to = true;
-
-    if (thing.indexOf("disab") === 0)
-        to = false;
-
-    if (thing.indexOf("tru") === 0)
-        to = true;
-
-    if (thing.indexOf("fa") === 0)
-        to = false;
-
-    if (to === null)
-        return msg.channel.send("Couldn't determine whether you wanted to enable or disable the spamfilter. Some examples: ```"  + ["enable", "disable", "true", "false", "enab", "disab", "tru", "fa"].join("\n") + " ```")
+    if (to === null) {
+        const examples = TOGGLE_PATTERNS.map(p => p.prefix).concat(["enable", "disable", "true", "false"]);
+        return msg.channel.send(`Couldn't determine whether you wanted to enable or disable the spamfilter. Some examples: \`\`\`${examples.join("\n")}\`\`\``);
+    }
 
     await yuno.dbCommands.setSpamFilterEnabled(yuno.database, msg.guild.id, thing);
     yuno._refreshMod("message-processors");
-    msg.channel.send("Spamfilter is now " + (to ? "enabled": "disabled") + " on this guild.\nEffects will appear in a few seconds.");
+    return msg.channel.send(`Spamfilter is now ${to ? "enabled" : "disabled"} on this guild.\nEffects will appear in a few seconds.`);
 }
 
 module.exports.about = {

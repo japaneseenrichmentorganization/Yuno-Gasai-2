@@ -115,18 +115,14 @@ module.exports.init = function(Yuno, hotReloaded) {
 }
 
 module.exports.configLoaded = function(Yuno, config) {
-    let workOnlyOnGuild_ = config.get("debug.work-only-on-guild"),
-        defaultPrefix_ = config.get("commands.default-prefix"),
-        dmMessage_ = config.get("chat.dm");
+    const workOnlyOnGuild_ = config.get("debug.work-only-on-guild");
+    const defaultPrefix_ = config.get("commands.default-prefix");
+    const dmMessage_ = config.get("chat.dm");
 
-    if (typeof workOnlyOnGuild_ === "string")
-        workOnlyOnGuild = workOnlyOnGuild_;
-
-    if (typeof defaultPrefix_ === "string")
-        defaultPrefix = defaultPrefix_;
-
-    if (typeof dmMessage_ === "string")
-        dmMessage = dmMessage_;
+    // Use nullish coalescing with type guard
+    workOnlyOnGuild = typeof workOnlyOnGuild_ === "string" ? workOnlyOnGuild_ : workOnlyOnGuild;
+    defaultPrefix = typeof defaultPrefix_ === "string" ? defaultPrefix_ : defaultPrefix;
+    dmMessage = typeof dmMessage_ === "string" ? dmMessage_ : dmMessage;
 }
 
 module.exports.beforeShutdown = function(Yuno) {

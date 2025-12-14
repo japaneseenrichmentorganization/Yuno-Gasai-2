@@ -37,18 +37,17 @@ module.exports.run = async function(yuno, author, args, msg) {
         result = e.message;
     }
 
-    if (typeof result === "string")
-        result = result.replace(new RegExp(Yuno.dC.token, "gi"), "[token]");
-    else
-        result = util.inspect(result, { depth: 0 });
+    result = typeof result === "string"
+        ? result.replace(new RegExp(yuno.dC.token, "gi"), "[token]")
+        : util.inspect(result, { depth: 0 });
 
-    if (isSilent && author !== 0)
+    if (isSilent && author !== 0) {
         msg.delete();
-    else
-        if (author !== 0)
-            msg.channel.send("```js\n " + result + " \n```")
-        else
-            yuno.prompt.info("Evaluation result:\n" + result);
+    } else if (author !== 0) {
+        msg.channel.send("```js\n " + result + " \n```");
+    } else {
+        yuno.prompt.info("Evaluation result:\n" + result);
+    }
     
 }
 

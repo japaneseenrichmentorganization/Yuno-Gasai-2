@@ -21,6 +21,15 @@ const { ChannelType, PermissionsBitField } = require("discord.js");
 // Track active watch sessions
 const activeWatches = new Map();
 
+// Allowed channel types for watching
+const WATCHABLE_CHANNEL_TYPES = [
+    ChannelType.GuildText,
+    ChannelType.GuildAnnouncement,
+    ChannelType.PublicThread,
+    ChannelType.PrivateThread,
+    ChannelType.AnnouncementThread
+];
+
 /**
  * Find a channel across all guilds
  */
@@ -140,12 +149,8 @@ module.exports.runTerminal = async function(yuno, args, rawInput, rl) {
         return;
     }
 
-    // Check if it's a text-based channel
-    if (channel.type !== ChannelType.GuildText &&
-        channel.type !== ChannelType.GuildAnnouncement &&
-        channel.type !== ChannelType.PublicThread &&
-        channel.type !== ChannelType.PrivateThread &&
-        channel.type !== ChannelType.AnnouncementThread) {
+    // Check if it's a text-based channel using lookup array
+    if (!WATCHABLE_CHANNEL_TYPES.includes(channel.type)) {
         console.log("Error: Cannot watch this channel type.");
         return;
     }

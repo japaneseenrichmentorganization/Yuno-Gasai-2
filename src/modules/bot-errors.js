@@ -20,106 +20,117 @@ let channelName = null,
     guildId = null,
     guild = null,
     channel = null,
-
     mentionOnCrash = null,
-
     ONE_TIME_EVENT = false;
 
 module.exports.modulename = "bot-errors";
 
-let getMentions = function() {
-    let str = "";
-    mentionOnCrash.forEach(el => str += (typeof el === "string" ? "<@!" + el + "> " : ""))
-    return str;
-}
+// Helper: Format mentions string
+const getMentions = () =>
+    mentionOnCrash
+        ?.filter(el => typeof el === "string")
+        .map(el => `<@!${el}>`)
+        .join(" ") ?? "";
 
-let discordConnected = async function(Yuno) {
-    let dC = Yuno.dC,
-        guilds = dC.guilds;
+// Helper: Validate error config object
+const isValidErrorConfig = (c) =>
+    c &&
+    typeof c === "object" &&
+    typeof c.guild === "string" &&
+    typeof c.channel === "string";
 
-    guild = guilds.cache.get(guildId);
+// Helper: Resolve channel by ID or name
+const resolveChannel = async (guild, identifier, Yuno) => {
+    const isId = /^\d+$/.test(identifier);
 
-    if (!guild)
-        return Yuno.prompt.error("Cannot log bot errors into a channel: GuildID: " + guildId + " is invalid. Try putting a guild ID instead")
+    if (isId) {
+        const cached = guild.channels.cache.get(identifier);
+        if (cached) return cached;
+
+        try {
+            return await guild.channels.fetch(identifier);
+        } catch (e) {
+            Yuno.prompt.warn(`Could not fetch channel by ID: ${e.message}`);
+        }
+    }
+
+    return guild.channels.cache.find(ch => ch.name === identifier) ?? null;
+};
+
+const discordConnected = async function(Yuno) {
+    guild = Yuno.dC.guilds.cache.get(guildId);
+
+    if (!guild) {
+        return Yuno.prompt.error(`Cannot log bot errors: GuildID ${guildId} is invalid.`);
+    }
 
     // Fetch all channels to ensure cache is populated
     try {
         await guild.channels.fetch();
     } catch (e) {
-        Yuno.prompt.error("Failed to fetch guild channels: " + e.message);
+        Yuno.prompt.error(`Failed to fetch guild channels: ${e.message}`);
     }
 
-    // Try to find channel by ID first (if channelName looks like an ID)
-    if (/^\d+$/.test(channelName)) {
-        channel = guild.channels.cache.get(channelName);
-        if (!channel) {
-            // Try fetching directly
-            try {
-                channel = await guild.channels.fetch(channelName);
-            } catch (e) {
-                Yuno.prompt.warn("Could not fetch channel by ID: " + e.message);
-            }
-        }
-    }
-    
-    // If not found by ID, try by name
-    if (!channel) {
-        channel = guild.channels.cache.find(ch => ch.name === channelName);
-    }
+    // Use helper function to resolve channel
+    channel = await resolveChannel(guild, channelName, Yuno);
 
     if (!channel) {
-        Yuno.prompt.error("Cannot log bot errors into a channel: ChannelName/ID: " + channelName + " is invalid.");
-        Yuno.prompt.info("Available channels in guild: " + Array.from(guild.channels.cache.values()).map(ch => ch.name + " (" + ch.id + ")").join(", "));
+        const availableChannels = Array.from(guild.channels.cache.values())
+            .map(ch => `${ch.name} (${ch.id})`)
+            .join(", ");
+        Yuno.prompt.error(`Cannot log bot errors: Channel ${channelName} is invalid.`);
+        Yuno.prompt.info(`Available channels: ${availableChannels}`);
         return;
     }
 
-    if (guild && channel)
-        Yuno.prompt.info("Errors logged on the guild " + guild.name + " on the channel " + channel.name)
-}
+    Yuno.prompt.info(`Errors logged on ${guild.name} in #${channel.name}`);
+};
 
 module.exports.init = function(Yuno, hotReloaded) {
     if (hotReloaded) {
         discordConnected(Yuno);
-    } else
+    } else {
         Yuno.on("discord-connected", discordConnected);
+    }
 
-    if (!ONE_TIME_EVENT)
-        Yuno.on("error", (function(e) {
+    if (!ONE_TIME_EVENT) {
+        // Use arrow function instead of .bind()
+        Yuno.on("error", (e) => {
             if (guild && channel) {
-                let errorString = e.message,
-                    moreInformations = "",
-                    possibleMoreInformations = ["From"];
+                const possibleMoreInfo = ["From"];
+                const moreInfo = possibleMoreInfo
+                    .filter(key => e.hasOwnProperty(key.toLowerCase()))
+                    .map(key => e[key.toLowerCase()])
+                    .join("\n");
 
-                possibleMoreInformations.forEach(el => {
-                    if (e.hasOwnProperty(el.toLowerCase())) {
-                        moreInformations += "\n" + e[el.toLowerCase()]
-                    }
-                })
+                const errorString = moreInfo
+                    ? `${e.message}\nMore information: ${moreInfo}`
+                    : e.message;
 
-                if (moreInformations !== "")
-                    errorString += "\nMore informations: " + moreInformations;
-
-                channel.send(getMentions() + "An exception happened :'(." + "```" + errorString + "```")
+                channel.send(`${getMentions()}An exception happened :'(.\`\`\`${errorString}\`\`\``);
             }
-        }).bind(Yuno));
+        });
+    }
 
     ONE_TIME_EVENT = true;
 }
 
 module.exports.configLoaded = function(Yuno, config) {
-    let c = config.get("errors.dropon");
+    const c = config.get("errors.dropon");
 
-    if (typeof c === "object" && c.hasOwnProperty("guild") && c.hasOwnProperty("channel") && typeof c.guild === "string" && typeof c.channel === "string") {
+    // Use helper for validation
+    if (isValidErrorConfig(c)) {
         channelName = c.channel;
         guildId = c.guild;
     } else if (c !== null) {
         config.set("errors.dropon", null);
     }
 
-    let mentionOnCrash_ = config.get("errors.mentionwhencrash");
+    // Use ternary with nullish assignment
+    const mentionOnCrash_ = config.get("errors.mentionwhencrash");
+    mentionOnCrash = Array.isArray(mentionOnCrash_) ? mentionOnCrash_ : [];
 
-    if (mentionOnCrash_ instanceof Array)
-        mentionOnCrash = mentionOnCrash_;
-    else
-        config.set("errors.mentionwhencrash", mentionOnCrash = []);
+    if (!Array.isArray(mentionOnCrash_)) {
+        config.set("errors.mentionwhencrash", mentionOnCrash);
+    }
 }

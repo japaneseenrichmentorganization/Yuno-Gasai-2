@@ -21,13 +21,15 @@ const readline = require("readline"),
     GROUPWIDTH = 10;
 
 let instance = null,
-    DEFAULT_COLORS;
+    DEFAULT_COLORS,
+    // Pre-cached empty colors object - avoids recreating on every log() call when colors disabled
+    EMPTY_COLORS = {"RESET":"","BRIGHT":"","DIM":"","UNDERSCORE":"","BLINK":"","REVERSE":"","HIDDEN":"","FGBLACK":"","FGRED":"","FGGREEN":"","FGYELLOW":"","FGBLUE":"","FGMAGENTA":"","FGCYAN":"","FGWHITE":"","BGBLACK":"","BGRED":"","BGGREEN":"","BGYELLOW":"","BGBLUE":"","BGMAGENTA":"","BGCYAN":"","BGWHITE":""};
 
 /**
  * The Prompt singleton.
  * @param {Object} [settings]
  * @deprecated Use Prompt.init() to create an instance of Prompt. Do not use new Prompt().
- * @prop {array} hiddenGroups All groups that are hidden.
+ * @prop {Set} hiddenGroups All groups that are hidden (stored uppercase for O(1) lookup).
  * @prop {Object} _DEFAULTGROUPCOLORS Default group colors.
  * @prop {Object} groupColors The colors for the group.
  * @prop {boolean} showTime Show time in logs.
@@ -35,9 +37,11 @@ let instance = null,
  */
 class Prompt {
     constructor(settings) {
-        this.hiddenGroups =
-            typeof settings === "object" && settings.hasOwnProperty("hiddenGroups") && typeof settings.hiddenGroups === "array" ?
-                settings.hiddenGroups : [];
+        // Use Set for O(1) lookup instead of Array O(n), store pre-uppercased
+        const settingsGroups = typeof settings === "object" && settings.hasOwnProperty("hiddenGroups") && Array.isArray(settings.hiddenGroups)
+            ? settings.hiddenGroups
+            : [];
+        this.hiddenGroups = new Set(settingsGroups.map(g => g.toUpperCase()));
 
         this._DEFAULTGROUPCOLORS = {
             "INFO": "FGBLUE",
@@ -74,7 +78,7 @@ class Prompt {
      */
     backup() {
         return {
-            "hiddenGroups": this.hiddenGroups,
+            "hiddenGroups": Array.from(this.hiddenGroups), // Convert Set back to Array for serialization
             "groupColors": this.groupColors,
             "showTime": this.showTime
         }
@@ -88,42 +92,42 @@ class Prompt {
      * @param {String} [textColor] Text's color. Corresponding to a value in Prompt.COLORS (key)
      */
     log() {
-        if (!this.colors)
-            Prompt.COLORS = {"RESET":"","BRIGHT":"","DIM":"","UNDERSCORE":"","BLINK":"","REVERSE":"","HIDDEN":"","FGBLACK":"","FGRED":"","FGGREEN":"","FGYELLOW":"","FGBLUE":"","FGMAGENTA":"","FGCYAN":"","FGWHITE":"","BGBLACK":"","BGRED":"","BGGREEN":"","BGYELLOW":"","BGBLUE":"","BGMAGENTA":"","BGCYAN":"","BGWHITE":""};
-        else
-            Prompt.COLORS = DEFAULT_COLORS;
+        const args = Array.from(arguments);
 
-        let args = Array.from(arguments);
+        // Early return: check if group is hidden before any processing
+        // For multi-arg calls, group is args[0]
+        if (args.length > 1) {
+            const groupUpper = args[0].toUpperCase();
+            if (this.hiddenGroups.has(groupUpper)) return;
+        }
+
+        // Use pre-cached empty colors object instead of recreating every call
+        Prompt.COLORS = this.colors ? DEFAULT_COLORS : EMPTY_COLORS;
 
         let group, text = "",
             groupColor = Prompt.COLORS.FGCYAN,
             textColor = Prompt.COLORS.RESET;
 
-        if (args.length === 1)
-            text = (args[0]).toString();
-        else {
+        if (args.length === 1) {
+            text = String(args[0]);
+        } else {
             group = args[0].toUpperCase();
-            text = (args[1]).toString();
+            text = String(args[1]);
             groupColor = args.length >= 3 && typeof args[2] === "string" ? args[2] : groupColor;
             textColor = args.length >= 4 && typeof args[3] === "string" ? args[3] : textColor;
         }
 
-        if (this.isGroupHidden(group))
-            return;
-
-        if (typeof group === "string")
-            group = this._centerGroup(group);
-        else
-            group = null;
+        const centeredGroup = typeof group === "string" ? this._centerGroup(group) : null;
 
         readline.cursorTo(process.stdout, 0);
-        readline.clearLine(process.stdout, 0)
+        readline.clearLine(process.stdout, 0);
 
+        const { RESET } = Prompt.COLORS;
         console.log(
-            (this.showTime ? Prompt.COLORS.RESET + "[" + this._getTime() + "] " : "") +
-            (typeof group === "string" ? "[" + groupColor + group + Prompt.COLORS.RESET + "]" : "" + Prompt.COLORS.RESET) + " " +
-            textColor + text + Prompt.COLORS.RESET
-        )
+            (this.showTime ? RESET + "[" + this._getTime() + "] " : "") +
+            (centeredGroup !== null ? "[" + groupColor + centeredGroup + RESET + "]" : "" + RESET) + " " +
+            textColor + text + RESET
+        );
     }
 
     /**
@@ -201,10 +205,7 @@ class Prompt {
      * @param {String} group
      */
     hideGroup(group) {
-        group = group.toUpperCase();
-
-        if (!this.hiddenGroups.includes(group))
-            this.hiddenGroups.push(group);
+        this.hiddenGroups.add(group.toUpperCase());
     }
 
     /**
@@ -212,12 +213,7 @@ class Prompt {
      * @param {String} group
      */
     showGroup(group) {
-        group = group.toUpperCase();
-
-        let ind = this.hiddenGroups.indexOf(group);
-
-        if (ind > -1)
-            this.hiddenGroups.splice(ind, 1);
+        this.hiddenGroups.delete(group.toUpperCase());
     }
 
     /**
@@ -226,7 +222,7 @@ class Prompt {
      * @returns {boolean}
      */
     isGroupHidden(group) {
-        return this.hiddenGroups.includes(group.toUpperCase());
+        return this.hiddenGroups.has(group.toUpperCase());
     }
 
     /**
@@ -313,20 +309,19 @@ class Prompt {
      * @param {Config} config The Yuno's config.
      */
     configLoaded(Yuno, config) {
-        let data = {
-            "hiddenGroups": config.get("logging.hidden-groups"),
-            "showTime": Yuno.config.get("logging.show-time"),
-            "groupColors": Yuno.config.get("logging.group-colors")
-        }
+        const hiddenGroupsConfig = config.get("logging.hidden-groups");
+        const showTimeConfig = Yuno.config.get("logging.show-time");
+        const groupColorsConfig = Yuno.config.get("logging.group-colors");
 
-        this.hiddenGroups =  typeof data === "object" && data.hasOwnProperty("hiddenGroups") && typeof data.hiddenGroups === "array" ?
-            data.hiddenGroups : [];
+        // Convert to Set with pre-uppercased values for O(1) lookup
+        const groupsArray = Array.isArray(hiddenGroupsConfig) ? hiddenGroupsConfig : [];
+        this.hiddenGroups = new Set(groupsArray.map(g => g.toUpperCase()));
 
-        this.groupColors = typeof data === "object" && data.hasOwnProperty("groupColors") && typeof data.groupColors === "object" ?
-            data.groupColors : {};
+        this.groupColors = typeof groupColorsConfig === "object" && groupColorsConfig !== null
+            ? groupColorsConfig
+            : {};
 
-        this.showTime = typeof data === "object" && data.hasOwnProperty("showTime") && typeof data.showTime === "boolean" ?
-            data.showTime : true;
+        this.showTime = typeof showTimeConfig === "boolean" ? showTimeConfig : true;
     }
 
     /**
@@ -334,7 +329,8 @@ class Prompt {
      * @param {Yuno} Yuno The instance.
      */
     beforeShutdown(Yuno) {
-        Yuno.config.set("logging.hidden-groups", JSON.stringify(this.hiddenGroups));
+        // Convert Set to Array for JSON serialization
+        Yuno.config.set("logging.hidden-groups", JSON.stringify(Array.from(this.hiddenGroups)));
         Yuno.config.set("logging.show-time", this.showTime);
         Yuno.config.set("logging.group-colors", JSON.stringify(this.groupColors));
     }

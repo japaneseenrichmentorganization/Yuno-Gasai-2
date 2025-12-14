@@ -31,6 +31,9 @@ const ACTIVITY_TYPES = {
 const STATUS_OPTIONS = ["online", "idle", "dnd", "invisible"];
 
 module.exports.run = async function(yuno, author, args, msg) {
+    // Cache discord client user reference
+    const { user: botUser } = yuno.dC;
+
     if (args.length < 1) {
         return msg.channel.send(`:information_source: **Set Presence Command**
 
@@ -68,7 +71,7 @@ module.exports.run = async function(yuno, author, args, msg) {
     // Handle clear
     if (subcommand === "clear" || subcommand === "reset" || subcommand === "none") {
         try {
-            await yuno.dC.user.setPresence({
+            await botUser.setPresence({
                 activities: [],
                 status: "online"
             });
@@ -87,7 +90,7 @@ module.exports.run = async function(yuno, author, args, msg) {
         }
 
         try {
-            await yuno.dC.user.setPresence({ status });
+            await botUser.setPresence({ status });
             const statusEmoji = {
                 "online": ":green_circle:",
                 "idle": ":yellow_circle:",
@@ -140,18 +143,21 @@ Example: \`set-presence streaming My Stream https://twitch.tv/example\``);
             activity.url = streamUrl;
         }
 
-        await yuno.dC.user.setPresence({
+        await botUser.setPresence({
             activities: [activity]
         });
 
         const typeDisplay = subcommand.charAt(0).toUpperCase() + subcommand.slice(1);
-        msg.channel.send(`:white_check_mark: Now **${typeDisplay}** ${activityText}${streamUrl ? ` (${streamUrl})` : ""}~`);
+        return msg.channel.send(`:white_check_mark: Now **${typeDisplay}** ${activityText}${streamUrl ? ` (${streamUrl})` : ""}~`);
     } catch (e) {
-        msg.channel.send(`:negative_squared_cross_mark: Failed to set presence: ${e.message}`);
+        return msg.channel.send(`:negative_squared_cross_mark: Failed to set presence: ${e.message}`);
     }
 }
 
 module.exports.runTerminal = async function(yuno, args) {
+    // Cache discord client user reference
+    const { user: botUser } = yuno.dC;
+
     if (args.length < 1) {
         console.log("Set Presence Command");
         console.log("");
@@ -179,7 +185,7 @@ module.exports.runTerminal = async function(yuno, args) {
     // Handle clear
     if (subcommand === "clear" || subcommand === "reset" || subcommand === "none") {
         try {
-            await yuno.dC.user.setPresence({
+            await botUser.setPresence({
                 activities: [],
                 status: "online"
             });
@@ -200,7 +206,7 @@ module.exports.runTerminal = async function(yuno, args) {
         }
 
         try {
-            await yuno.dC.user.setPresence({ status });
+            await botUser.setPresence({ status });
             console.log(`Status set to: ${status}`);
         } catch (e) {
             console.log(`Failed to set status: ${e.message}`);
@@ -248,7 +254,7 @@ module.exports.runTerminal = async function(yuno, args) {
             activity.url = streamUrl;
         }
 
-        await yuno.dC.user.setPresence({
+        await botUser.setPresence({
             activities: [activity]
         });
 

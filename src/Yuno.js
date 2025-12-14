@@ -262,6 +262,9 @@ class Yuno extends EventEmitter {
      * @async
      */
     async parseArguments(pargv) {
+        // Cache frequently used properties
+        const { prompt, interactiveTerm, version } = this;
+
         // duplicating
         pargv = Array.from(pargv).slice(2).concat([""]);
 
@@ -308,123 +311,137 @@ ${YUNO_PINK}⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠂⠀⠀⠀⠀⠀⠀�
 ⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣦⠀⠀⠀⠀⠀⠀⡇⠀⠀⠀⠀⣿⠀⡇⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣠⡞⠁⠀⠀⠀⢀⡞⠀⠀⠀⠀⠀⢀⣾⣿⠟⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
 ⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⠏⠀⠀⠀⠀⠀⠀⢸⡄⠀⠀⠀⢸⣠⡇⠀⠀⠀⠀⠀⠀⠀⢀⣠⡾⠋⠀⠀⠀⠀⣠⡞⠀⢀⠀⣀⢀⣴⣿⣿⣋⣤⠤⠖⠒⠚⠛⠛⠒⠦⣤⣀⠀${RESET}
 
-${YUNO_PINK_BOLD}                    ♥ Yuno Gasai v${this.version} ♥${RESET}
+${YUNO_PINK_BOLD}                    ♥ Yuno Gasai v${version} ♥${RESET}
 ${YUNO_PINK}           "I'll protect this server forever... just for you~"${RESET}
 `);
 
         this.interactivity = !((pargv.includes("--no-interactions") || pargv.includes("-noit") || process.env.NO_INTERACTION))
 
         if (!this.interactivity)
-            this.prompt.warning("Interactive terminal is disabled.");
+            prompt.warning("Interactive terminal is disabled.");
 
-        for(let i = 0; i < pargv.length; i++) {
-            let el = pargv[i];
-
-            if (el.indexOf("--token") === 0) {
-                if (el.indexOf("--token=") === 0)
-                    CUSTOM_TOKEN = el.split("=")[1];
-                else
-                    this.prompt.warning("Not any new token defined. You have to define token like --token=yourtoken")
-            }
-
-            if (el.indexOf("--custom-config") === 0) {
-                if (el.indexOf("--custom-config=") === 0) {
-                    CUSTOM_CONFIG_FILE = el.split("=")[1];
-                } else
-                    this.prompt.warning("Not any custom config path defined. You have to define path like --custom-config=yourconfig.json");
-            }
-
-            if (el.indexOf("--upgrade-database") === 0) {
-                if (!this.interactivity)
-                    return this.prompt.error("Cannot upgrade database without interactive terminal.");
-
-                if (el.indexOf("--upgrade-database=") === 0) {
-                    let files = el.split("=")[1].split(";"),
-                        file = files[0],
-                        to = files[1]
-
-                    if (!file || file === "")
-                        this.prompt.warn("No source file given to --upgrade-database. Example: --customconfig=yunov1.db;destination.db");
-                    else if (!to || to === "")
-                        return this.prompt.warn("No destination file for --upgrade-database. Example: --customconfig=yunov1.db;destination.db");
-                    else {
-                        process.on("uncaughtException", (e) => {
-                            this._uncaughtException(e);
-                        })
-                        process.on("unhandledRejection", (e) => {
-                            this._unhandledRejection(e);
-                        });
-
-                        this.interactiveTerm.setHandler(async (enter) => {
-                            if (enter === "yes") {
-                                this.interactiveTerm.stop();
-                                this.prompt.info("Starting the upgrade of the database...");
-                                await this._upgradeDb(file, to);
-                            } else if (enter === "no") {
-                                this.prompt.info("You cancelled the upgrade of the database. Stopping...");
-                                this.shutdown(3);
-                            } else {
-                                this.prompt.warn("Please enter either \"yes\" or \"no\".");
-                            }
-                        })
-
-                        this.interactiveTerm.on("quit", () => {
-                            this.shutdown(3)
-                        })
-
-                        this.interactiveTerm.listen();
-
-                        this.prompt.info("If your destination file " + to + " exists, it'll be erased.");
-                        this.prompt.info("The database " + file + " will not be affected by the upgrade.");
-                        this.prompt.info("Please confirm the upgrading of the database by entering \"yes\" or \"no\" in lowercase then press Enter.");
-                    }
-                } else {
-                    this.prompt.warn("No value given to --upgrade-database.");
+        // Argument handler object pattern - each handler tests and processes arguments
+        const ARG_HANDLERS = {
+            token: {
+                test: (arg) => arg.startsWith("--token"),
+                handle: (arg) => {
+                    CUSTOM_TOKEN = arg.startsWith("--token=")
+                        ? arg.split("=")[1]
+                        : (prompt.warning("Not any new token defined. You have to define token like --token=yourtoken"), null);
                 }
-                return;
-            }
-
-            if (el.indexOf("--hot-reload") === 0 || el.indexOf("-hr") === 0)
-                if (el.split("=").length > 0)
-                    this.prompt.debug("Hot-Reload enabled on " + ModuleExporter.watch(el.split("=")[1]))
-                else
-                    this.prompt.debug("Hot-Reload enabled on " + ModuleExporter.watch())
-
-            if (el === "--debug-script") {
-                this.on("ready", () => {
-                    require("fs").readFile("./debug-script.js", "utf8", (err, data) => {
-                        this._eval(data);
-                        this.prompt.info("Debug-script loaded.");
-                    });
-                })
-            }
-
-            if (el === "--no-colors" || el === "-nc")
-                this.prompt.colors = false;
-
-            if (el === "--quick-crash" || el === "-qc") {
-                process.on("uncaughtException", (e) => {
-                    console.log("uncaughtException", e);
-                    this.shutdown(-1);
-                });
-                process.on("unhandledRejection", (e) => {
-                    console.log("unhandledRejection", e)
-                    this.shutdown(-1);
-                });
-            }
-
-            if (el.indexOf("--custom-config") === 0) {
-                if (el.indexOf("--custom-config=") === 0) {
-                    let file = el.split("=")[1]
-
-                    if (!file || file === "")
-                        this.prompt.warn("No value given to --custom-config.");
-                    else {
-                        this.prompt.info("Loading " + file + " as config file.");
-                        await this.readConfig(file);
+            },
+            customConfig: {
+                test: (arg) => arg.startsWith("--custom-config"),
+                handle: async (arg) => {
+                    if (!arg.startsWith("--custom-config=")) {
+                        CUSTOM_CONFIG_FILE = (prompt.warning("Not any custom config path defined. You have to define path like --custom-config=yourconfig.json"), null);
+                        return;
                     }
-                } else {
-                    this.prompt.warn("Please define --custom-config. Example: --custom-config=DEBUG will load ./DEBUG.json as a config file")
+                    const file = arg.split("=")[1];
+                    if (!file || file === "") {
+                        prompt.warn("No value given to --custom-config.");
+                        return;
+                    }
+                    CUSTOM_CONFIG_FILE = file;
+                    prompt.info("Loading " + file + " as config file.");
+                    await this.readConfig(file);
+                }
+            },
+            upgradeDatabase: {
+                test: (arg) => arg.startsWith("--upgrade-database"),
+                handle: (arg) => {
+                    if (!this.interactivity)
+                        return { stop: true, result: prompt.error("Cannot upgrade database without interactive terminal.") };
+
+                    if (!arg.startsWith("--upgrade-database=")) {
+                        prompt.warn("No value given to --upgrade-database.");
+                        return { stop: true };
+                    }
+
+                    const files = arg.split("=")[1].split(";");
+                    const [file, to] = files;
+
+                    if (!file || file === "") {
+                        prompt.warn("No source file given to --upgrade-database. Example: --customconfig=yunov1.db;destination.db");
+                        return { stop: true };
+                    }
+                    if (!to || to === "") {
+                        prompt.warn("No destination file for --upgrade-database. Example: --customconfig=yunov1.db;destination.db");
+                        return { stop: true };
+                    }
+
+                    process.on("uncaughtException", (e) => this._uncaughtException(e));
+                    process.on("unhandledRejection", (e) => this._unhandledRejection(e));
+
+                    const RESPONSES = {
+                        yes: async () => {
+                            interactiveTerm.stop();
+                            prompt.info("Starting the upgrade of the database...");
+                            await this._upgradeDb(file, to);
+                        },
+                        no: () => {
+                            prompt.info("You cancelled the upgrade of the database. Stopping...");
+                            this.shutdown(3);
+                        }
+                    };
+
+                    interactiveTerm.setHandler(async (enter) => {
+                        const handler = RESPONSES[enter];
+                        handler ? await handler() : prompt.warn("Please enter either \"yes\" or \"no\".");
+                    });
+
+                    interactiveTerm.on("quit", () => this.shutdown(3));
+                    interactiveTerm.listen();
+
+                    prompt.info(`If your destination file ${to} exists, it'll be erased.`);
+                    prompt.info(`The database ${file} will not be affected by the upgrade.`);
+                    prompt.info("Please confirm the upgrading of the database by entering \"yes\" or \"no\" in lowercase then press Enter.");
+
+                    return { stop: true };
+                }
+            },
+            hotReload: {
+                test: (arg) => arg.startsWith("--hot-reload") || arg.startsWith("-hr"),
+                handle: (arg) => {
+                    prompt.debug("Hot-Reload enabled on " + ModuleExporter.watch(arg.split("=")[1] ?? undefined));
+                }
+            },
+            debugScript: {
+                test: (arg) => arg === "--debug-script",
+                handle: () => {
+                    this.on("ready", () => {
+                        require("fs").readFile("./debug-script.js", "utf8", (err, data) => {
+                            this._eval(data);
+                            prompt.info("Debug-script loaded.");
+                        });
+                    });
+                }
+            },
+            noColors: {
+                test: (arg) => arg === "--no-colors" || arg === "-nc",
+                handle: () => { prompt.colors = false; }
+            },
+            quickCrash: {
+                test: (arg) => arg === "--quick-crash" || arg === "-qc",
+                handle: () => {
+                    process.on("uncaughtException", (e) => {
+                        console.log("uncaughtException", e);
+                        this.shutdown(-1);
+                    });
+                    process.on("unhandledRejection", (e) => {
+                        console.log("unhandledRejection", e);
+                        this.shutdown(-1);
+                    });
+                }
+            }
+        };
+
+        // Process arguments using handler objects
+        for (const arg of pargv) {
+            for (const handler of Object.values(ARG_HANDLERS)) {
+                if (handler.test(arg)) {
+                    const result = await handler.handle(arg);
+                    if (result?.stop) return result.result;
                 }
             }
         }
@@ -486,18 +503,22 @@ ${YUNO_PINK}           "I'll protect this server forever... just for you~"${RESE
      * @return {Promise}
      */
     async _triggerConfigEvents() {
-        // Instances that need a config event.
-        // Sorted by their importance (from first to last)
-        const INSTANCES = [this.prompt, this.interactiveTerm, this.commandMan, this.configMan];
+        // Cache references to avoid repeated property lookups
+        const { prompt, interactiveTerm, commandMan, configMan, modules, config } = this;
+
+        // Instances that need a config event, sorted by importance
+        const INSTANCES = [prompt, interactiveTerm, commandMan, configMan];
 
         for (const el of INSTANCES) {
-            if (typeof el.configLoaded === "function")
-                await el.configLoaded(this, this.config);
+            if (typeof el.configLoaded === "function") {
+                await el.configLoaded(this, config);
+            }
         }
 
-        for (const el of this.modules) {
-            if (typeof el.configLoaded === "function")
-                await el.configLoaded(this, this.config);
+        for (const el of modules) {
+            if (typeof el.configLoaded === "function") {
+                await el.configLoaded(this, config);
+            }
         }
     }
 
@@ -507,18 +528,22 @@ ${YUNO_PINK}           "I'll protect this server forever... just for you~"${RESE
      * @return {Promise}
      */
     async _triggerShutdownEvents() {
-        // Instances that need a shutdown event.
-        // Sorted by their importance (from first to last)
-        const INSTANCES = [this.prompt, this.interactiveTerm, this.commandMan, this.configMan]
+        // Cache references to avoid repeated property lookups
+        const { prompt, interactiveTerm, commandMan, configMan, modules, config } = this;
+
+        // Instances that need a shutdown event, sorted by importance
+        const INSTANCES = [prompt, interactiveTerm, commandMan, configMan];
 
         for (const el of INSTANCES) {
-            if (el.beforeShutdown && typeof el.beforeShutdown === "function")
+            if (typeof el.beforeShutdown === "function") {
                 await el.beforeShutdown(this);
+            }
         }
 
-        for (const el of this.modules) {
-            if (typeof el.beforeShutdown === "function")
-                await el.beforeShutdown(this, this.config);
+        for (const el of modules) {
+            if (typeof el.beforeShutdown === "function") {
+                await el.beforeShutdown(this, config);
+            }
         }
     }
 
@@ -603,14 +628,15 @@ ${YUNO_PINK}           "I'll protect this server forever... just for you~"${RESE
      * @async
      */
     async _loadModules() {
-        let files = await fsPromises.readdir("./src/modules");
+        const files = await fsPromises.readdir("./src/modules");
+        const { modules, prompt } = this;
 
         for (const file of files) {
-            delete require.cache[require.resolve("./modules/" + file)]
-            let mod = require("./modules/" + file);
-            this.modules.push(mod);
+            delete require.cache[require.resolve("./modules/" + file)];
+            const mod = require("./modules/" + file);
+            modules.push(mod);
             await mod.init(this);
-            this.prompt.success("Module " + mod.modulename + " successfully loaded.");
+            prompt.success(`Module ${mod.modulename} successfully loaded.`);
         }
     }
 
@@ -620,15 +646,16 @@ ${YUNO_PINK}           "I'll protect this server forever... just for you~"${RESE
      * @async
      */
     async _loadModulesHR() {
-        let files = await fsPromises.readdir("./src/modules");
+        const files = await fsPromises.readdir("./src/modules");
+        const { modules, config, prompt } = this;
 
         for (const file of files) {
-            delete require.cache[require.resolve("./modules/" + file)]
-            let mod = require("./modules/" + file);
-            this.modules.push(mod);
-            await mod.configLoaded(this, this.config);
+            delete require.cache[require.resolve("./modules/" + file)];
+            const mod = require("./modules/" + file);
+            modules.push(mod);
+            await mod.configLoaded(this, config);
             await mod.init(this, true);
-            this.prompt.success("Module " + mod.modulename + " successfully loaded.");
+            prompt.success(`Module ${mod.modulename} successfully loaded.`);
         }
     }
 
@@ -755,63 +782,61 @@ ${YUNO_PINK}           "I'll protect this server forever... just for you~"${RESE
      * @private
      */
     _setupReconnectionHandlers() {
-        // Clear any existing handlers to prevent duplicates
-        this.dC.removeAllListeners('ready');
-        this.dC.removeAllListeners('disconnect');
-        this.dC.removeAllListeners('reconnecting');
-        this.dC.removeAllListeners('resume');
-        this.dC.removeAllListeners('shardReady');
-        this.dC.removeAllListeners('shardDisconnect');
-        this.dC.removeAllListeners('shardReconnecting');
-        this.dC.removeAllListeners('shardResume');
-        this.dC.removeAllListeners('shardError');
+        const { dC, prompt } = this;
 
-        // Handle successful connection/ready
-        this.dC.on('ready', () => {
+        // Clear any existing handlers to prevent duplicates
+        const eventsToRemove = [
+            'clientReady', 'disconnect', 'reconnecting', 'resume',
+            'shardReady', 'shardDisconnect', 'shardReconnecting', 'shardResume', 'shardError'
+        ];
+        eventsToRemove.forEach(event => dC.removeAllListeners(event));
+
+        // Handle successful connection/ready (clientReady replaces deprecated 'ready' in v15)
+        dC.on('clientReady', () => {
             connectionState.isConnected = true;
             if (connectionState.reconnectCount > 0) {
-                this.prompt.success(`✓ Reconnected successfully (attempt #${connectionState.reconnectCount})`);
+                prompt.success(`✓ Reconnected successfully (attempt #${connectionState.reconnectCount})`);
                 connectionState.reconnectCount = 0;
             }
             connectionState.lastDisconnect = null;
         });
 
         // Handle shard ready (for sharded bots)
-        this.dC.on('shardReady', (shardId) => {
+        dC.on('shardReady', (shardId) => {
             connectionState.isConnected = true;
-            this.prompt.info(`✓ Shard ${shardId} connected`);
+            prompt.info(`✓ Shard ${shardId} connected`);
         });
 
         // Handle disconnection
-        this.dC.on('shardDisconnect', (event, shardId) => {
+        dC.on('shardDisconnect', (event, shardId) => {
             connectionState.isConnected = false;
             connectionState.lastDisconnect = Date.now();
-            this.prompt.warning(`⚠️  Shard ${shardId} disconnected (code: ${event.code})`);
+            prompt.warning(`⚠️  Shard ${shardId} disconnected (code: ${event.code})`);
         });
 
         // Handle reconnecting
-        this.dC.on('shardReconnecting', (shardId) => {
+        dC.on('shardReconnecting', (shardId) => {
             connectionState.reconnectCount++;
-            this.prompt.info(`🔄 Shard ${shardId} reconnecting (attempt #${connectionState.reconnectCount})...`);
+            prompt.info(`🔄 Shard ${shardId} reconnecting (attempt #${connectionState.reconnectCount})...`);
         });
 
         // Handle resumed connection
-        this.dC.on('shardResume', (shardId, replayedEvents) => {
+        dC.on('shardResume', (shardId, replayedEvents) => {
             connectionState.isConnected = true;
-            this.prompt.success(`✓ Shard ${shardId} resumed (replayed ${replayedEvents} events)`);
+            prompt.success(`✓ Shard ${shardId} resumed (replayed ${replayedEvents} events)`);
             connectionState.reconnectCount = 0;
             connectionState.lastDisconnect = null;
         });
 
         // Handle shard errors
-        this.dC.on('shardError', (error, shardId) => {
-            this.prompt.error(`❌ Shard ${shardId} error: ${error.message}`);
+        dC.on('shardError', (error, shardId) => {
+            prompt.error(`❌ Shard ${shardId} error: ${error.message}`);
         });
 
         // Start connection monitor for fallback reconnection
         this._startConnectionMonitor();
 
-        this.prompt.info("✓ Auto-reconnection handlers initialized");
+        prompt.info("✓ Auto-reconnection handlers initialized");
     }
 
     /**

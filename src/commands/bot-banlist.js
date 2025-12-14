@@ -18,21 +18,21 @@
 
 const { EmbedBuilder } = require("discord.js");
 
+// Type filter lookup table
+const TYPE_FILTERS = {
+    users: "user", user: "user",
+    servers: "server", server: "server"
+};
+
 module.exports.run = async function(yuno, author, args, msg) {
-    const filter = args[0]?.toLowerCase();
-    let type = null;
+    // Cache discord client references
+    const { users, guilds } = yuno.dC;
 
-    if (filter === "users" || filter === "user") {
-        type = "user";
-    } else if (filter === "servers" || filter === "server") {
-        type = "server";
-    }
-
+    const type = TYPE_FILTERS[args[0]?.toLowerCase()] ?? null;
     const bans = await yuno.dbCommands.getAllBotBans(yuno.database, type);
 
-    if (bans.length === 0) {
+    if (bans.length === 0)
         return msg.channel.send(`:information_source: No bot bans found${type ? ` for ${type}s` : ""}.`);
-    }
 
     const embed = new EmbedBuilder()
         .setTitle(`Bot Bans${type ? ` (${type}s only)` : ""}`)
@@ -42,19 +42,9 @@ module.exports.run = async function(yuno, author, args, msg) {
 
     let description = "";
     for (const ban of bans.slice(0, 20)) {
-        let targetName = ban.id;
-
-        if (ban.type === "user") {
-            try {
-                const user = await yuno.dC.users.fetch(ban.id);
-                targetName = user.tag;
-            } catch (e) {
-                targetName = `Unknown User`;
-            }
-        } else {
-            const guild = yuno.dC.guilds.cache.get(ban.id);
-            targetName = guild?.name || `Unknown Server`;
-        }
+        const targetName = ban.type === "user"
+            ? await users.fetch(ban.id).then(u => u.tag).catch(() => "Unknown User")
+            : guilds.cache.get(ban.id)?.name ?? "Unknown Server";
 
         const emoji = ban.type === "user" ? ":bust_in_silhouette:" : ":homes:";
         description += `${emoji} **${targetName}**\n`;
@@ -72,15 +62,10 @@ module.exports.run = async function(yuno, author, args, msg) {
 }
 
 module.exports.runTerminal = async function(yuno, args) {
-    const filter = args[0]?.toLowerCase();
-    let type = null;
+    // Cache discord client references
+    const { users, guilds } = yuno.dC;
 
-    if (filter === "users" || filter === "user") {
-        type = "user";
-    } else if (filter === "servers" || filter === "server") {
-        type = "server";
-    }
-
+    const type = TYPE_FILTERS[args[0]?.toLowerCase()] ?? null;
     const bans = await yuno.dbCommands.getAllBotBans(yuno.database, type);
 
     if (bans.length === 0) {
@@ -91,19 +76,9 @@ module.exports.runTerminal = async function(yuno, args) {
     console.log(`\n=== Bot Bans${type ? ` (${type}s only)` : ""} ===\n`);
 
     for (const ban of bans) {
-        let targetName = ban.id;
-
-        if (ban.type === "user") {
-            try {
-                const user = await yuno.dC.users.fetch(ban.id);
-                targetName = user.tag;
-            } catch (e) {
-                targetName = "Unknown User";
-            }
-        } else {
-            const guild = yuno.dC.guilds.cache.get(ban.id);
-            targetName = guild?.name || "Unknown Server";
-        }
+        const targetName = ban.type === "user"
+            ? await users.fetch(ban.id).then(u => u.tag).catch(() => "Unknown User")
+            : guilds.cache.get(ban.id)?.name ?? "Unknown Server";
 
         const icon = ban.type === "user" ? "[USER]" : "[SERVER]";
         console.log(`${icon} ${targetName}`);
