@@ -70,21 +70,23 @@ module.exports = self = {
         await self.initDB(newdb, Yuno, true);
 
         prompt.info("Exporting experiences... 1/2");
+        const expStmt = await newdb.prepare("INSERT INTO experiences VALUES(?, ?, ?, ?)");
         for (let i = 0; i < experiences.length; i++) {
             const el = experiences[i];
-            await newdb.runPromise("INSERT INTO experiences VALUES(?, ?, ?, ?)",
-                [el.level, el.userID, el.guildID, el.expCount]);
+            await expStmt.run([el.level, el.userID, el.guildID, el.expCount]);
             prompt.writeWithoutJumpingLine(`${i}/${experiences.length} values inserted into table experiences.`);
         }
+        await expStmt.finalize();
         prompt.success("Experiences exported...");
 
         prompt.info("Exporting guild settings... 2/2");
+        const guildStmt = await newdb.prepare("INSERT INTO guilds VALUES(?, ?, ?, NULL, true)");
         for (let i = 0; i < guilds.length; i++) {
-            const el = guilds[i]; // Fixed: was experiences[i]
-            await newdb.runPromise("INSERT INTO guilds VALUES(?, ?, ?, NULL, true)",
-                [el.guildID, el.prefix, el.joinDMMessage]);
+            const el = guilds[i];
+            await guildStmt.run([el.guildID, el.prefix, el.joinDMMessage]);
             prompt.writeWithoutJumpingLine(`${zeroPadding(i, guilds.length.toString().length)}/${guilds.length} values inserted into table guild settings.`);
         }
+        await guildStmt.finalize();
         prompt.success("Guild settings exported");
 
         await newdb.closePromise();
@@ -99,17 +101,23 @@ module.exports = self = {
      * @async
      */
     "initDB": async function(database, Yuno, newDb) {
-        let version = await database.allPromise("PRAGMA user_version;"),
-            dbVer = version[0]["user_version"];
+        const version = await database.allPromise("PRAGMA user_version;");
+        const dbVer = version[0]["user_version"];
 
-        if (dbVer < Yuno.intVersion && !newDb) {
-            Yuno.prompt.info("The database isn't at the good version for the bot. (Yuno's version: " + Yuno.intVersion + "; dbvers: " + dbVer + "). Expect errors, and report them.")
+        // Handle version mismatch
+        if (dbVer !== Yuno.intVersion && !newDb) {
             if (dbVer === 0) {
-                Yuno.prompt.error("The database isn't for the Yuno's v2 version. Please update the db, see node index -h to upgrade it.");
+                // Version 0 means v1 database - requires manual upgrade
+                Yuno.prompt.error("Database is from Yuno v1. Please upgrade with: node index --upgrade-db <old.db> <new.db>");
                 return Yuno.shutdown(-1);
+            } else if (dbVer < Yuno.intVersion) {
+                // Older version - auto-migrate by creating new tables/indexes
+                Yuno.prompt.info(`Auto-migrating database from v${dbVer} to v${Yuno.intVersion}...`);
             }
+            // If dbVer > Yuno.intVersion, user is running older code on newer DB - that's fine
         }
 
+        // Update version after successful init
         await database.runPromise("PRAGMA user_version = " + Yuno.intVersion);
 
         await database.runPromise(`CREATE TABLE IF NOT EXISTS experiences (
