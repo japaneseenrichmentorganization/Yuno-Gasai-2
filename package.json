@@ -1,6 +1,6 @@
 {
   "name": "yuno-gasai-2",
-  "version": "2.6.1",
+  "version": "2.6.2",
   "description": "The remade of Yuno Gasai, flawless & bugless",
   "main": "index.js",
   "scripts": {
