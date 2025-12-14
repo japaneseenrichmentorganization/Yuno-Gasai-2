@@ -16,148 +16,147 @@
     along with this program.  If not, see https://www.gnu.org/licenses/.
 */
 
-const {TextChannel, MessageMentions, EmbedBuilder} = require("discord.js")
+const {TextChannel, EmbedBuilder} = require("discord.js")
+
+// Handler object pattern for cleaner command routing
+const subcommandHandlers = {
+    async remove(yuno, ch, args, msg) {
+        if (!(ch instanceof TextChannel))
+            return msg.channel.send(":negative_squared_cross_mark: Please mention a channel.");
+
+        const { database, dbCommands, intervalMan } = yuno;
+        const clean = await dbCommands.getClean(database, ch.guild.id, ch.name);
+        if (clean === null)
+            return msg.channel.send(":negative_squared_cross_mark: This channel doesn't have any auto-clean set up.");
+
+        await dbCommands.delClean(database, ch.guild.id, ch.name);
+        intervalMan.clear(`autocleaner-clean-${ch.guild.id}-${ch.name}`);
+        return msg.channel.send(":white_check_mark: The auto-clean has been removed.");
+    },
+
+    async clean(yuno, ch, args, msg) {
+        return yuno.commandMan.execute(yuno, msg.member, "clean <#dummy-id>", msg);
+    },
+
+    async reset(yuno, ch, args, msg) {
+        if (!(ch instanceof TextChannel))
+            return msg.channel.send(":negative_squared_cross_mark: Please mention a channel.");
+
+        const { database, dbCommands } = yuno;
+        const clean = await dbCommands.getClean(database, ch.guild.id, ch.name);
+
+        if (clean === null)
+            return msg.channel.send(":negative_squared_cross_mark: This channel doesn't have any auto-clean set up.");
+
+        const { timeFEachClean, timeBeforeClean } = clean;
+        await dbCommands.setClean(database, ch.guild.id, ch.name, timeFEachClean, timeBeforeClean, timeFEachClean * 60);
+        return msg.channel.send(":white_check_mark: Reset!");
+    },
+
+    async list(yuno, ch, args, msg) {
+        const { database, dbCommands, UTIL } = yuno;
+
+        if (ch instanceof TextChannel) {
+            const clean = await dbCommands.getClean(database, ch.guild.id, ch.name);
+            if (clean === null)
+                return msg.channel.send(":negative_squared_cross_mark: The auto-clean doesn't exists.");
+
+            const { timeFEachClean, timeBeforeClean, remainingTime } = clean;
+            return msg.channel.send({embeds: [new EmbedBuilder()
+                .setColor("#ff51ff")
+                .setTitle(`#${ch.name} auto-clean configuration.`)
+                .addFields([
+                    {name: "Time between each clean", value: `${String(timeFEachClean).padStart(2, '0')}h`, inline: true},
+                    {name: "Warning thrown at", value: `${UTIL.formatDuration(timeBeforeClean * 60)}remaining`, inline: true},
+                    {name: "Remaining time before clean", value: `${UTIL.formatDuration(remainingTime * 60)}`, inline: true}
+                ])]});
+        }
+
+        const cleans = await dbCommands.getCleans(database);
+        const channels = cleans
+            .filter(el => el.guildId === msg.guild.id)
+            .map(el => `#${el.channelName}`);
+
+        const message = channels.length === 0 ? "None." : `\`\`\` ${channels.join(", ")} \`\`\``;
+
+        return msg.channel.send({embeds: [new EmbedBuilder()
+            .setColor("#ff51ff")
+            .setTitle("Channels having an auto-clean:")
+            .setDescription(message)]});
+    },
+
+    async delay(yuno, ch, args, msg) {
+        if (!(ch instanceof TextChannel))
+            return msg.channel.send(":negative_squared_cross_mark: Please mention a channel.");
+
+        const { database, dbCommands } = yuno;
+        const clean = await dbCommands.getClean(database, ch.guild.id, ch.name);
+
+        if (clean === null)
+            return msg.channel.send(":negative_squared_cross_mark: This channel doesn't have any auto-clean set up.");
+
+        const { timeFEachClean, timeBeforeClean, remainingTime } = clean;
+        await dbCommands.setClean(database, ch.guild.id, ch.name, timeFEachClean, timeBeforeClean, remainingTime + parseInt(args[1]));
+        return msg.channel.send(`:white_check_mark: Delayed the clean from ${args[1]} minutes!`);
+    },
+
+    async addOrEdit(yuno, ch, args, msg) {
+        if (!(ch instanceof TextChannel))
+            return msg.channel.send("Please mention a channel.");
+
+        const { database, dbCommands } = yuno;
+        const isAddOrEdit = args[0] === "add" || args[0] === "edit";
+        let betweenCleans = parseInt(isAddOrEdit ? args[2] : args[1]);
+        let beforeWarning = parseInt(isAddOrEdit ? args[3] : args[2]);
+
+        if (args[0] === "add") {
+            const existing = await dbCommands.getClean(database, ch.guild.id, ch.name);
+            if (existing !== null)
+                return msg.channel.send(":negative_squared_cross_mark: The channel you asked to add an auto-clean already has an auto-clean.\nPlease use `auto-clean edit`.");
+        }
+
+        if (typeof betweenCleans !== "number" || typeof beforeWarning !== "number")
+            return msg.channel.send(":negative_squared_cross_mark: Not enough arguments.");
+
+        const MAX_INTERVAL_MS = 2147483647;
+
+        if (isNaN(betweenCleans) || isNaN(beforeWarning))
+            return msg.channel.send("Between cleans or before warning argument isn't a number.");
+
+        if (betweenCleans <= 0 || beforeWarning <= 0)
+            return msg.channel.send("Between cleans and before warning cannot be negative or equal to 0.");
+
+        if (betweenCleans * 60 * 60 * 1000 > MAX_INTERVAL_MS)
+            return msg.channel.send(`Between cleans must be **less than ${Math.floor(MAX_INTERVAL_MS / (60*60*1000))}**.`);
+
+        if (beforeWarning / 60 >= betweenCleans)
+            return msg.channel.send("Before warning cannot be equal or higher than between cleans.");
+
+        const [result] = await dbCommands.setClean(database, msg.guild.id, ch.name, betweenCleans, beforeWarning, null);
+        const nicesentence = `<#${ch.id}> will be cleaned every ${betweenCleans} hours and a warning will be thrown ${beforeWarning} minutes before.`;
+
+        yuno._refreshMod("auto-cleaner");
+
+        return msg.channel.send(result === "creating"
+            ? `Clean created!\n${nicesentence}`
+            : `Clean updated!\n${nicesentence}`);
+    }
+};
 
 module.exports.run = async function(yuno, author, args, msg) {
     if (args.length === 0)
         return msg.channel.send(":negative_squared_cross_mark: Not enough arguments.");
 
-    let ch = msg.mentions.channels.first();
+    const ch = msg.mentions.channels.first();
+    const subcommand = args[0];
 
-    switch(args[0]) {
-        case "remove":
-            if (ch instanceof TextChannel) {
-                let clean = await yuno.dbCommands.getClean(yuno.database, ch.guild.id, ch.name);
-                if (clean === null)
-                    return msg.channel.send(":negative_squared_cross_mark: This channel doesn't have any auto-clean set up.")
-
-                await yuno.dbCommands.delClean(yuno.database, ch.guild.id, ch.name);
-                yuno.intervalMan.clear("autocleaner-clean-" + ch.guild.id + "-" + ch.name);
-                return msg.channel.send(":white_check_mark: The auto-clean has been removed.");
-            } else
-                return msg.channel.send(":negative_squared_cross_mark: Please mention a channel.")
-            break;
-
-        case "clean":
-            // a way to do aliases
-            return yuno.commandMan.execute(yuno, msg.member, "clean <#dummy-id>", msg)
-            break;
-
-        case "reset":
-            if (ch instanceof TextChannel) {
-                let clean = await yuno.dbCommands.getClean(yuno.database, ch.guild.id, ch.name);
-
-                if (clean === null)
-                    return msg.channel.send(":negative_squared_cross_mark: This channel doesn't have any auto-clean set up.")
-                else {
-                    await yuno.dbCommands.setClean(yuno.database, ch.guild.id, ch.name, clean.timeFEachClean, clean.timeBeforeClean, clean.timeFEachClean * 60)
-                    return msg.channel.send(":white_check_mark: Reset!")
-                }
-            } else
-                return msg.channel.send(":negative_squared_cross_mark: Please mention a channel.");
-            break;
-
-        case "list":
-            if (ch instanceof TextChannel) {
-                let clean = await yuno.dbCommands.getClean(yuno.database, ch.guild.id, ch.name);
-                if (clean === null)
-                    return msg.channel.send(":negative_squared_cross_mark: The auto-clean doesn't exists.");
-                return msg.channel.send({embeds: [new EmbedBuilder()
-                    .setColor("#ff51ff")
-                    .setTitle("#" + ch.name + " auto-clean configuration.")
-                    .addFields([
-                        {name: "Time between each clean", value: ("00" + clean.timeFEachClean).slice(-2) + "h", inline: true},
-                        {name: "Warning thrown at", value: yuno.UTIL.formatDuration(clean.timeBeforeClean * 60) + "remaining", inline: true},
-                        {name: "Remaining time before clean", value: yuno.UTIL.formatDuration(clean.remainingTime * 60) + "", inline: true}
-                    ])]})
-            } else {
-                let channels = [];
-                
-                (await yuno.dbCommands.getCleans(yuno.database)).forEach(el => {
-                    if (el.guildId !== msg.guild.id)
-                        return;
-
-                    channels.push("#" + el.channelName)
-                })
-
-                let message;
-
-                if (channels.length === 0)
-                    message = "None.";
-                else
-                    message = "``` " + channels.join(", ") + " ```"
-
-                return msg.channel.send({embeds: [new EmbedBuilder()
-                    .setColor("#ff51ff")
-                    .setTitle("Channels having an auto-clean:")
-                    .setDescription(message)]})
-            }
-            break;
-
-        case "delay":
-            if (ch instanceof TextChannel) {
-                let clean = await yuno.dbCommands.getClean(yuno.database, ch.guild.id, ch.name);
-
-                if (clean === null)
-                    return msg.channel.send(":negative_squared_cross_mark: This channel doesn't have any auto-clean set up.")
-                else {
-                    await yuno.dbCommands.setClean(yuno.database, ch.guild.id, ch.name, clean.timeFEachClean, clean.timeBeforeClean, clean.remainingTime + parseInt(args[1]))
-                    return msg.channel.send(":white_check_mark: Delayed the clean from " + args[1] + " minutes!")
-                }
-            } else
-                return msg.channel.send(":negative_squared_cross_mark: Please mention a channel.");
-            break;
-
-        case "add":
-        case "edit":
-        default:
-            if (!(ch instanceof TextChannel))
-                return msg.channel.send("Please mention a channel.");
-
-            let betweenCleans = parseInt(args[1]),
-                beforeWarning = parseInt(args[2])
-
-            if (args[0] === "add") {
-                let c = await yuno.dbCommands.getClean(yuno.database, ch.guild.id, ch.name);
-
-                if (c !== null)
-                    return msg.channel.send(":negative_squared_cross_mark: The channel you asked to add an auto-clean already has an auto-clean.\nPlease use `auto-clean edit`.")
-            }
-
-            if (args[0] === "add" || args[0] === "edit") {
-                betweenCleans = parseInt(args[2]);
-                beforeWarning = parseInt(args[3]);
-            }
-
-            if (!(typeof betweenCleans === "number" && typeof beforeWarning === "number"))
-                return msg.channel.send(":negative_squared_cross_mark: Not enough arguments.");
-
-            let MAX_INTERVAL_MS = 2147483647;
-
-            if (isNaN(parseInt(betweenCleans)) || isNaN(parseInt(beforeWarning)))
-                return msg.channel.send("Between cleans or before warning argument isn't a number.")
-
-            if (betweenCleans <= 0 || beforeWarning <= 0)
-                return msg.channel.send("Between cleans and before warning cannot be negative or equal to 0.")
-
-            if (betweenCleans * 60 * 60 * 1000 > MAX_INTERVAL_MS)
-                return msg.channel.send("Between cleans must be **less than " + parseInt(MAX_INTERVAL_MS / (60*60*1000)) + "**.")
-
-            if (beforeWarning / 60 >= betweenCleans)
-                return msg.channel.send("Before warning cannot be equal or higher than between cleans.")
-
-            let db = await yuno.dbCommands.setClean(yuno.database, msg.guild.id, ch.name, betweenCleans, beforeWarning, null),
-                r = db[0]
-                nicesentence = "<#" + ch.id + "> will be cleaned every " + betweenCleans + " hours and a warning will be thrown " + beforeWarning + " minutes before."
-
-            yuno._refreshMod("auto-cleaner");
-
-            if (r === "creating")
-                return msg.channel.send("Clean created!\n" + nicesentence);
-            else
-                return msg.channel.send("Clean updated!\n" + nicesentence);
-            break;
+    const handler = subcommandHandlers[subcommand];
+    if (handler) {
+        return handler(yuno, ch, args, msg);
     }
+
+    // Default: add/edit behavior
+    return subcommandHandlers.addOrEdit(yuno, ch, args, msg);
 }
 
 module.exports.about = {

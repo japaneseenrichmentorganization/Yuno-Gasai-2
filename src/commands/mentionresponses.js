@@ -19,17 +19,18 @@
 const {EmbedBuilder} = require("discord.js");
 
 module.exports.run = async function(yuno, author, args, msg) {
-    let toSay = [];
+    const { database, dbCommands } = yuno;
+    const { id: guildId } = msg.guild;
 
-    (await yuno.dbCommands.getMentionResponses(yuno.database)).forEach(el => {
-        if (el.guildId === msg.guild.id)
-            toSay.push("trigger: " + el.trigger + ", response: " + el.response + (el.image !== "null" ? ", image: " + el.image : ""));
-    })
+    const responses = await dbCommands.getMentionResponses(database);
+    const toSay = responses
+        .filter(el => el.guildId === guildId)
+        .map(el => `trigger: ${el.trigger}, response: ${el.response}${el.image !== "null" ? `, image: ${el.image}` : ""}`);
 
     if (toSay.length === 0)
-        return "No mention responses found."
-    else
-        return msg.channel.send(toSay.join("\n"))
+        return msg.channel.send("No mention responses found.");
+
+    return msg.channel.send(toSay.join("\n"));
 }
 
 module.exports.about = {

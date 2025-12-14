@@ -16,21 +16,19 @@
     along with this program.  If not, see https://www.gnu.org/licenses/.
 */
 
-const {EmbedBuilder} = require("discord.js");
-
 module.exports.run = async function(yuno, author, args, msg) {
     if (args.length === 0)
         return msg.channel.send(":negative_squared_cross_mark: Not enough argument.");
 
-    let trigger = args[0];
+    const trigger = args[0];
+    const { database } = yuno;
+    const { id: guildId } = msg.guild;
 
-    let r = await yuno.dbCommands.getMentionResponseFromTrigger(yuno.database, msg.guild.id, trigger);
-        alreadyExists = r !== null;
+    const response = await yuno.dbCommands.getMentionResponseFromTrigger(database, guildId, trigger);
+    if (!response)
+        return msg.channel.send(":negative_squared_cross_mark: There's no mention response for this guild with this trigger.");
 
-    if (!alreadyExists)
-        return msg.channel.send(":negative_squared_cross_mark: There's no mention response for this guild with this trigger.")
-
-    await yuno.dbCommands.delMentionResponse(yuno.database, r.id);
+    await yuno.dbCommands.delMentionResponse(database, response.id);
 
     yuno._refreshMod("message-processors");
     msg.channel.send(":white_check_mark: Mention response deleted!");

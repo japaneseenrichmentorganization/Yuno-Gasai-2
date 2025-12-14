@@ -19,169 +19,160 @@
 const EmbedCmdResponse = require("../lib/EmbedCmdResponse"),
     {EmbedBuilder} = require("discord.js");
 
-let listMainCommands = function(yuno, isTerminal, member) {
-    let cmdman = yuno.commandMan,
-        commands = Object.values(cmdman.commands),
-        keys = Object.keys(cmdman.commands);
+function listMainCommands(yuno, isTerminal, member) {
+    const { commandMan } = yuno;
+    const commands = Object.values(commandMan.commands);
+    const keys = Object.keys(commandMan.commands);
+    const ret = [];
 
-    let ret = [];
+    for (let i = 0; i < commands.length; i++) {
+        const { about } = commands[i];
 
-    commands.forEach(function(el, i) {
-        el = el.about;
-        if (el.listTerminal === false && isTerminal === true)
-            return;
+        if (about.listTerminal === false && isTerminal)
+            continue;
 
-        if (el.list === false && isTerminal === false)
-            return;
+        if (about.list === false && !isTerminal)
+            continue;
 
         // removing aliases
-        if (el.command !== keys[i])
-            return;
+        if (about.command !== keys[i])
+            continue;
 
-        if (isTerminal === false) {
-            let isUM = yuno.commandMan._isUserMaster(member.id)
+        if (!isTerminal) {
+            const isUM = commandMan._isUserMaster(member.id);
 
-            if (!isUM && el.onlyMasterUsers === true)
-                return;
+            if (!isUM && about.onlyMasterUsers === true)
+                continue;
 
-            if (!isUM && !yuno.commandMan._hasPermissions(member, el.requiredPermissions))
-                return;
+            if (!isUM && !commandMan._hasPermissions(member, about.requiredPermissions))
+                continue;
         }
 
         ret.push(keys[i]);
-    })
+    }
 
     return ret.join(", ");
 }
 
-let helpOnACommand = function(command, yuno, msg) {
-    let cmdman = yuno.commandMan,
-        isTerminal = !msg;
+function helpOnACommand(command, yuno, msg) {
+    const { commandMan, prompt } = yuno;
+    const isTerminal = !msg;
 
-    if (!cmdman._commandExists(command))
-        if (isTerminal)
-            return yuno.prompt.error("The command " + command + " doesn't exists.");
-        else
-            return msg.channel.send("The command " + command + " doesn't exists.");
-
-    command = cmdman.commands[command];
-
-    let commandName = command.about.command,
-        aliases = command.about.aliases,
-        usage = command.about.usage,
-        examples = command.about.examples,
-        description = command.about.description;
-        requiredPermissions = command.about.requiredPermissions,
-        usableOnDiscord = command.about.discord,
-        usableOnTerminal = command.about.terminal,
-        listedOnDiscord = command.about.list,
-        listedOnTerminal = command.about.listTerminal,
-        onlyMasterUsers = command.about.onlyMasterUsers;
-
-    let defaulter = function(value, ret) {
-        if (typeof value !== "boolean")
-            return typeof ret === "boolean" ? ret : true;
-        return value;
+    if (!commandMan._commandExists(command)) {
+        const errorMsg = `The command ${command} doesn't exists.`;
+        return isTerminal ? prompt.error(errorMsg) : msg.channel.send(errorMsg);
     }
+
+    const cmd = commandMan.commands[command];
+    const {
+        command: commandName,
+        aliases,
+        usage,
+        examples,
+        description,
+        requiredPermissions,
+        discord: usableOnDiscord,
+        terminal: usableOnTerminal,
+        list: listedOnDiscord,
+        listTerminal: listedOnTerminal,
+        onlyMasterUsers
+    } = cmd.about;
+    let aliasesCopy = aliases;
+    let examplesCopy = examples;
+    let requiredPermsCopy = requiredPermissions;
+
+    const defaulter = (value, ret) => typeof value !== "boolean" ? (typeof ret === "boolean" ? ret : true) : value;
 
     if ((listedOnDiscord === false || usableOnDiscord === false) && !isTerminal)
-        return msg.channel.send("The command " + commandName + " doesn't exists.") // brain
-    
-    if (listedOnTerminal === false && usableOnTerminal === false && isTerminal)
-        yuno.prompt.warn("Command " + commandName + " is not usable & not listed in terminal.")
-    else if (listedOnTerminal === false && isTerminal)
-        yuno.prompt.warn("Command " + commandName + " not listed in terminal.");
-    else if (usableOnTerminal === false && isTerminal)
-        yuno.prompt.warn("Command " + commandName + " is not usable in terminal");
+        return msg.channel.send(`The command ${commandName} doesn't exists.`);
 
     if (isTerminal) {
-        let lines = [
-            "Command name: " + commandName
-        ];
+        if (listedOnTerminal === false && usableOnTerminal === false)
+            prompt.warn(`Command ${commandName} is not usable & not listed in terminal.`);
+        else if (listedOnTerminal === false)
+            prompt.warn(`Command ${commandName} not listed in terminal.`);
+        else if (usableOnTerminal === false)
+            prompt.warn(`Command ${commandName} is not usable in terminal`);
 
-        if (aliases) {
-            if (aliases instanceof Array)
-                if (aliases.length > 1)
-                    lines.push("Aliases" + ": " + aliases.join(","));
-                else
-                    aliases = aliases[0]
-            if (typeof aliases === "string")
-                lines.push("Alias: " + aliases);
+        const lines = [`Command name: ${commandName}`];
+
+        if (aliasesCopy) {
+            if (Array.isArray(aliasesCopy) && aliasesCopy.length > 1)
+                lines.push(`Aliases: ${aliasesCopy.join(",")}`);
+            else {
+                const aliasStr = Array.isArray(aliasesCopy) ? aliasesCopy[0] : aliasesCopy;
+                if (typeof aliasStr === "string") lines.push(`Alias: ${aliasStr}`);
+            }
+        } else {
+            lines.push("Aliases: None");
         }
-        
-        if (!(aliases instanceof Array || typeof aliases === "string"))
-            lines.push("Aliases: " + "None");
 
-        if (typeof description === "string")
-            lines.push("Description: " + description);
+        if (typeof description === "string") lines.push(`Description: ${description}`);
+        if (typeof usage === "string") lines.push(`Usage: ${usage}`);
 
-        if (typeof usage === "string")
-            lines.push("Usage: " + usage)
-
-        if (examples) {
-            if (examples instanceof Array)
-                if (examples.length > 1)
-                    lines.push("Examples" + ": " + examples.join(","));
-                else
-                    examples = examples[0]
-            if (typeof examples === "string")
-                lines.push("Examples: " + examples);
+        if (examplesCopy) {
+            if (Array.isArray(examplesCopy) && examplesCopy.length > 1)
+                lines.push(`Examples: ${examplesCopy.join(",")}`);
+            else {
+                const exStr = Array.isArray(examplesCopy) ? examplesCopy[0] : examplesCopy;
+                if (typeof exStr === "string") lines.push(`Examples: ${exStr}`);
+            }
+        } else {
+            lines.push("Examples: None");
         }
-        if (!(examples instanceof Array || typeof examples === "string"))
-            lines.push("Examples: " + "None");
 
-        if (requiredPermissions) {
-            if (requiredPermissions instanceof Array)
-                if (requiredPermissions.length > 1)
-                    lines.push("Required permissions" + ": " + requiredPermissions.join(","));
-                else
-                    requiredPermissions = requiredPermissions[0]
-            if (typeof requiredPermissions === "string")
-                lines.push("Required permission: " + requiredPermissions)
+        if (requiredPermsCopy) {
+            if (Array.isArray(requiredPermsCopy) && requiredPermsCopy.length > 1)
+                lines.push(`Required permissions: ${requiredPermsCopy.join(",")}`);
+            else {
+                const permStr = Array.isArray(requiredPermsCopy) ? requiredPermsCopy[0] : requiredPermsCopy;
+                if (typeof permStr === "string") lines.push(`Required permission: ${permStr}`);
+            }
+        } else {
+            lines.push("Required permissions: None");
         }
-        if (!(requiredPermissions instanceof Array || typeof requiredPermissions === "string"))
-            lines.push("Required permissions: " + "None");
 
-        lines.push("Usable on discord: " + defaulter(usableOnDiscord));
-        lines.push("Usable on terminal: " + defaulter(usableOnTerminal));
-        lines.push("Listed on discord (through help/list): " + defaulter(listedOnDiscord));
-        lines.push("Listed on terminal: " + defaulter(listedOnTerminal));
-        lines.push("Usable only by master users: " + defaulter(onlyMasterUsers, false));
+        lines.push(`Usable on discord: ${defaulter(usableOnDiscord)}`);
+        lines.push(`Usable on terminal: ${defaulter(usableOnTerminal)}`);
+        lines.push(`Listed on discord (through help/list): ${defaulter(listedOnDiscord)}`);
+        lines.push(`Listed on terminal: ${defaulter(listedOnTerminal)}`);
+        lines.push(`Usable only by master users: ${defaulter(onlyMasterUsers, false)}`);
 
-        lines.forEach(el => yuno.prompt.info(el));
+        for (const line of lines) prompt.info(line);
         return;
-    } else {
-        let response = new EmbedBuilder()
-            .setColor("#42d1f4")
-            .addFields([{name: "Command name", value: commandName, inline: true}])
-
-        EmbedCmdResponse.setCMDRequester(response, msg.member);
-        
-        if (aliases instanceof Array)
-            if (aliases.length === 1)
-                aliases = aliases[0];
-            else
-                response.addFields([{name: "Aliases", value: aliases.join(", "), inline: true}])
-
-        if (typeof aliases === "string")
-            response.addFields([{name: "Alias", value: aliases, inline: true}]);
-
-        if (typeof usage === "string")
-            response.addFields([{name: "Usage", value: usage, inline: true}]);
-
-        if (typeof description === "string")
-            response.addFields([{name: "Description", value: description}]);
-
-        if (examples instanceof Array)
-            if (examples.length === 1)
-                examples = examples[0];
-            else
-                response.addFields([{name: "Examples", value: examples.join(", "), inline: true}])
-        if (typeof examples === "string")
-            response.addFields([{name: "Example", value: examples, inline: true}]);
-
-        return msg.channel.send({embeds: [response]});
     }
+
+    const response = new EmbedBuilder()
+        .setColor("#42d1f4")
+        .addFields([{name: "Command name", value: commandName, inline: true}]);
+
+    EmbedCmdResponse.setCMDRequester(response, msg.member);
+
+    if (Array.isArray(aliasesCopy)) {
+        if (aliasesCopy.length === 1)
+            response.addFields([{name: "Alias", value: aliasesCopy[0], inline: true}]);
+        else
+            response.addFields([{name: "Aliases", value: aliasesCopy.join(", "), inline: true}]);
+    } else if (typeof aliasesCopy === "string") {
+        response.addFields([{name: "Alias", value: aliasesCopy, inline: true}]);
+    }
+
+    if (typeof usage === "string")
+        response.addFields([{name: "Usage", value: usage, inline: true}]);
+
+    if (typeof description === "string")
+        response.addFields([{name: "Description", value: description}]);
+
+    if (Array.isArray(examplesCopy)) {
+        if (examplesCopy.length === 1)
+            response.addFields([{name: "Example", value: examplesCopy[0], inline: true}]);
+        else
+            response.addFields([{name: "Examples", value: examplesCopy.join(", "), inline: true}]);
+    } else if (typeof examplesCopy === "string") {
+        response.addFields([{name: "Example", value: examplesCopy, inline: true}]);
+    }
+
+    return msg.channel.send({embeds: [response]});
 }
 
 /*

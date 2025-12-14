@@ -16,34 +16,35 @@
     along with this program.  If not, see https://www.gnu.org/licenses/.
 */
 
-const {EmbedBuilder} = require("discord.js");
+const { EmbedBuilder } = require("discord.js");
 
 module.exports.run = async function(yuno, author, args, msg) {
     if (args.length <= 1)
         return msg.channel.send(":negative_squared_cross_mark: You must provide a trigger and response, url is not required.");
 
-    let trigger = args[0],
-        response = args[1],
-        image = args[args.length - 1];
+    const { database } = yuno;
+    const { id: guildId } = msg.guild;
+    const trigger = args[0];
+    const response = args[1];
+    const image = yuno.UTIL.checkIfUrl(args[args.length - 1]) ? args[args.length - 1] : null;
 
-    if (!yuno.UTIL.checkIfUrl(image))
-        image = null;
-        
-    let alreadyExists = (await yuno.dbCommands.getMentionResponseFromTrigger(yuno.database, msg.guild.id, trigger)) !== null;
+    const existing = await yuno.dbCommands.getMentionResponseFromTrigger(database, guildId, trigger);
+    if (existing) return msg.channel.send(":negative_squared_cross_mark: This guild already has a trigger for this.");
 
-    if (alreadyExists)
-        return msg.channel.send(":negative_squared_cross_mark: This guild already has a trigger for this.")
-
-    let r = await yuno.dbCommands.addMentionResponses(yuno.database, msg.guild.id, trigger, response, image);
+    await yuno.dbCommands.addMentionResponses(database, guildId, trigger, response, image);
     yuno._refreshMod("message-processors");
-    msg.channel.send({embeds: [new EmbedBuilder()
-        .setTitle(":white_check_mark: Mention response added.")
-        .addFields([
-            {name: "Trigger", value: trigger, inline: true},
-            {name: "Response", value: response, inline: true},
-            {name: "Image", value: typeof image === "string" ? image : "None.", inline: true}
-        ])
-        .setColor("#43cc24")]});
+
+    msg.channel.send({
+        embeds: [new EmbedBuilder()
+            .setTitle(":white_check_mark: Mention response added.")
+            .addFields([
+                { name: "Trigger", value: trigger, inline: true },
+                { name: "Response", value: response, inline: true },
+                { name: "Image", value: image ?? "None.", inline: true }
+            ])
+            .setColor("#43cc24")
+        ]
+    });
 }
 
 module.exports.about = {
