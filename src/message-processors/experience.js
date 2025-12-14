@@ -18,17 +18,19 @@
 
 module.exports.messageProcName = "experience"
 
-let guildsWhereExpIsEnabled = [],
+// Use Set for O(1) lookup instead of Array O(n)
+let guildsWhereExpIsEnabled = new Set(),
     exppermsg = 5,
     yuno;
 
 module.exports.discordConnected = async function(Yuno) {
-    guildsWhereExpIsEnabled = await Yuno.dbCommands.getGuildsWhereExpIsEnabled(Yuno.database);
+    const guildsArray = await Yuno.dbCommands.getGuildsWhereExpIsEnabled(Yuno.database);
+    guildsWhereExpIsEnabled = new Set(guildsArray);
 }
 
 module.exports.configLoaded = function(Yuno, config) {
     yuno = Yuno;
-    let exppermsg_ = config.get("chat.exppermsg");
+    const exppermsg_ = config.get("chat.exppermsg");
 
     if (typeof exppermsg_ === "number")
         exppermsg = exppermsg_;
@@ -37,32 +39,39 @@ module.exports.configLoaded = function(Yuno, config) {
 }
 
 module.exports.message = async function(content, msg) {
-    if (msg.author.bot)
-        return;
+    // Early returns for invalid messages
+    if (msg.author.bot) return;
+    if (!guildsWhereExpIsEnabled.has(msg.guild.id)) return;
 
-    let dbCommands = yuno.dbCommands,
-        db = yuno.database;
-    
-    if (!guildsWhereExpIsEnabled.includes(msg.guild.id))
-        return;
+    const { dbCommands, database: db } = yuno;
 
-    let xp = await dbCommands.getXPData(db, msg.guild.id, msg.author.id),
-        neededXP = 5 * Math.pow(xp.level, 2) + 50 * xp.level + 100
+    const xp = await dbCommands.getXPData(db, msg.guild.id, msg.author.id);
+    const neededXP = 5 * Math.pow(xp.level, 2) + 50 * xp.level + 100;
 
+    let leveledUp = false;
     xp.xp += exppermsg;
 
     if (xp.xp >= neededXP) {
         xp.level += 1;
         xp.xp -= neededXP;
+        leveledUp = true;
     }
 
     await dbCommands.setXPData(db, msg.guild.id, msg.author.id, xp.xp, xp.level);
 
-    let rolemap = await dbCommands.getLevelRoleMap(db, msg.guild.id);
+    // Only check role map if user leveled up (optimization)
+    if (!leveledUp) return;
 
-    if (rolemap === null)
-        return;
+    const rolemap = await dbCommands.getLevelRoleMap(db, msg.guild.id);
+    if (!rolemap || !rolemap[xp.level]) return;
 
-    if (rolemap && rolemap[xp.level])
-        msg.member.roles.add(msg.guild.roles.cache.get(rolemap[xp.level]));
+    // Add role with error handling
+    const role = msg.guild.roles.cache.get(rolemap[xp.level]);
+    if (role) {
+        try {
+            await msg.member.roles.add(role);
+        } catch (e) {
+            // Silently fail - role may be higher than bot's role or missing permissions
+        }
+    }
 }
