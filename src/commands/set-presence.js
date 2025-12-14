@@ -75,6 +75,8 @@ module.exports.run = async function(yuno, author, args, msg) {
                 activities: [],
                 status: "online"
             });
+            // Clear from database
+            await yuno.dbCommands.clearPresence(yuno.database);
             return msg.channel.send(":white_check_mark: Presence cleared~");
         } catch (e) {
             return msg.channel.send(`:negative_squared_cross_mark: Failed to clear presence: ${e.message}`);
@@ -91,6 +93,12 @@ module.exports.run = async function(yuno, author, args, msg) {
 
         try {
             await botUser.setPresence({ status });
+            // Get current presence and update status in database
+            const currentPresence = await yuno.dbCommands.getPresence(yuno.database) || {};
+            await yuno.dbCommands.setPresence(yuno.database, {
+                ...currentPresence,
+                status
+            });
             const statusEmoji = {
                 "online": ":green_circle:",
                 "idle": ":yellow_circle:",
@@ -147,6 +155,15 @@ Example: \`set-presence streaming My Stream https://twitch.tv/example\``);
             activities: [activity]
         });
 
+        // Save to database
+        const currentPresence = await yuno.dbCommands.getPresence(yuno.database) || {};
+        await yuno.dbCommands.setPresence(yuno.database, {
+            type: subcommand,
+            text: activityText,
+            status: currentPresence.status || 'online',
+            streamUrl: streamUrl
+        });
+
         const typeDisplay = subcommand.charAt(0).toUpperCase() + subcommand.slice(1);
         return msg.channel.send(`:white_check_mark: Now **${typeDisplay}** ${activityText}${streamUrl ? ` (${streamUrl})` : ""}~`);
     } catch (e) {
@@ -189,6 +206,8 @@ module.exports.runTerminal = async function(yuno, args) {
                 activities: [],
                 status: "online"
             });
+            // Clear from database
+            await yuno.dbCommands.clearPresence(yuno.database);
             console.log("Presence cleared.");
         } catch (e) {
             console.log(`Failed to clear presence: ${e.message}`);
@@ -207,6 +226,12 @@ module.exports.runTerminal = async function(yuno, args) {
 
         try {
             await botUser.setPresence({ status });
+            // Get current presence and update status in database
+            const currentPresence = await yuno.dbCommands.getPresence(yuno.database) || {};
+            await yuno.dbCommands.setPresence(yuno.database, {
+                ...currentPresence,
+                status
+            });
             console.log(`Status set to: ${status}`);
         } catch (e) {
             console.log(`Failed to set status: ${e.message}`);
@@ -256,6 +281,15 @@ module.exports.runTerminal = async function(yuno, args) {
 
         await botUser.setPresence({
             activities: [activity]
+        });
+
+        // Save to database
+        const currentPresence = await yuno.dbCommands.getPresence(yuno.database) || {};
+        await yuno.dbCommands.setPresence(yuno.database, {
+            type: subcommand,
+            text: activityText,
+            status: currentPresence.status || 'online',
+            streamUrl: streamUrl
         });
 
         console.log(`Now ${subcommand} ${activityText}${streamUrl ? ` (${streamUrl})` : ""}`);

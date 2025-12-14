@@ -242,6 +242,22 @@ module.exports = self = {
          * joinedAt = timestamp when user joined VC
          * lastXpGrant = timestamp of last XP grant
          */
+        /*
+         * Bot presence/activity persistence
+         * Only one row exists (bot-wide setting)
+         * type = 'playing', 'watching', 'listening', 'streaming', 'competing'
+         * text = activity text
+         * status = 'online', 'idle', 'dnd', 'invisible'
+         * streamUrl = optional stream URL for streaming type
+         */
+        await database.runPromise(`CREATE TABLE IF NOT EXISTS botPresence (
+            id INTEGER PRIMARY KEY CHECK (id = 1),
+            type TEXT,
+            text TEXT,
+            status TEXT DEFAULT 'online',
+            streamUrl TEXT
+        )`)
+
         await database.runPromise(`CREATE TABLE IF NOT EXISTS vcSessions (
             gid TEXT,
             usrId TEXT,
@@ -1654,5 +1670,63 @@ module.exports = self = {
             "SELECT COUNT(*) as count FROM dmInbox WHERE replied = 0"
         );
         return result[0]?.count || 0;
+    },
+
+    // ==================== Bot Presence Functions ====================
+
+    /**
+     * Get saved bot presence
+     * @param {Database} database
+     * @async
+     * @return {Object|null} {type, text, status, streamUrl} or null if not set
+     */
+    "getPresence": async function(database) {
+        const result = await database.allPromise(
+            "SELECT type, text, status, streamUrl FROM botPresence WHERE id = 1"
+        );
+
+        if (result.length === 0) {
+            return null;
+        }
+
+        return {
+            type: result[0].type,
+            text: result[0].text,
+            status: result[0].status || 'online',
+            streamUrl: result[0].streamUrl
+        };
+    },
+
+    /**
+     * Save bot presence settings
+     * @param {Database} database
+     * @param {Object} presence - {type, text, status, streamUrl}
+     * @async
+     */
+    "setPresence": async function(database, presence) {
+        const existing = await database.allPromise(
+            "SELECT id FROM botPresence WHERE id = 1"
+        );
+
+        if (existing.length === 0) {
+            await database.runPromise(
+                "INSERT INTO botPresence(id, type, text, status, streamUrl) VALUES(1, ?, ?, ?, ?)",
+                [presence.type || null, presence.text || null, presence.status || 'online', presence.streamUrl || null]
+            );
+        } else {
+            await database.runPromise(
+                "UPDATE botPresence SET type = ?, text = ?, status = ?, streamUrl = ? WHERE id = 1",
+                [presence.type || null, presence.text || null, presence.status || 'online', presence.streamUrl || null]
+            );
+        }
+    },
+
+    /**
+     * Clear bot presence (resets to default)
+     * @param {Database} database
+     * @async
+     */
+    "clearPresence": async function(database) {
+        await database.runPromise("DELETE FROM botPresence WHERE id = 1");
     }
 }
