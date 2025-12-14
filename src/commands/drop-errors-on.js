@@ -20,12 +20,15 @@ module.exports.run = async function(yuno, author, args, msg) {
     if (!msg.mentions.channels.size)
         return msg.channel.send("Please mention a channel.");
 
+    const channel = msg.mentions.channels.first();
+
     yuno.config.set("errors.dropon", {
         "guild": msg.guild.id,
-        "channel": msg.mentions.channels.first().name
+        "channel": channel.name
     });
 
-    await yuno._refreshMod("bot-errors")
+    await yuno._refreshMod("bot-errors");
+    await msg.channel.send(`:white_check_mark: Errors will now be sent to ${channel}.`);
 }
 
 module.exports.about = {
