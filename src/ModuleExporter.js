@@ -95,24 +95,20 @@ class ModuleExporter extends EventEmitter {
      * @param {String} path The path to the reference (the file)
      */
     _triggerhrReference(path) {
-        if (typeof path !== "string")
-            return;
+        if (typeof path !== "string") return;
 
-        let rf = this.hotreloadReferences[path];
+        const rf = this.hotreloadReferences[path];
+        if (!rf) return;
 
-        if (!rf)
-            return;
-
-        let backup = {};
-
+        const backup = {};
         rf.eventEmitter.emit("reloading", backup);
 
-        let mod = this._loadModule(path);
+        const mod = this._loadModule(path);
 
         if (rf.instance && typeof rf.prop === "string")
             rf.instance[rf.prop] = mod;
 
-        rf.eventEmitter.emit("done", mod, backup)
+        rf.eventEmitter.emit("done", mod, backup);
     }
 
     /**
@@ -164,21 +160,17 @@ class ModuleExporter extends EventEmitter {
      * @return {Object} Module.
      */
     singletonPreset(instance, file, prop, subdir, arg) {
-        if (typeof subdir !== "string")
-            subdir = "./lib";
+        const dir = subdir ?? "./lib";
+        const property = prop ?? file;
 
-        if (typeof prop !== "string")
-            prop = file;
-
-
-        return this.requireAndRef(subdir + "/" + file, instance, prop).on("reloading", function(backup) {
-            if (instance[prop] && instance[prop].backup)
-                backup = instance[prop].backup();
+        return this.requireAndRef(`${dir}/${file}`, instance, property).on("reloading", function(backup) {
+            if (instance[property]?.backup)
+                backup = instance[property].backup();
             else
-                console.log("Error with " + prop + " no backup()")
+                console.log(`Error with ${property} no backup()`);
         }).on("done", function(MOD, backupdata) {
-            delete instance[prop];
-            instance[prop] = MOD.init(backupdata);
+            delete instance[property];
+            instance[property] = MOD.init(backupdata);
         }).module.init(arg);
     }
 
@@ -192,20 +184,17 @@ class ModuleExporter extends EventEmitter {
      * @param {any} arg Argument used when the instance will be instancied: new Class(arg);
      */
     instancePreset(instance, file, prop, subdir, arg) {
-        if (typeof subdir !== "string")
-            subdir = "./lib";
+        const dir = subdir ?? "./lib";
+        const property = prop ?? file;
 
-        if (typeof prop !== "string")
-            prop = file;
-
-        return new (this.requireAndRef(subdir + "/" + file, this, prop).on("reloading", function(backup) {
-            if (instance[prop] && instance[prop].backup)
-                backup = instance[prop].backup();
+        return new (this.requireAndRef(`${dir}/${file}`, this, property).on("reloading", function(backup) {
+            if (instance[property]?.backup)
+                backup = instance[property].backup();
             else
-                console.log("Error with " + prop + " no backup()")
+                console.log(`Error with ${property} no backup()`);
         }).on("done", function(MOD, backupdata) {
-            delete instance[prop];
-            instance[prop] = new MOD(backupdata);
+            delete instance[property];
+            instance[property] = new MOD(backupdata);
         }).module)(arg);
     }
 
@@ -215,16 +204,11 @@ class ModuleExporter extends EventEmitter {
      * @description Hot reload a specific module.
      */
     hotreload(file) {
-        let path;
+        if (file == null) return this._hotreloadAllFiles();
 
-        if (typeof file === "undefined" || file === "null")
-            return this._hotreloadAllFiles();
-        else {
-            this.emit("hot-reload", file);
-            path = require.resolve(file);
-            this.modules[path] = this._loadModule(path);
-        }
-
+        this.emit("hot-reload", file);
+        const path = require.resolve(file);
+        this.modules[path] = this._loadModule(path);
         this.emit("hot-reload-end", path);
     }
 
@@ -234,9 +218,9 @@ class ModuleExporter extends EventEmitter {
      */
     _hotreloadAllFiles() {
         this.emit("hot-reload-full");
-        Object.keys(this.modules).forEach((el, ind, arr) => {
-            this.hotreload(el);
-        });
+        for (const modulePath of Object.keys(this.modules)) {
+            this.hotreload(modulePath);
+        }
         this.emit("hot-reload-full-end");
     }
 
@@ -247,13 +231,12 @@ class ModuleExporter extends EventEmitter {
      * @description Deletes cache, and require (again) the module
      */
     _loadModule(path) {
-        if (require.cache[path])
-            delete require.cache[path];
+        delete require.cache[path];
 
         try {
             return require(path);
         } catch(e) {
-            prompt.error("Fatal error: Module " + path + " has a syntax error :\n" + e.message);
+            prompt.error(`Fatal error: Module ${path} has a syntax error:\n${e.message}`);
             process.exit(0);
         }
     }
@@ -265,8 +248,7 @@ class ModuleExporter extends EventEmitter {
      * @return {boolean} If the file given (as path) is a module (that has been exported).
      */
     _isAnExportedModule(path) {
-        path = require.resolve(path);
-        return !(typeof this.modules[path] === "undefined");
+        return this.modules[require.resolve(path)] !== undefined;
     }
 
     /**
@@ -275,30 +257,27 @@ class ModuleExporter extends EventEmitter {
      * @return {String} The directory/file watched.
      */
     watch(towatch) {
-        if (typeof towatch === "undefined" || towatch === null)
-            towatch = "./src/";
+        const watchPath = towatch ?? "./src/";
 
-
-        fs.watch(towatch, {
-            "persistent": false, // Indicates whether the process should continue to run as long as files are being watched.
-            "recursive": true,
+        fs.watch(watchPath, {
+            persistent: false,
+            recursive: true,
         }, async (eType, file) => {
-            file = Path.join(__dirname, file);
-            if (this._isAnExportedModule(file)) {
-                this.emit("file-changed", file);
-                this.hotreload(file);
-                prompt.debug("File " + file + " hot-reloaded.");
+            const fullPath = Path.join(__dirname, file);
+            if (this._isAnExportedModule(fullPath)) {
+                this.emit("file-changed", fullPath);
+                this.hotreload(fullPath);
+                prompt.debug(`File ${fullPath} hot-reloaded.`);
             } else {
-                prompt.debug("Reloading all the bot (we're in a debug env, np huh ?)")
+                prompt.debug("Reloading all the bot (we're in a debug env, np huh ?)");
                 prompt.warning("In case of a production environment, it's better to disable auto hot-reload for better stability.");
-                if (Yuno)
-                    await Yuno.hotreload();
-                else
-                    prompt.warning("Yuno's hot reload cancelled. Yuno's reference has been not defined.")
+                Yuno
+                    ? await Yuno.hotreload()
+                    : prompt.warning("Yuno's hot reload cancelled. Yuno's reference has been not defined.");
             }
         });
 
-        return towatch;
+        return watchPath;
     }
 }
 
