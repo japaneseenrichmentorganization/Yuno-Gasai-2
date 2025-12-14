@@ -42,9 +42,17 @@ module.exports.run = async function(yuno, author, args, msg) {
 
     let description = "";
     for (const ban of bans.slice(0, 20)) {
-        const targetName = ban.type === "user"
-            ? await users.fetch(ban.id).then(u => u.tag).catch(() => "Unknown User")
-            : guilds.cache.get(ban.id)?.name ?? "Unknown Server";
+        let targetName;
+        if (ban.type === "user") {
+            try {
+                const user = await users.fetch(ban.id);
+                targetName = user.tag;
+            } catch {
+                targetName = "Unknown User";
+            }
+        } else {
+            targetName = guilds.cache.get(ban.id)?.name ?? "Unknown Server";
+        }
 
         const emoji = ban.type === "user" ? ":bust_in_silhouette:" : ":homes:";
         description += `${emoji} **${targetName}**\n`;
@@ -76,9 +84,17 @@ module.exports.runTerminal = async function(yuno, args) {
     console.log(`\n=== Bot Bans${type ? ` (${type}s only)` : ""} ===\n`);
 
     for (const ban of bans) {
-        const targetName = ban.type === "user"
-            ? await users.fetch(ban.id).then(u => u.tag).catch(() => "Unknown User")
-            : guilds.cache.get(ban.id)?.name ?? "Unknown Server";
+        let targetName;
+        if (ban.type === "user") {
+            try {
+                const user = await users.fetch(ban.id);
+                targetName = user.tag;
+            } catch {
+                targetName = "Unknown User";
+            }
+        } else {
+            targetName = guilds.cache.get(ban.id)?.name ?? "Unknown Server";
+        }
 
         const icon = ban.type === "user" ? "[USER]" : "[SERVER]";
         console.log(`${icon} ${targetName}`);

@@ -73,13 +73,12 @@ class Yuno extends EventEmitter {
         this.prompt = ModuleExporter.singletonPreset(this, "prompt")
 
         // Not hot-reloading this one: it's the core of interactivity => essential.
-        this.interactiveTerm = (require("./lib/interactiveTerm")).init((cmd) => {
-            return new Promise(async (res, rej) => {
-                try { await this.commandMan.execute(this, null, cmd) } catch(e) {
-                    this.prompt.error("Error happened while executing command", e);
-                }
-                res();
-            });
+        this.interactiveTerm = (require("./lib/interactiveTerm")).init(async (cmd) => {
+            try {
+                await this.commandMan.execute(this, null, cmd);
+            } catch(e) {
+                this.prompt.error("Error happened while executing command", e);
+            }
         });
 
         this.database = new Database();
@@ -163,34 +162,31 @@ class Yuno extends EventEmitter {
      * @private
      * @return {Promise}
      */
-    _init() {
-        return new Promise(async (resolve, reject) => {
-            this.commandMan.on("loaded", () => {
-                if (this.interactivity)
-                    this.interactiveTerm.listen();
+    async _init() {
+        this.commandMan.on("loaded", () => {
+            if (this.interactivity)
+                this.interactiveTerm.listen();
+        });
+
+        await this.commandMan.init();
+
+        if (!ONETIME_EVENT) {
+            ONETIME_EVENT = true;
+
+            this.interactiveTerm.on("quit", () => {
+                this.shutdown(1);
             });
 
-            await this.commandMan.init();
-
-            if (!ONETIME_EVENT) {
-                ONETIME_EVENT = true;
-
-                this.interactiveTerm.on("quit", () => {
-                    this.shutdown(1);
-                });
-
-                process.on("uncaughtException", (e) => {
-                    this._uncaughtException(e);
-                })
-                process.on("unhandledRejection", (e) => {
-                    this._unhandledRejection(e);
-                });
-                this.dC.on("error", (e) => {
-                    this.prompt.error("Discord.JS's client threw an error", e);
-                });
-            }
-            resolve();
-        });
+            process.on("uncaughtException", (e) => {
+                this._uncaughtException(e);
+            });
+            process.on("unhandledRejection", (e) => {
+                this._unhandledRejection(e);
+            });
+            this.dC.on("error", (e) => {
+                this.prompt.error("Discord.JS's client threw an error", e);
+            });
+        }
     }
 
     /**
@@ -454,27 +450,19 @@ ${YUNO_PINK}           "I'll protect this server forever... just for you~"${RESE
     /**
      * Loads a config file.
      * @param {String} file The config file (without the extension)
-     * @return {Promise}
      */
     readConfig(file) {
-        return new Promise((resolve, reject) => {
-            this.config = this.configMan.readConfigSync(file).defaults(DEFAULT_CONFIG)
-            resolve();
-        });
+        this.config = this.configMan.readConfigSync(file).defaults(DEFAULT_CONFIG);
     }
 
     /**
-     * Switches steathly to an another config
+     * Switches stealthily to another config
      * @param {String} file The config file (without the extension)
-     * @return {Promise}
      */
-    switchToConfig(file) {
-        return new Promise(async (resolve, reject) => {
-            await this._triggerShutdownEvents()
-            this.config = (async (this.configMan.readConfig(file)).defaults(DEFAULT_CONFIG));
-            await this._triggerConfigEvents()
-            resolve();
-        });
+    async switchToConfig(file) {
+        await this._triggerShutdownEvents();
+        this.config = (await this.configMan.readConfig(file)).defaults(DEFAULT_CONFIG);
+        await this._triggerConfigEvents();
     }
 
     /**

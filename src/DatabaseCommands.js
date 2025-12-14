@@ -621,35 +621,34 @@ module.exports = self = {
      */
     "setClean": async function(database, guildid, channelname, timeFEachClean, timeBeforeClean, remainingTime) {
         await self.initGuild(database, guildid);
-        return new Promise(async resolve => {
-            if (typeof guildid !== "string" || typeof channelname !== "string")
-                return;
 
-            if (typeof timeFEachClean === "string")
-                timeFEachClean = parseInt(timeFEachClean);
+        if (typeof guildid !== "string" || typeof channelname !== "string")
+            return;
 
-            if (typeof timeBeforeClean === "string")
-                timeBeforeClean = parseInt(timeBeforeClean);
+        if (typeof timeFEachClean === "string")
+            timeFEachClean = parseInt(timeFEachClean);
 
-            if (typeof remainingTime === "string")
-                remainingTime = parseInt(remainingTime);
+        if (typeof timeBeforeClean === "string")
+            timeBeforeClean = parseInt(timeBeforeClean);
 
-            if (remainingTime > timeFEachClean * 60)
-                remainingTime = timeFEachClean;
+        if (typeof remainingTime === "string")
+            remainingTime = parseInt(remainingTime);
 
-            if (remainingTime === null)
-                remainingTime = timeFEachClean * 60;
+        if (remainingTime > timeFEachClean * 60)
+            remainingTime = timeFEachClean;
 
-            if (isNaN(timeFEachClean) || isNaN(timeBeforeClean))
-                resolve()
+        if (remainingTime === null)
+            remainingTime = timeFEachClean * 60;
 
-            let entry = await database.allPromise("SELECT cleantime FROM channelcleans WHERE gid = ? AND cname = ?;", [guildid, channelname]);
+        if (isNaN(timeFEachClean) || isNaN(timeBeforeClean))
+            return;
 
-            if (entry.length === 0)
-                resolve(["creating", await database.runPromise("INSERT INTO channelcleans(gid, cname, cleantime, warningtime, remainingtime) VALUES(?, ?, ?, ?, ?);", [guildid, channelname, timeFEachClean, timeBeforeClean, remainingTime])])
-            else
-                resolve(["updating", await database.runPromise("UPDATE channelcleans SET cleantime = ?, warningtime = ?, remainingtime = ? WHERE gid = ? AND cname = ?;", [timeFEachClean, timeBeforeClean, remainingTime.toString(), guildid, channelname])])
-        });
+        const entry = await database.allPromise("SELECT cleantime FROM channelcleans WHERE gid = ? AND cname = ?;", [guildid, channelname]);
+
+        if (entry.length === 0) {
+            return ["creating", await database.runPromise("INSERT INTO channelcleans(gid, cname, cleantime, warningtime, remainingtime) VALUES(?, ?, ?, ?, ?);", [guildid, channelname, timeFEachClean, timeBeforeClean, remainingTime])];
+        }
+        return ["updating", await database.runPromise("UPDATE channelcleans SET cleantime = ?, warningtime = ?, remainingtime = ? WHERE gid = ? AND cname = ?;", [timeFEachClean, timeBeforeClean, remainingTime.toString(), guildid, channelname])];
     },
 
     /**
