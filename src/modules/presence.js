@@ -106,11 +106,11 @@ function convertToV14Presence(oldPresence) {
     return newPresence;
 }
 
-module.exports.init = function(Yuno, hotReloaded) {
+module.exports.init = async function(Yuno, hotReloaded) {
     if (hotReloaded)
-        discordConnected(Yuno);
+        await discordConnected(Yuno);
     else
-        Yuno.on("discord-connected", discordConnected)
+        Yuno.on("discord-connected", discordConnected);
 }
 
 module.exports.configLoaded = async function(Yuno, config) {

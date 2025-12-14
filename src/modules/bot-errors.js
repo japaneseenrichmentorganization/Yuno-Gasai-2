@@ -86,16 +86,16 @@ const discordConnected = async function(Yuno) {
     Yuno.prompt.info(`Errors logged on ${guild.name} in #${channel.name}`);
 };
 
-module.exports.init = function(Yuno, hotReloaded) {
+module.exports.init = async function(Yuno, hotReloaded) {
     if (hotReloaded) {
-        discordConnected(Yuno);
+        await discordConnected(Yuno);
     } else {
         Yuno.on("discord-connected", discordConnected);
     }
 
     if (!ONE_TIME_EVENT) {
         // Use arrow function instead of .bind()
-        Yuno.on("error", (e) => {
+        Yuno.on("error", async (e) => {
             if (guild && channel) {
                 const possibleMoreInfo = ["From"];
                 const moreInfo = possibleMoreInfo
@@ -107,7 +107,7 @@ module.exports.init = function(Yuno, hotReloaded) {
                     ? `${e.message}\nMore information: ${moreInfo}`
                     : e.message;
 
-                channel.send(`${getMentions()}An exception happened :'(.\`\`\`${errorString}\`\`\``);
+                await channel.send(`${getMentions()}An exception happened :'(.\`\`\`${errorString}\`\`\``);
             }
         });
     }

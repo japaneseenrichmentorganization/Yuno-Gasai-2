@@ -141,11 +141,11 @@ const setupCleaners = async (Yuno) => {
 
 module.exports.configLoaded = function() {};
 
-module.exports.init = function(Yuno, hotreloaded) {
+module.exports.init = async function(Yuno, hotreloaded) {
     intervalManager = Yuno.intervalMan;
 
     if (hotreloaded) {
-        setupCleaners(Yuno);
+        await setupCleaners(Yuno);
     } else {
         // Use arrow function instead of .bind()
         Yuno.on("discord-connected", () => setupCleaners(Yuno));

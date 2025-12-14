@@ -19,9 +19,8 @@
 module.exports.run = async function(yuno, author, args, msg) {
     if (author === 0)
         yuno.prompt.info("Modified!");
-    else
-        if (msg)
-            msg.reply("Hey xd");
+    else if (msg)
+        await msg.reply("Hey xd");
 }
 
 module.exports.about = {
