@@ -85,9 +85,10 @@ Yuno is a **yandere-themed Discord bot** combining powerful moderation tools wit
 - 🔧 Customizable prefix
 - 👋 Join messages
 - 🖼️ Custom ban images
-- 🎮 Presence/status control
+- 🎮 Presence/status control (persisted)
 - 🔥 Hot-reload commands
 - 📝 Per-guild settings
+- 🔄 Auto-update from git
 
 </td>
 </tr>
@@ -176,6 +177,86 @@ Yuno is a **yandere-themed Discord bot** combining powerful moderation tools wit
 - **SQLite3**
 - **Git**
 - **tmux** *(optional, for interactive shell)*
+
+### 🔧 Installing Node.js 22
+
+<details>
+<summary><b>🐧 Linux (Ubuntu/Debian)</b></summary>
+
+```bash
+# Using NodeSource repository (recommended)
+curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
+sudo apt-get install -y nodejs
+
+# Or using nvm (Node Version Manager)
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash
+source ~/.bashrc
+nvm install 22
+nvm use 22
+
+# Verify installation
+node --version  # Should show v22.x.x
+```
+
+**Also install build tools:**
+```bash
+sudo apt-get install -y build-essential python3
+```
+
+</details>
+
+<details>
+<summary><b>🪟 Windows</b></summary>
+
+**Option 1: Direct Download (Recommended)**
+1. Go to [Node.js Downloads](https://nodejs.org/en/download/)
+2. Download the **Windows Installer (.msi)** for version 22.x LTS
+3. Run the installer and follow the prompts
+4. Ensure "Automatically install necessary tools" is checked
+
+**Option 2: Using winget**
+```powershell
+winget install OpenJS.NodeJS.LTS
+```
+
+**Option 3: Using Chocolatey**
+```powershell
+choco install nodejs-lts
+```
+
+**Option 4: Using nvm-windows**
+1. Download [nvm-windows](https://github.com/coreybutler/nvm-windows/releases)
+2. Install and run:
+```powershell
+nvm install 22
+nvm use 22
+```
+
+**Verify installation:**
+```powershell
+node --version  # Should show v22.x.x
+```
+
+</details>
+
+<details>
+<summary><b>🍎 macOS</b></summary>
+
+```bash
+# Using Homebrew (recommended)
+brew install node@22
+
+# Or using nvm
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash
+source ~/.zshrc
+nvm install 22
+nvm use 22
+
+# Verify installation
+node --version  # Should show v22.x.x
+```
+
+</details>
 
 ### 🌸 Setup Steps
 
@@ -506,6 +587,38 @@ timportbans <server-id> ./BANS-123456.txt
 
 ---
 
+## 🔄 Auto-Update
+
+*"I'll always be the best version of myself... for you~"* 💕
+
+Yuno can check for updates from git, download them, and apply them via hot-reload without restarting.
+
+### 🔧 Commands
+
+```bash
+# Check if updates are available
+.auto-update check
+
+# Download updates from git
+.auto-update pull
+
+# Apply changes via hot-reload
+.auto-update reload
+
+# Full automatic update (check + pull + reload)
+.auto-update full
+```
+
+### 💡 How It Works
+
+1. **Check** - Fetches from remote and compares commits
+2. **Pull** - Downloads updates (stashes local changes first)
+3. **Reload** - Hot-reloads all modules without restart
+
+> ⚠️ **Note:** Major database changes may still require a full restart.
+
+---
+
 ## 💖 Commands Preview
 
 | Command | Description |
@@ -519,6 +632,7 @@ timportbans <server-id> ./BANS-123456.txt
 | `8ball` | *"Let fate decide~"* 🎱 |
 | `neko` | *"Nya~"* 🐱 |
 | `set-presence` | *"Let me show you how I'm feeling~"* 🎭 |
+| `auto-update` | *"Always improving... for you~"* 🔄 |
 | `db-encrypt` | *"Your secrets are mine to keep~"* 🔐 |
 | `set-logchannel` | *"I'll watch over everything~"* 📋 |
 | `log-status` | *"Here's what I'm watching~"* 👁️ |
@@ -544,6 +658,7 @@ timportbans <server-id> ./BANS-123456.txt
 | `texportbans` | *"Saving my enemies list~"* 📤 |
 | `timportbans` | *"Loading my enemies~"* 📥 |
 | `set-presence` | *"Changing my mood~"* 🎭 |
+| `auto-update` | *"Evolving to perfection~"* 🔄 |
 
 *Use the `list` command to see all available commands!*
 

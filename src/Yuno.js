@@ -759,10 +759,63 @@ ${YUNO_PINK}           "I'll protect this server forever... just for you~"${RESE
         this.emit("discord-connected", this);
         this.prompt.success("Successfully connected to Discord as " + this.dC.user.tag);
 
+        // Restore presence from database
+        await this._restorePresence();
+
         // Setup auto-reconnection handlers
         this._setupReconnectionHandlers();
 
         this.prompt.info("Bot launched.");
+    }
+
+    /**
+     * Restores bot presence from database on startup
+     * @private
+     */
+    async _restorePresence() {
+        try {
+            const savedPresence = await this.dbCommands.getPresence(this.database);
+
+            if (!savedPresence || (!savedPresence.type && !savedPresence.status)) {
+                this.prompt.info("No saved presence found, using default.");
+                return;
+            }
+
+            const { ActivityType } = require("discord.js");
+            const ACTIVITY_TYPES = {
+                "playing": ActivityType.Playing,
+                "streaming": ActivityType.Streaming,
+                "listening": ActivityType.Listening,
+                "watching": ActivityType.Watching,
+                "competing": ActivityType.Competing
+            };
+
+            const presenceData = {
+                status: savedPresence.status || 'online'
+            };
+
+            if (savedPresence.type && savedPresence.text) {
+                const activity = {
+                    name: savedPresence.text,
+                    type: ACTIVITY_TYPES[savedPresence.type] || ActivityType.Playing
+                };
+
+                if (savedPresence.streamUrl && savedPresence.type === 'streaming') {
+                    activity.url = savedPresence.streamUrl;
+                }
+
+                presenceData.activities = [activity];
+            }
+
+            await this.dC.user.setPresence(presenceData);
+
+            const activityInfo = savedPresence.type && savedPresence.text
+                ? ` (${savedPresence.type}: ${savedPresence.text})`
+                : '';
+            this.prompt.success(`Restored presence: ${savedPresence.status}${activityInfo}`);
+        } catch (e) {
+            this.prompt.error("Failed to restore presence", e);
+        }
     }
 
     /**
