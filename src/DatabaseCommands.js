@@ -120,221 +120,123 @@ module.exports = self = {
         // Update version after successful init
         await database.runPromise("PRAGMA user_version = " + Yuno.intVersion);
 
-        await database.runPromise(`CREATE TABLE IF NOT EXISTS experiences (
-            level INTEGER,
-            userID STRING,
-            guildID STRING,
-            exp INTEGER
-        )`)
-        /*
-            id = the guild id
-            prefix = the prefix triggering commands
-            onJoinDMMsg = the message sent to new users
-            onJoinDMMsgTitle = the title of the msg sent to new users
-        */
-        await database.runPromise(`CREATE TABLE IF NOT EXISTS guilds (
-            id TEXT,
-            prefix VARCHAR(5),
-            onJoinDMMsg TEXT,
-            onJoinDMMsgTitle VARCHAR(255),
-            spamFilter BOOL,
-            measureXP BOOL,
-            levelRoleMap TEXT
-        )`)
-        /*
-            gid = the guild id
-            cname = the channel's name
-            cleantime = the nb of hours between each clean
-            warningtime = the nb of minutes before the clean to warn
-            remainingtime = remaining time before clean in minute (updated every minute)
-        */
-       await database.runPromise(`CREATE TABLE IF NOT EXISTS channelcleans (
-           gid TEXT,
-           cname TEXT,
-           cleantime INTEGER,
-           warningtime INTEGER,
-           remainingtime TEXT
-        )`)
-        /*
-            id = index
-            gid = the guild id
-            trigger
-            response
-            image
-        */
-        await database.runPromise(`CREATE TABLE IF NOT EXISTS mentionResponses (
-            id INTEGER PRIMARY KEY, 
-            gid TEXT,
-            trigger TEXT,
-            response TEXT,
-            image TEXT
-        )`)
-        /*
-         * gid = guild id
-         * banner = user id of the banner
-         * image = image url
-         */
-        await database.runPromise(`CREATE TABLE IF NOT EXISTS banImages (
-            gid TEXT,
-            banner TEXT,
-            image TEXT
-        )`)
+        // Create all tables in parallel for faster initialization
+        await Promise.all([
+            database.runPromise(`CREATE TABLE IF NOT EXISTS experiences (
+                level INTEGER,
+                userID STRING,
+                guildID STRING,
+                exp INTEGER
+            )`),
+            database.runPromise(`CREATE TABLE IF NOT EXISTS guilds (
+                id TEXT,
+                prefix VARCHAR(5),
+                onJoinDMMsg TEXT,
+                onJoinDMMsgTitle VARCHAR(255),
+                spamFilter BOOL,
+                measureXP BOOL,
+                levelRoleMap TEXT
+            )`),
+            database.runPromise(`CREATE TABLE IF NOT EXISTS channelcleans (
+                gid TEXT,
+                cname TEXT,
+                cleantime INTEGER,
+                warningtime INTEGER,
+                remainingtime TEXT
+            )`),
+            database.runPromise(`CREATE TABLE IF NOT EXISTS mentionResponses (
+                id INTEGER PRIMARY KEY,
+                gid TEXT,
+                trigger TEXT,
+                response TEXT,
+                image TEXT
+            )`),
+            database.runPromise(`CREATE TABLE IF NOT EXISTS banImages (
+                gid TEXT,
+                banner TEXT,
+                image TEXT
+            )`),
+            database.runPromise(`CREATE TABLE IF NOT EXISTS modActions (
+                id INTEGER PRIMARY KEY,
+                gid TEXT,
+                moderatorId TEXT,
+                targetId TEXT,
+                action TEXT,
+                reason TEXT,
+                timestamp INTEGER
+            )`),
+            database.runPromise(`CREATE TABLE IF NOT EXISTS logChannels (
+                gid TEXT,
+                logType TEXT,
+                channelId TEXT,
+                enabled INTEGER DEFAULT 1,
+                PRIMARY KEY (gid, logType)
+            )`),
+            database.runPromise(`CREATE TABLE IF NOT EXISTS logSettings (
+                gid TEXT PRIMARY KEY,
+                flushInterval INTEGER DEFAULT 30,
+                maxBufferSize INTEGER DEFAULT 50
+            )`),
+            database.runPromise(`CREATE TABLE IF NOT EXISTS vcXpConfig (
+                gid TEXT PRIMARY KEY,
+                enabled INTEGER DEFAULT 0,
+                xpPerInterval INTEGER DEFAULT 10,
+                intervalSeconds INTEGER DEFAULT 300,
+                ignoreAfkChannel INTEGER DEFAULT 1
+            )`),
+            database.runPromise(`CREATE TABLE IF NOT EXISTS botPresence (
+                id INTEGER PRIMARY KEY CHECK (id = 1),
+                type TEXT,
+                text TEXT,
+                status TEXT DEFAULT 'online',
+                streamUrl TEXT
+            )`),
+            database.runPromise(`CREATE TABLE IF NOT EXISTS vcSessions (
+                gid TEXT,
+                usrId TEXT,
+                channelId TEXT,
+                joinedAt INTEGER,
+                lastXpGrant INTEGER,
+                PRIMARY KEY (gid, usrId)
+            )`),
+            database.runPromise(`CREATE TABLE IF NOT EXISTS dmConfig (
+                gid TEXT PRIMARY KEY,
+                channelId TEXT,
+                enabled INTEGER DEFAULT 1
+            )`),
+            database.runPromise(`CREATE TABLE IF NOT EXISTS botBans (
+                id TEXT PRIMARY KEY,
+                type TEXT,
+                reason TEXT,
+                bannedAt INTEGER,
+                bannedBy TEXT
+            )`),
+            database.runPromise(`CREATE TABLE IF NOT EXISTS dmInbox (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                usrId TEXT,
+                userTag TEXT,
+                content TEXT,
+                attachments TEXT,
+                timestamp INTEGER,
+                replied INTEGER DEFAULT 0
+            )`)
+        ]);
 
-        /*
-         * Moderation actions tracking
-         * gid = guild id
-         * moderatorId = user id of the moderator who performed the action
-         * targetId = user id of the target
-         * action = 'ban', 'kick', 'unban', 'timeout'
-         * reason = reason for the action
-         * timestamp = when the action occurred
-         */
-        await database.runPromise(`CREATE TABLE IF NOT EXISTS modActions (
-            id INTEGER PRIMARY KEY,
-            gid TEXT,
-            moderatorId TEXT,
-            targetId TEXT,
-            action TEXT,
-            reason TEXT,
-            timestamp INTEGER
-        )`)
-
-        /*
-         * Log channel configuration per guild
-         * gid = guild id
-         * logType = 'unified', 'voice', 'nickname', 'avatar', 'presence'
-         * channelId = channel id to send logs to
-         * enabled = whether this log type is enabled
-         */
-        await database.runPromise(`CREATE TABLE IF NOT EXISTS logChannels (
-            gid TEXT,
-            logType TEXT,
-            channelId TEXT,
-            enabled INTEGER DEFAULT 1,
-            PRIMARY KEY (gid, logType)
-        )`)
-
-        /*
-         * Log settings per guild
-         * gid = guild id
-         * flushInterval = seconds between log flushes (min 10, max 300)
-         * maxBufferSize = max entries before force flush (min 10, max 100)
-         */
-        await database.runPromise(`CREATE TABLE IF NOT EXISTS logSettings (
-            gid TEXT PRIMARY KEY,
-            flushInterval INTEGER DEFAULT 30,
-            maxBufferSize INTEGER DEFAULT 50
-        )`)
-
-        /*
-         * Voice channel XP configuration per guild
-         * gid = guild id
-         * enabled = whether VC XP is enabled
-         * xpPerInterval = XP amount granted per interval
-         * intervalSeconds = time interval in seconds
-         * ignoreAfkChannel = whether to ignore AFK channel
-         */
-        await database.runPromise(`CREATE TABLE IF NOT EXISTS vcXpConfig (
-            gid TEXT PRIMARY KEY,
-            enabled INTEGER DEFAULT 0,
-            xpPerInterval INTEGER DEFAULT 10,
-            intervalSeconds INTEGER DEFAULT 300,
-            ignoreAfkChannel INTEGER DEFAULT 1
-        )`)
-
-        /*
-         * Active voice channel sessions for XP tracking
-         * gid = guild id
-         * usrId = user id
-         * channelId = current voice channel id
-         * joinedAt = timestamp when user joined VC
-         * lastXpGrant = timestamp of last XP grant
-         */
-        /*
-         * Bot presence/activity persistence
-         * Only one row exists (bot-wide setting)
-         * type = 'playing', 'watching', 'listening', 'streaming', 'competing'
-         * text = activity text
-         * status = 'online', 'idle', 'dnd', 'invisible'
-         * streamUrl = optional stream URL for streaming type
-         */
-        await database.runPromise(`CREATE TABLE IF NOT EXISTS botPresence (
-            id INTEGER PRIMARY KEY CHECK (id = 1),
-            type TEXT,
-            text TEXT,
-            status TEXT DEFAULT 'online',
-            streamUrl TEXT
-        )`)
-
-        await database.runPromise(`CREATE TABLE IF NOT EXISTS vcSessions (
-            gid TEXT,
-            usrId TEXT,
-            channelId TEXT,
-            joinedAt INTEGER,
-            lastXpGrant INTEGER,
-            PRIMARY KEY (gid, usrId)
-        )`)
-
-        /*
-         * DM forwarding configuration per guild
-         * gid = guild id
-         * channelId = channel to forward DMs to
-         * enabled = whether forwarding is enabled
-         */
-        await database.runPromise(`CREATE TABLE IF NOT EXISTS dmConfig (
-            gid TEXT PRIMARY KEY,
-            channelId TEXT,
-            enabled INTEGER DEFAULT 1
-        )`)
-
-        /*
-         * Users/servers banned from using the bot
-         * id = user id or guild id
-         * type = 'user' or 'server'
-         * reason = ban reason
-         * bannedAt = timestamp
-         * bannedBy = user id who banned
-         */
-        await database.runPromise(`CREATE TABLE IF NOT EXISTS botBans (
-            id TEXT PRIMARY KEY,
-            type TEXT,
-            reason TEXT,
-            bannedAt INTEGER,
-            bannedBy TEXT
-        )`)
-
-        /*
-         * DM inbox for storing messages sent to the bot
-         * usrId = user id who sent the DM
-         * userTag = user tag at time of message
-         * content = message content
-         * attachments = JSON array of attachment URLs
-         * timestamp = when message was received
-         * replied = whether bot has replied
-         */
-        await database.runPromise(`CREATE TABLE IF NOT EXISTS dmInbox (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            usrId TEXT,
-            userTag TEXT,
-            content TEXT,
-            attachments TEXT,
-            timestamp INTEGER,
-            replied INTEGER DEFAULT 0
-        )`)
-
-        // Create indexes for common queries
-        await database.runPromise(`CREATE INDEX IF NOT EXISTS idx_botbans_type ON botBans(type)`);
-        await database.runPromise(`CREATE INDEX IF NOT EXISTS idx_dminbox_usrid ON dmInbox(usrId)`);
-        await database.runPromise(`CREATE INDEX IF NOT EXISTS idx_dminbox_timestamp ON dmInbox(timestamp)`);
-        await database.runPromise(`CREATE INDEX IF NOT EXISTS idx_modactions_gid_moderator ON modActions(gid, moderatorId)`);
-        await database.runPromise(`CREATE INDEX IF NOT EXISTS idx_modactions_gid_action ON modActions(gid, action)`);
-        await database.runPromise(`CREATE INDEX IF NOT EXISTS idx_experiences_user_guild ON experiences(userID, guildID)`);
-        await database.runPromise(`CREATE INDEX IF NOT EXISTS idx_guilds_id ON guilds(id)`);
-        await database.runPromise(`CREATE INDEX IF NOT EXISTS idx_channelcleans_gid_cname ON channelcleans(gid, cname)`);
-        await database.runPromise(`CREATE INDEX IF NOT EXISTS idx_mentionresponses_gid_trigger ON mentionResponses(gid, trigger)`);
-        await database.runPromise(`CREATE INDEX IF NOT EXISTS idx_banimages_gid_banner ON banImages(gid, banner)`);
-        await database.runPromise(`CREATE INDEX IF NOT EXISTS idx_logchannels_gid ON logChannels(gid)`);
-        await database.runPromise(`CREATE INDEX IF NOT EXISTS idx_vcsessions_gid ON vcSessions(gid)`);
+        // Create all indexes in parallel (tables must exist first)
+        await Promise.all([
+            database.runPromise(`CREATE INDEX IF NOT EXISTS idx_botbans_type ON botBans(type)`),
+            database.runPromise(`CREATE INDEX IF NOT EXISTS idx_dminbox_usrid ON dmInbox(usrId)`),
+            database.runPromise(`CREATE INDEX IF NOT EXISTS idx_dminbox_timestamp ON dmInbox(timestamp)`),
+            database.runPromise(`CREATE INDEX IF NOT EXISTS idx_modactions_gid_moderator ON modActions(gid, moderatorId)`),
+            database.runPromise(`CREATE INDEX IF NOT EXISTS idx_modactions_gid_action ON modActions(gid, action)`),
+            database.runPromise(`CREATE INDEX IF NOT EXISTS idx_experiences_user_guild ON experiences(userID, guildID)`),
+            database.runPromise(`CREATE INDEX IF NOT EXISTS idx_guilds_id ON guilds(id)`),
+            database.runPromise(`CREATE INDEX IF NOT EXISTS idx_channelcleans_gid_cname ON channelcleans(gid, cname)`),
+            database.runPromise(`CREATE INDEX IF NOT EXISTS idx_mentionresponses_gid_trigger ON mentionResponses(gid, trigger)`),
+            database.runPromise(`CREATE INDEX IF NOT EXISTS idx_banimages_gid_banner ON banImages(gid, banner)`),
+            database.runPromise(`CREATE INDEX IF NOT EXISTS idx_logchannels_gid ON logChannels(gid)`),
+            database.runPromise(`CREATE INDEX IF NOT EXISTS idx_vcsessions_gid ON vcSessions(gid)`)
+        ]);
     },
 
     /**

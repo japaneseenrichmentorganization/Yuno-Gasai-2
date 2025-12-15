@@ -1,4 +1,65 @@
+/**
+ * HTML entity decode map for common entities
+ * Native replacement for 'he' library
+ */
+const HTML_ENTITIES = {
+    '&amp;': '&',
+    '&lt;': '<',
+    '&gt;': '>',
+    '&quot;': '"',
+    '&#39;': "'",
+    '&apos;': "'",
+    '&nbsp;': ' ',
+    '&ndash;': '\u2013',
+    '&mdash;': '\u2014',
+    '&lsquo;': '\u2018',
+    '&rsquo;': '\u2019',
+    '&ldquo;': '\u201C',
+    '&rdquo;': '\u201D',
+    '&hellip;': '\u2026',
+    '&copy;': '\u00A9',
+    '&reg;': '\u00AE',
+    '&trade;': '\u2122',
+    '&deg;': '\u00B0',
+    '&plusmn;': '\u00B1',
+    '&frac12;': '\u00BD',
+    '&frac14;': '\u00BC',
+    '&frac34;': '\u00BE',
+    '&times;': '\u00D7',
+    '&divide;': '\u00F7',
+    '&euro;': '\u20AC',
+    '&pound;': '\u00A3',
+    '&yen;': '\u00A5',
+    '&cent;': '\u00A2'
+};
+
 module.exports = {
+    /**
+     * Decode HTML entities in a string
+     * Native replacement for the 'he' library
+     * @param {string} str - String with HTML entities
+     * @returns {string} Decoded string
+     */
+    "decodeHTML": function(str) {
+        if (!str || typeof str !== 'string') return str;
+
+        // First, handle named entities
+        let result = str.replace(/&[a-zA-Z]+;/g, (entity) => {
+            return HTML_ENTITIES[entity] || entity;
+        });
+
+        // Then handle numeric entities (&#123; or &#x7B;)
+        result = result.replace(/&#(\d+);/g, (_, code) => {
+            return String.fromCharCode(parseInt(code, 10));
+        });
+
+        result = result.replace(/&#x([0-9a-fA-F]+);/g, (_, code) => {
+            return String.fromCharCode(parseInt(code, 16));
+        });
+
+        return result;
+    },
+
     /**
      * Returns the avatar url from the user
      * @param {User} user

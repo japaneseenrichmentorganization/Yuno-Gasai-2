@@ -16,357 +16,493 @@
     along with this program.  If not, see https://www.gnu.org/licenses/.
 */
 
-// Try to load sqlcipher for encryption support, fall back to regular sqlite3
+// Database driver detection - priority: native SQLite > sqlcipher > sqlite3
 let sqlite;
 let encryptionAvailable = false;
+let useNativeSQLite = false;
+let DatabaseImpl;
 
+// Try Node.js 24+ native SQLite first
 try {
-    sqlite = require("@journeyapps/sqlcipher");
-    encryptionAvailable = true;
+    const { DatabaseSync } = require('node:sqlite');
+    useNativeSQLite = true;
+    console.log("[Database] Using Node.js 24 native SQLite");
 } catch (e) {
-    sqlite = require("sqlite3");
-    encryptionAvailable = false;
+    // Native SQLite not available, try npm packages
+    try {
+        sqlite = require("@journeyapps/sqlcipher");
+        encryptionAvailable = true;
+        console.log("[Database] Using @journeyapps/sqlcipher (encryption available)");
+    } catch (e2) {
+        try {
+            sqlite = require("sqlite3");
+            console.log("[Database] Using sqlite3 npm package");
+        } catch (e3) {
+            throw new Error("No SQLite implementation available. Install sqlite3 or use Node.js 24+");
+        }
+    }
 }
 
 /**
- * A wrapper for sqlite3 Statement with Promise support.
- * Prepared statements are more efficient for repeated queries.
- * @constructor
- * @param {sqlite3.Statement} stmt The underlying sqlite3 statement
+ * Native SQLite Database wrapper for Node.js 24+
+ * Uses synchronous API wrapped in async for compatibility
  */
-function Statement(stmt) {
-    this.stmt = stmt;
-}
+class NativeDatabase {
+    constructor() {
+        this.db = null;
+        this.isEncrypted = false;
+    }
 
-/**
- * Binds parameters to the statement
- * @param {array|Object} [param] The parameters to bind
- * @return {Promise<Statement>}
- */
-Statement.prototype.bind = function(param) {
-    return new Promise((resolve, reject) => {
-        this.stmt.bind(param, (err) => {
-            err ? reject(err) : resolve(this);
-        });
-    });
-};
+    isEncryptionAvailable() {
+        return false; // Native SQLite doesn't support encryption
+    }
 
-/**
- * Resets the statement to its initial state, ready to be re-executed
- * @return {Promise<Statement>}
- */
-Statement.prototype.reset = function() {
-    return new Promise((resolve, reject) => {
-        this.stmt.reset((err) => {
-            err ? reject(err) : resolve(this);
-        });
-    });
-};
+    async open(file, options = {}) {
+        const { DatabaseSync } = require('node:sqlite');
 
-/**
- * Runs the statement with optional parameters
- * @param {array|Object} [param] The parameters
- * @return {Promise<{lastID: number, changes: number}>}
- */
-Statement.prototype.run = function(param) {
-    return new Promise((resolve, reject) => {
-        this.stmt.run(param, function(err) {
-            if (err) {
-                reject(err);
-            } else {
-                resolve({ lastID: this.lastID, changes: this.changes });
-            }
-        });
-    });
-};
+        if (options.password) {
+            console.warn("[Database] Encryption requested but Node.js native SQLite doesn't support encryption. Use @journeyapps/sqlcipher instead.");
+        }
 
-/**
- * Runs the statement and returns the first row
- * @param {array|Object} [param] The parameters
- * @return {Promise<Object|undefined>}
- */
-Statement.prototype.get = function(param) {
-    return new Promise((resolve, reject) => {
-        this.stmt.get(param, (err, row) => {
-            err ? reject(err) : resolve(row);
-        });
-    });
-};
+        this.db = new DatabaseSync(file);
 
-/**
- * Runs the statement and returns all rows
- * @param {array|Object} [param] The parameters
- * @return {Promise<Array>}
- */
-Statement.prototype.all = function(param) {
-    return new Promise((resolve, reject) => {
-        this.stmt.all(param, (err, rows) => {
-            err ? reject(err) : resolve(rows);
-        });
-    });
-};
+        // Apply PRAGMA optimizations
+        if (options.pragmas) {
+            await this._applyPragmas(options.pragmas);
+        }
 
-/**
- * Finalizes the statement, releasing resources.
- * The statement cannot be used after this.
- * @return {Promise<void>}
- */
-Statement.prototype.finalize = function() {
-    return new Promise((resolve, reject) => {
-        this.stmt.finalize((err) => {
-            err ? reject(err) : resolve();
-        });
-    });
-};
+        return this;
+    }
 
-/**
- * A sqlite3 database with optional encryption and PRAGMA optimization support.
- * @constructor
- */
-function Database() {
-    this.db = null;
-    this.isEncrypted = false;
-}
+    async _applyPragmas(pragmas) {
+        const pragmaStatements = [];
 
-/**
- * Returns whether encryption is available (sqlcipher installed)
- * @return {boolean}
- */
-Database.prototype.isEncryptionAvailable = function() {
-    return encryptionAvailable;
-};
+        if (pragmas.walMode) {
+            pragmaStatements.push("PRAGMA journal_mode = WAL");
+        }
 
-/**
- * Opens a file as a sqlite3 database.
- * @param {String} file Path to the database.
- * @param {Object} [options] Database options
- * @param {String} [options.password] Encryption password (requires @journeyapps/sqlcipher)
- * @param {Object} [options.pragmas] PRAGMA settings to apply
- * @param {boolean} [options.pragmas.walMode] Enable WAL journal mode
- * @param {boolean} [options.pragmas.performanceMode] Enable performance optimizations
- * @param {number} [options.pragmas.cacheSize] Cache size in KB (negative) or pages (positive)
- * @param {boolean} [options.pragmas.memoryTemp] Store temp tables in memory
- * @param {number} [options.pragmas.mmapSize] Memory-map size in bytes
- * @return {Promise}
- * @async
- */
-Database.prototype.open = function(file, options = {}) {
-    return new Promise((resolve, reject) => {
-        this.db = new sqlite.Database(file, async (err) => {
-            if (err) {
-                reject(new Error(`Impossible to connect to the database ${file}. ${err.message}`));
-                return;
-            }
+        if (pragmas.performanceMode) {
+            pragmaStatements.push(
+                "PRAGMA synchronous = NORMAL",
+                "PRAGMA temp_store = MEMORY",
+                "PRAGMA cache_size = -64000",
+                "PRAGMA mmap_size = 268435456"
+            );
+        }
 
+        if (typeof pragmas.cacheSize === "number") {
+            pragmaStatements.push(`PRAGMA cache_size = ${pragmas.cacheSize}`);
+        }
+
+        if (pragmas.memoryTemp === true) {
+            pragmaStatements.push("PRAGMA temp_store = MEMORY");
+        }
+
+        if (typeof pragmas.mmapSize === "number") {
+            pragmaStatements.push(`PRAGMA mmap_size = ${pragmas.mmapSize}`);
+        }
+
+        // Execute all PRAGMAs (they're fast, sequential is fine for setup)
+        for (const pragma of pragmaStatements) {
+            this.db.exec(pragma);
+        }
+    }
+
+    prepare(sql, param) {
+        if (this.db === null) {
+            throw new Error("Tried to access database, but not opened!");
+        }
+        return Promise.resolve(new NativeStatement(this.db.prepare(sql)));
+    }
+
+    run(sqlCommand, param, callback) {
+        if (this.db === null) {
+            throw new Error("Tried to access database, but not opened!");
+        }
+        try {
+            const stmt = this.db.prepare(sqlCommand);
+            const result = param ? stmt.run(...(Array.isArray(param) ? param : [param])) : stmt.run();
+            callback?.(null);
+            return result;
+        } catch (err) {
+            callback?.(err);
+        }
+    }
+
+    runPromise(sqlCommand, param) {
+        if (this.db === null) {
+            throw new Error("Tried to access database, but not opened!");
+        }
+        return new Promise((resolve, reject) => {
             try {
-                // Apply encryption if password provided and sqlcipher is available
-                if (options.password && encryptionAvailable) {
-                    await this.runPromise(`PRAGMA key = '${options.password.replace(/'/g, "''")}'`);
-                    this.isEncrypted = true;
-                } else if (options.password && !encryptionAvailable) {
-                    console.warn("[Database] Encryption requested but @journeyapps/sqlcipher is not installed. Database will be unencrypted.");
-                }
-
-                // Apply PRAGMA optimizations if configured
-                if (options.pragmas) {
-                    await this._applyPragmas(options.pragmas);
-                }
-
-                resolve(this);
-            } catch (pragmaErr) {
-                reject(new Error(`Failed to configure database: ${pragmaErr.message}`));
-            }
-        });
-    });
-};
-
-/**
- * Apply PRAGMA settings for optimization
- * @param {Object} pragmas PRAGMA configuration object
- * @private
- * @async
- */
-Database.prototype._applyPragmas = async function(pragmas) {
-    // WAL mode - better concurrency and performance
-    if (pragmas.walMode) {
-        await this.runPromise("PRAGMA journal_mode = WAL");
-    }
-
-    // Performance mode - bundle of safe optimizations
-    if (pragmas.performanceMode) {
-        await this.runPromise("PRAGMA synchronous = NORMAL");
-        await this.runPromise("PRAGMA temp_store = MEMORY");
-        await this.runPromise("PRAGMA cache_size = -64000"); // 64MB cache
-        await this.runPromise("PRAGMA mmap_size = 268435456"); // 256MB mmap
-    }
-
-    // Individual settings (override performanceMode if set)
-    if (typeof pragmas.cacheSize === "number") {
-        await this.runPromise(`PRAGMA cache_size = ${pragmas.cacheSize}`);
-    }
-
-    if (pragmas.memoryTemp === true) {
-        await this.runPromise("PRAGMA temp_store = MEMORY");
-    }
-
-    if (typeof pragmas.mmapSize === "number") {
-        await this.runPromise(`PRAGMA mmap_size = ${pragmas.mmapSize}`);
-    }
-};
-
-/**
- * Change the encryption key on an open database
- * @param {String} newPassword The new encryption password
- * @return {Promise}
- * @async
- */
-Database.prototype.rekey = function(newPassword) {
-    if (!encryptionAvailable) {
-        return Promise.reject(new Error("Encryption not available. Install @journeyapps/sqlcipher"));
-    }
-    return this.runPromise(`PRAGMA rekey = '${newPassword.replace(/'/g, "''")}'`);
-};
-
-/**
- * Prepares a SQL statement for repeated execution.
- * More efficient than run/all for queries executed multiple times.
- * IMPORTANT: Always call finalize() when done to release resources.
- * @throws {Error} When method is triggered but the db is not opened.
- * @param {String} sql The SQL command to prepare
- * @param {array|Object} [param] Optional parameters to bind immediately
- * @return {Promise<Statement>}
- * @example
- * const stmt = await db.prepare("INSERT INTO users VALUES (?, ?)");
- * await stmt.run(["user1", "email1"]);
- * await stmt.run(["user2", "email2"]);
- * await stmt.finalize();
- */
-Database.prototype.prepare = function(sql, param) {
-    if (this.db === null) {
-        throw new Error("Tried to access database, but not opened!");
-    }
-    return new Promise((resolve, reject) => {
-        const stmt = this.db.prepare(sql, param, (err) => {
-            err ? reject(err) : resolve(new Statement(stmt));
-        });
-    });
-};
-
-/**
- * Runs a SQL command
- * @throws {Error} When method is triggered but the db is not opened.
- * @param {String} sqlCommand
- * @param {array|Object} [param] The ? and $value in the SQL command.
- * @param {function(e)?} [callback] Error is null on success, otherwise, it contains the error
- */
-Database.prototype.run = function(sqlCommand, param, callback) {
-    if (this.db === null) {
-        throw new Error("Tried to access database, but not opened!");
-    }
-    return this.db.run(sqlCommand, param, callback);
-};
-
-/**
- * Runs a SQL command but returns a Promise
- * @throws {Error} When method is triggered but the db is not opened.
- * @param {String} sqlCommand
- * @param {array|Object} [param] The ? and $value in the SQL command.
- * @returns {Promise<{lastID: number, changes: number}>}
- */
-Database.prototype.runPromise = function(sqlCommand, param) {
-    if (this.db === null) {
-        throw new Error("Tried to access database, but not opened!");
-    }
-    return new Promise((resolve, reject) => {
-        // Note: Must use regular function here to access sqlite3's 'this' context
-        this.db.run(sqlCommand, param, function(err) {
-            if (err) {
+                const stmt = this.db.prepare(sqlCommand);
+                const result = param ? stmt.run(...(Array.isArray(param) ? param : [param])) : stmt.run();
+                resolve({ lastID: result.lastInsertRowid, changes: result.changes });
+            } catch (err) {
                 reject(err);
-            } else {
-                // 'this' inside sqlite3 callback contains lastID and changes
-                resolve({ lastID: this.lastID, changes: this.changes });
             }
         });
-    });
-};
-
-/**
- * Retriggers callback for every row returned by the SQL command
- * @throws {Error} When method is triggered but the db is not opened.
- * @param {String} sql The SQL command
- * @param {array|Object} [param] The placeholders.
- * @param {function(err, row)} [callback] Called at every row.
- * @param {function} [complete] Executed when the iteration is done.
- */
-Database.prototype.each = function(sql, param, callback, complete) {
-    if (this.db === null) {
-        throw new Error("Tried to access database, but not opened!");
     }
-    return this.db.each(sql, param, callback, complete);
-};
 
-/**
- * Executes a SQL command and returns the given rows
- * @throws {Error} When method is triggered but the db is not opened.
- * @param {String} sql The SQL command
- * @param {array|Object} [param] The placeholders.
- * @param {function(err, rows)} [callback]
- */
-Database.prototype.all = function(sql, param, callback) {
-    if (this.db === null) {
-        throw new Error("Tried to access database, but not opened!");
+    each(sql, param, callback, complete) {
+        if (this.db === null) {
+            throw new Error("Tried to access database, but not opened!");
+        }
+        try {
+            const stmt = this.db.prepare(sql);
+            const rows = param ? stmt.all(...(Array.isArray(param) ? param : [param])) : stmt.all();
+            for (const row of rows) {
+                callback(null, row);
+            }
+            complete?.();
+        } catch (err) {
+            callback(err, null);
+        }
     }
-    return this.db.all(sql, param, callback);
-};
 
-/**
- * Executes a SQL command and returns the given rows through a Promise
- * @throws {Error} When method is triggered but the db is not opened.
- * @param {String} sql The SQL command
- * @param {array|Object} [param] The placeholders.
- * @return {Promise<Array>}
- */
-Database.prototype.allPromise = function(sql, param) {
-    if (this.db === null) {
-        throw new Error("Tried to access database, but not opened!");
+    all(sql, param, callback) {
+        if (this.db === null) {
+            throw new Error("Tried to access database, but not opened!");
+        }
+        try {
+            const stmt = this.db.prepare(sql);
+            const rows = param ? stmt.all(...(Array.isArray(param) ? param : [param])) : stmt.all();
+            callback?.(null, rows);
+            return rows;
+        } catch (err) {
+            callback?.(err, null);
+        }
     }
-    return new Promise((resolve, reject) => {
-        this.db.all(sql, param, (err, rows) => {
-            err ? reject(err) : resolve(rows);
+
+    allPromise(sql, param) {
+        if (this.db === null) {
+            throw new Error("Tried to access database, but not opened!");
+        }
+        return new Promise((resolve, reject) => {
+            try {
+                const stmt = this.db.prepare(sql);
+                const rows = param ? stmt.all(...(Array.isArray(param) ? param : [param])) : stmt.all();
+                resolve(rows);
+            } catch (err) {
+                reject(err);
+            }
         });
-    });
-};
-
-/**
- * Close the database.
- * @param {function} [callback]
- */
-Database.prototype.close = function(callback) {
-    if (this.db === null) {
-        return callback?.();
     }
 
-    return this.db.close(() => {
+    close(callback) {
+        if (this.db === null) {
+            return callback?.();
+        }
+        this.db.close();
         this.db = null;
         callback?.();
-    });
-};
+    }
 
-/**
- * Close the database but with a promise.
- * @return {Promise<void>}
- */
-Database.prototype.closePromise = function() {
-    if (this.db === null) {
+    closePromise() {
+        if (this.db === null) {
+            return Promise.resolve();
+        }
+        this.db.close();
+        this.db = null;
         return Promise.resolve();
     }
 
-    return new Promise((resolve) => {
-        this.db.close(() => {
-            this.db = null;
-            resolve();
-        });
-    });
-};
+    rekey(newPassword) {
+        return Promise.reject(new Error("Encryption not supported with native SQLite"));
+    }
+}
 
-module.exports = Database;
+/**
+ * Native SQLite Statement wrapper
+ */
+class NativeStatement {
+    constructor(stmt) {
+        this.stmt = stmt;
+    }
+
+    bind(param) {
+        // Native SQLite handles binding differently - parameters are passed at execution time
+        return Promise.resolve(this);
+    }
+
+    reset() {
+        // Native statements auto-reset
+        return Promise.resolve(this);
+    }
+
+    run(param) {
+        return new Promise((resolve, reject) => {
+            try {
+                const result = param ? this.stmt.run(...(Array.isArray(param) ? param : [param])) : this.stmt.run();
+                resolve({ lastID: result.lastInsertRowid, changes: result.changes });
+            } catch (err) {
+                reject(err);
+            }
+        });
+    }
+
+    get(param) {
+        return new Promise((resolve, reject) => {
+            try {
+                const row = param ? this.stmt.get(...(Array.isArray(param) ? param : [param])) : this.stmt.get();
+                resolve(row);
+            } catch (err) {
+                reject(err);
+            }
+        });
+    }
+
+    all(param) {
+        return new Promise((resolve, reject) => {
+            try {
+                const rows = param ? this.stmt.all(...(Array.isArray(param) ? param : [param])) : this.stmt.all();
+                resolve(rows);
+            } catch (err) {
+                reject(err);
+            }
+        });
+    }
+
+    finalize() {
+        // Native statements don't need explicit finalization
+        return Promise.resolve();
+    }
+}
+
+/**
+ * Legacy sqlite3/sqlcipher Statement wrapper
+ */
+class LegacyStatement {
+    constructor(stmt) {
+        this.stmt = stmt;
+    }
+
+    bind(param) {
+        return new Promise((resolve, reject) => {
+            this.stmt.bind(param, (err) => {
+                err ? reject(err) : resolve(this);
+            });
+        });
+    }
+
+    reset() {
+        return new Promise((resolve, reject) => {
+            this.stmt.reset((err) => {
+                err ? reject(err) : resolve(this);
+            });
+        });
+    }
+
+    run(param) {
+        return new Promise((resolve, reject) => {
+            this.stmt.run(param, function(err) {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve({ lastID: this.lastID, changes: this.changes });
+                }
+            });
+        });
+    }
+
+    get(param) {
+        return new Promise((resolve, reject) => {
+            this.stmt.get(param, (err, row) => {
+                err ? reject(err) : resolve(row);
+            });
+        });
+    }
+
+    all(param) {
+        return new Promise((resolve, reject) => {
+            this.stmt.all(param, (err, rows) => {
+                err ? reject(err) : resolve(rows);
+            });
+        });
+    }
+
+    finalize() {
+        return new Promise((resolve, reject) => {
+            this.stmt.finalize((err) => {
+                err ? reject(err) : resolve();
+            });
+        });
+    }
+}
+
+/**
+ * Legacy sqlite3/sqlcipher Database wrapper
+ */
+class LegacyDatabase {
+    constructor() {
+        this.db = null;
+        this.isEncrypted = false;
+    }
+
+    isEncryptionAvailable() {
+        return encryptionAvailable;
+    }
+
+    open(file, options = {}) {
+        return new Promise((resolve, reject) => {
+            this.db = new sqlite.Database(file, async (err) => {
+                if (err) {
+                    reject(new Error(`Impossible to connect to the database ${file}. ${err.message}`));
+                    return;
+                }
+
+                try {
+                    // Apply encryption if password provided and sqlcipher is available
+                    if (options.password && encryptionAvailable) {
+                        await this.runPromise(`PRAGMA key = '${options.password.replace(/'/g, "''")}'`);
+                        this.isEncrypted = true;
+                    } else if (options.password && !encryptionAvailable) {
+                        console.warn("[Database] Encryption requested but @journeyapps/sqlcipher is not installed. Database will be unencrypted.");
+                    }
+
+                    // Apply PRAGMA optimizations if configured
+                    if (options.pragmas) {
+                        await this._applyPragmas(options.pragmas);
+                    }
+
+                    resolve(this);
+                } catch (pragmaErr) {
+                    reject(new Error(`Failed to configure database: ${pragmaErr.message}`));
+                }
+            });
+        });
+    }
+
+    async _applyPragmas(pragmas) {
+        // Collect all PRAGMA statements for potential parallel execution
+        const pragmaPromises = [];
+
+        if (pragmas.walMode) {
+            pragmaPromises.push(this.runPromise("PRAGMA journal_mode = WAL"));
+        }
+
+        // Performance mode settings can be run in parallel
+        if (pragmas.performanceMode) {
+            pragmaPromises.push(
+                this.runPromise("PRAGMA synchronous = NORMAL"),
+                this.runPromise("PRAGMA temp_store = MEMORY"),
+                this.runPromise("PRAGMA cache_size = -64000"),
+                this.runPromise("PRAGMA mmap_size = 268435456")
+            );
+        }
+
+        // Individual settings
+        if (typeof pragmas.cacheSize === "number") {
+            pragmaPromises.push(this.runPromise(`PRAGMA cache_size = ${pragmas.cacheSize}`));
+        }
+
+        if (pragmas.memoryTemp === true) {
+            pragmaPromises.push(this.runPromise("PRAGMA temp_store = MEMORY"));
+        }
+
+        if (typeof pragmas.mmapSize === "number") {
+            pragmaPromises.push(this.runPromise(`PRAGMA mmap_size = ${pragmas.mmapSize}`));
+        }
+
+        // Execute all PRAGMAs in parallel for faster initialization
+        await Promise.all(pragmaPromises);
+    }
+
+    rekey(newPassword) {
+        if (!encryptionAvailable) {
+            return Promise.reject(new Error("Encryption not available. Install @journeyapps/sqlcipher"));
+        }
+        return this.runPromise(`PRAGMA rekey = '${newPassword.replace(/'/g, "''")}'`);
+    }
+
+    prepare(sql, param) {
+        if (this.db === null) {
+            throw new Error("Tried to access database, but not opened!");
+        }
+        return new Promise((resolve, reject) => {
+            const stmt = this.db.prepare(sql, param, (err) => {
+                err ? reject(err) : resolve(new LegacyStatement(stmt));
+            });
+        });
+    }
+
+    run(sqlCommand, param, callback) {
+        if (this.db === null) {
+            throw new Error("Tried to access database, but not opened!");
+        }
+        return this.db.run(sqlCommand, param, callback);
+    }
+
+    runPromise(sqlCommand, param) {
+        if (this.db === null) {
+            throw new Error("Tried to access database, but not opened!");
+        }
+        return new Promise((resolve, reject) => {
+            this.db.run(sqlCommand, param, function(err) {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve({ lastID: this.lastID, changes: this.changes });
+                }
+            });
+        });
+    }
+
+    each(sql, param, callback, complete) {
+        if (this.db === null) {
+            throw new Error("Tried to access database, but not opened!");
+        }
+        return this.db.each(sql, param, callback, complete);
+    }
+
+    all(sql, param, callback) {
+        if (this.db === null) {
+            throw new Error("Tried to access database, but not opened!");
+        }
+        return this.db.all(sql, param, callback);
+    }
+
+    allPromise(sql, param) {
+        if (this.db === null) {
+            throw new Error("Tried to access database, but not opened!");
+        }
+        return new Promise((resolve, reject) => {
+            this.db.all(sql, param, (err, rows) => {
+                err ? reject(err) : resolve(rows);
+            });
+        });
+    }
+
+    close(callback) {
+        if (this.db === null) {
+            return callback?.();
+        }
+
+        return this.db.close(() => {
+            this.db = null;
+            callback?.();
+        });
+    }
+
+    closePromise() {
+        if (this.db === null) {
+            return Promise.resolve();
+        }
+
+        return new Promise((resolve) => {
+            this.db.close(() => {
+                this.db = null;
+                resolve();
+            });
+        });
+    }
+}
+
+// Export the appropriate database class
+DatabaseImpl = useNativeSQLite ? NativeDatabase : LegacyDatabase;
+
+// Add static method to check which implementation is in use
+DatabaseImpl.isNativeSQLite = () => useNativeSQLite;
+DatabaseImpl.isEncryptionAvailable = () => encryptionAvailable;
+
+module.exports = DatabaseImpl;
