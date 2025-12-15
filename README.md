@@ -343,6 +343,46 @@ You can also set encryption in `config.json`:
 
 ---
 
+## 🚀 Node.js 24 Optimizations
+
+*"I've evolved to be even faster... all for you~"* 💗
+
+Yuno v2.8.0+ is optimized for Node.js 24 with native features:
+
+### ✨ Native Features Used
+
+| Feature | Replaces | Benefit |
+|---------|----------|---------|
+| **Native SQLite** | sqlite3 npm package | Zero native compilation, faster startup |
+| **Native Date Formatting** | moment.js | ~50KB smaller, faster duration formatting |
+| **Native HTML Decoding** | he library | ~15KB smaller, faster entity decoding |
+| **Promise.all() Parallelization** | Sequential operations | 2-3x faster DB initialization |
+
+### 🔧 Running with Native SQLite
+
+```bash
+# Recommended: Use the start script
+./start.sh
+
+# Or manually with the experimental flag
+node --experimental-sqlite index.js
+
+# Legacy mode (uses sqlite3 npm package)
+npm run start:legacy
+```
+
+### 📦 Dependency Modes
+
+| Mode | Command | SQLite Source |
+|------|---------|---------------|
+| **Native (recommended)** | `npm start` | Node.js 24 built-in |
+| **Encrypted** | Install `@journeyapps/sqlcipher` | SQLCipher (supports encryption) |
+| **Legacy** | `npm run start:legacy` | sqlite3 npm package |
+
+> 💡 **Note:** Native SQLite doesn't support encryption. Use SQLCipher if you need database encryption.
+
+---
+
 ## ⚡ Database Performance Tuning
 
 *"I'll be faster than anyone else... just for you~"* 💗

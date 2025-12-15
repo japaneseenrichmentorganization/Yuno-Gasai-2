@@ -15,9 +15,7 @@
     You should have received a copy of the GNU Affero General Public License
     along with this program.  If not, see https://www.gnu.org/licenses/.
 */
-const { ReactionCollector } = require('discord.js');
-const {EmbedBuilder} = require("discord.js");
-const he = require('he');
+const { ReactionCollector, EmbedBuilder } = require('discord.js');
 
 module.exports.run = async function(yuno, author, args, msg) {
     let res = Yuno.animeClient.searchAnimes(args.join(' '));
@@ -40,7 +38,7 @@ module.exports.run = async function(yuno, author, args, msg) {
                 { name: 'Episodes', value: item.episodes === 0 ? 'TBD' : item.episodes, inline: true },
                 { name: 'Score', value: `${item.score}`, inline: true }
             ])
-            .setDescription(Yuno.Util.cleanSynopsis(he.decode(item.synopsis), item.id, 'anime'))
+            .setDescription(Yuno.Util.cleanSynopsis(Yuno.Util.decodeHTML(item.synopsis), item.id, 'anime'))
             .setThumbnail(item.image)
             .setFooter({ text: `Use the reactions to browse | Page 1/${res.length}`});
         return embed;
