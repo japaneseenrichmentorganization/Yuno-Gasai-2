@@ -172,11 +172,11 @@ Yuno is a **yandere-themed Discord bot** combining powerful moderation tools wit
 
 > *"Let me prepare everything for you~"* 💗
 
-- **Node.js** 24.x or higher
-- **node-gyp** & **build-essential** (make)
-- **SQLite3**
+- **Node.js** 24.x or higher (includes built-in SQLite!)
 - **Git**
 - **tmux** *(optional, for interactive shell)*
+
+> 💡 Node.js 24 includes native SQLite - no compilation or build tools needed!
 
 ### 🔧 Installing Node.js 24
 
@@ -198,11 +198,6 @@ nvm use 24
 node --version  # Should show v24.x.x
 ```
 
-**Also install build tools:**
-```bash
-sudo apt-get install -y build-essential python3
-```
-
 </details>
 
 <details>
@@ -212,7 +207,6 @@ sudo apt-get install -y build-essential python3
 1. Go to [Node.js Downloads](https://nodejs.org/en/download/)
 2. Download the **Windows Installer (.msi)** for version 24.x
 3. Run the installer and follow the prompts
-4. Ensure "Automatically install necessary tools" is checked
 
 **Option 2: Using winget**
 ```powershell
@@ -269,9 +263,6 @@ cd Yuno-Gasai-2
 
 # Let me gather my strength...
 npm install
-
-# Make sure SQLite3 is ready
-npm install sqlite3
 ```
 
 ### 💝 Configuration
@@ -283,15 +274,18 @@ npm install sqlite3
 ### 🚀 Running
 
 ```bash
-# With tmux (recommended)
-tmux
-NODE_ENV=production node index.js
-
-# Or use the start script
+# Recommended: Use the start script (includes native SQLite flag)
 ./start.sh
+
+# Or with tmux for persistent sessions
+tmux
+./start.sh
+
+# Manual run with native SQLite
+node --experimental-sqlite index.js
 ```
 
-> 💡 *Remove `NODE_ENV=production` for full stack traces during development~*
+> 💡 *Set `NODE_ENV=development` for full stack traces during development~*
 
 ---
 
