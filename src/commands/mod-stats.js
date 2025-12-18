@@ -17,6 +17,7 @@
 */
 
 const { EmbedBuilder, PermissionsBitField } = require("discord.js");
+const { withRateLimitHandling } = require("../lib/rateLimitHelper");
 
 module.exports.run = async function(yuno, author, args, msg) {
     const statusMsg = await msg.channel.send(":hourglass: Gathering moderator statistics...");
@@ -103,12 +104,9 @@ module.exports.run = async function(yuno, author, args, msg) {
                 const cachedUser = yuno.dC.users.cache.get(mod.moderatorId);
                 if (cachedUser) return cachedUser.tag;
 
-                // Only fetch if not cached, with timeout
+                // Only fetch if not cached, with rate limit handling
                 try {
-                    const user = await Promise.race([
-                        yuno.dC.users.fetch(mod.moderatorId),
-                        new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 2000))
-                    ]);
+                    const user = await withRateLimitHandling(yuno.dC, () => yuno.dC.users.fetch(mod.moderatorId), 2);
                     return user.tag;
                 } catch (e) {
                     return mod.moderatorId; // Fall back to ID

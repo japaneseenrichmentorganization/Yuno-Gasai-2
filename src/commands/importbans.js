@@ -17,6 +17,7 @@
 */
 
 const fs = require("fs").promises;
+const { setupRateLimitListener, waitForRateLimit } = require("../lib/rateLimitHelper");
 
 module.exports.run = async function(yuno, author, args, msg) {
     if (!args[0])
@@ -47,11 +48,12 @@ module.exports.run = async function(yuno, author, args, msg) {
 
         const statusMsg = await msg.channel.send(`:hourglass: Starting ban import for ${bans.length} users... This may take a while.`);
 
+        // Setup rate limit listener for dynamic delays
+        const cleanupRateLimitListener = setupRateLimitListener(yuno.dC);
+
         // Discord.js v14 doesn't have bulkCreate, we need to ban individually
         // Process in batches to avoid rate limits
         const batchSize = 5; // Small batch to be safe with rate limits
-        const delayBetweenBans = 1000; // 1 second delay between each ban
-        const delayBetweenBatches = 5000; // 5 second delay between batches
 
         let totalBanned = 0;
         let totalFailed = 0;
@@ -59,51 +61,55 @@ module.exports.run = async function(yuno, author, args, msg) {
         let processedCount = 0;
         const totalBatches = Math.ceil(bans.length / batchSize);
 
-        // Process bans in small batches
-        for (let i = 0; i < bans.length; i += batchSize) {
-            const batch = bans.slice(i, i + batchSize);
-            const batchNum = Math.floor(i / batchSize) + 1;
+        try {
+            // Process bans in small batches
+            for (let i = 0; i < bans.length; i += batchSize) {
+                const batch = bans.slice(i, i + batchSize);
+                const batchNum = Math.floor(i / batchSize) + 1;
 
-            // Update status at start of each batch
-            await statusMsg.edit(
-                `:hourglass: Processing ban import... Batch ${batchNum}/${totalBatches}\n` +
-                `Progress: ${processedCount}/${bans.length} (${Math.round((processedCount/bans.length)*100)}%)\n` +
-                `Banned: ${totalBanned} | Already banned: ${totalAlreadyBanned} | Failed: ${totalFailed}`
-            );
+                // Update status at start of each batch
+                await statusMsg.edit(
+                    `:hourglass: Processing ban import... Batch ${batchNum}/${totalBatches}\n` +
+                    `Progress: ${processedCount}/${bans.length} (${Math.round((processedCount/bans.length)*100)}%)\n` +
+                    `Banned: ${totalBanned} | Already banned: ${totalAlreadyBanned} | Failed: ${totalFailed}`
+                );
 
-            // Process each ban in the batch with individual delays
-            for (const userId of batch) {
-                try {
-                    await msg.guild.members.ban(userId, {
-                        deleteMessageSeconds: 0,
-                        reason: "Ban import from saved banlist"
-                    });
-                    totalBanned++;
-                    console.log(`[BanMSystem] Banned user ${userId}`);
-                } catch (error) {
-                    // Check if already banned
-                    if (error.code === 10026) { // Unknown Ban (user not banned)
-                        totalAlreadyBanned++;
-                    } else if (error.message.includes("already banned")) {
-                        totalAlreadyBanned++;
-                    } else {
-                        totalFailed++;
-                        console.error(`[BanMSystem] Failed to ban ${userId}:`, error.message);
+                // Process each ban in the batch with dynamic delays
+                for (const userId of batch) {
+                    try {
+                        await msg.guild.members.ban(userId, {
+                            deleteMessageSeconds: 0,
+                            reason: "Ban import from saved banlist"
+                        });
+                        totalBanned++;
+                        console.log(`[BanMSystem] Banned user ${userId}`);
+                    } catch (error) {
+                        // Check if already banned
+                        if (error.code === 10026) { // Unknown Ban (user not banned)
+                            totalAlreadyBanned++;
+                        } else if (error.message.includes("already banned")) {
+                            totalAlreadyBanned++;
+                        } else {
+                            totalFailed++;
+                            console.error(`[BanMSystem] Failed to ban ${userId}:`, error.message);
+                        }
+                    }
+
+                    processedCount++;
+
+                    // Dynamic delay between individual bans based on rate limit status
+                    if (processedCount < bans.length) {
+                        await waitForRateLimit(yuno.dC);
                     }
                 }
 
-                processedCount++;
-
-                // Delay between individual bans
-                if (processedCount < bans.length) {
-                    await new Promise(resolve => setTimeout(resolve, delayBetweenBans));
+                // Dynamic delay between batches based on rate limit status
+                if (i + batchSize < bans.length) {
+                    await waitForRateLimit(yuno.dC);
                 }
             }
-
-            // Longer delay between batches
-            if (i + batchSize < bans.length) {
-                await new Promise(resolve => setTimeout(resolve, delayBetweenBatches));
-            }
+        } finally {
+            cleanupRateLimitListener();
         }
 
         console.log(`[BanMSystem] Import complete. Banned: ${totalBanned}, Already banned: ${totalAlreadyBanned}, Failed: ${totalFailed}`);

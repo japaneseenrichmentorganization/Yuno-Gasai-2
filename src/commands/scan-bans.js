@@ -17,6 +17,11 @@
 */
 
 const { EmbedBuilder, AuditLogEvent } = require("discord.js");
+const { setupRateLimitListener, waitForRateLimit } = require("../lib/rateLimitHelper");
+
+// Batch size for parallel processing
+const BATCH_SIZE = 50;
+const AUDIT_BATCH_SIZE = 100;
 
 module.exports.run = async function(yuno, author, args, msg) {
     const mode = args[0]?.toLowerCase();
@@ -30,8 +35,65 @@ module.exports.run = async function(yuno, author, args, msg) {
     }
 }
 
+/**
+ * Batch check which mod actions already exist in the database
+ * @param {Object} database
+ * @param {String} guildId
+ * @param {Array} entries - Array of {targetId, action, timestamp?}
+ * @returns {Set} Set of keys that already exist
+ */
+async function batchCheckExists(database, guildId, entries) {
+    if (entries.length === 0) return new Set();
+
+    // Build a query to check all entries at once
+    const placeholders = entries.map(() => "(?, ?, ?)").join(", ");
+    const values = entries.flatMap(e => [guildId, e.targetId, e.action]);
+
+    const results = await database.allPromise(
+        `SELECT targetId, action FROM modActions WHERE (gid, targetId, action) IN (VALUES ${placeholders})`,
+        values
+    );
+
+    return new Set(results.map(r => `${r.targetId}:${r.action}`));
+}
+
+/**
+ * Batch check with timestamp for audit log entries
+ */
+async function batchCheckExistsWithTimestamp(database, guildId, entries) {
+    if (entries.length === 0) return new Set();
+
+    const placeholders = entries.map(() => "(?, ?, ?, ?)").join(", ");
+    const values = entries.flatMap(e => [guildId, e.targetId, e.action, e.timestamp]);
+
+    const results = await database.allPromise(
+        `SELECT targetId, action, timestamp FROM modActions WHERE (gid, targetId, action, timestamp) IN (VALUES ${placeholders})`,
+        values
+    );
+
+    return new Set(results.map(r => `${r.targetId}:${r.action}:${r.timestamp}`));
+}
+
+/**
+ * Batch insert mod actions
+ */
+async function batchInsertModActions(database, guildId, actions) {
+    if (actions.length === 0) return;
+
+    const placeholders = actions.map(() => "(null, ?, ?, ?, ?, ?, ?)").join(", ");
+    const values = actions.flatMap(a => [guildId, a.moderatorId, a.targetId, a.action, a.reason || null, a.timestamp]);
+
+    await database.runPromise(
+        `INSERT INTO modActions(id, gid, moderatorId, targetId, action, reason, timestamp) VALUES ${placeholders}`,
+        values
+    );
+}
+
 async function scanBanList(yuno, msg) {
     const statusMsg = await msg.channel.send(":hourglass: Scanning ban list... This may take a while for large servers.");
+
+    // Setup rate limit listener for dynamic delays
+    const cleanupRateLimitListener = setupRateLimitListener(yuno.dC);
 
     try {
         let totalImported = 0;
@@ -39,6 +101,9 @@ async function scanBanList(yuno, msg) {
         let totalProcessed = 0;
         let lastBanId = null;
         const batchSize = 1000;
+
+        // Initialize guild first
+        await yuno.dbCommands.initGuild(yuno.database, msg.guild.id);
 
         // First, try to build a map of bans from audit logs (for moderator info)
         await statusMsg.edit(":hourglass: Building audit log cache for moderator info...");
@@ -93,51 +158,50 @@ async function scanBanList(yuno, msg) {
                 break;
             }
 
+            // Collect all bans from this batch for batch processing
+            const banEntries = [];
             for (const [userId, ban] of bans) {
                 lastBanId = userId;
-                totalProcessed++;
-
-                // Check if we already have this ban in the database
-                // Use a simple check - if ANY ban exists for this target in this guild
-                const existingBans = await yuno.database.allPromise(
-                    "SELECT id FROM modActions WHERE gid = ? AND targetId = ? AND action = 'ban' LIMIT 1",
-                    [msg.guild.id, userId]
-                );
-
-                if (existingBans.length > 0) {
-                    totalSkipped++;
-                    continue;
-                }
-
-                // Get moderator info from audit cache if available
                 const auditInfo = auditBanMap.get(userId);
-                const moderatorId = auditInfo?.moderatorId || "unknown";
-                const reason = auditInfo?.reason || ban.reason || null;
-                const timestamp = auditInfo?.timestamp || Date.now(); // Use current time if unknown
+                banEntries.push({
+                    targetId: userId,
+                    action: "ban",
+                    moderatorId: auditInfo?.moderatorId || "unknown",
+                    reason: auditInfo?.reason || ban.reason || null,
+                    timestamp: auditInfo?.timestamp || Date.now()
+                });
+            }
 
-                await yuno.dbCommands.addModAction(
-                    yuno.database,
-                    msg.guild.id,
-                    moderatorId,
-                    userId,
-                    "ban",
-                    reason,
-                    timestamp
-                );
-                totalImported++;
+            // Batch check which bans already exist
+            const existingSet = await batchCheckExists(yuno.database, msg.guild.id, banEntries);
 
-                // Update status every 1000 bans
-                if (totalProcessed % 1000 === 0) {
-                    await statusMsg.edit(`:hourglass: Processing bans... ${totalProcessed} checked | ${totalImported} imported | ${totalSkipped} skipped`);
+            // Filter out existing bans and prepare for batch insert
+            const toInsert = [];
+            for (const entry of banEntries) {
+                totalProcessed++;
+                const key = `${entry.targetId}:${entry.action}`;
+                if (existingSet.has(key)) {
+                    totalSkipped++;
+                } else {
+                    toInsert.push(entry);
                 }
             }
+
+            // Batch insert new bans
+            if (toInsert.length > 0) {
+                await batchInsertModActions(yuno.database, msg.guild.id, toInsert);
+                totalImported += toInsert.length;
+            }
+
+            // Update status every batch
+            await statusMsg.edit(`:hourglass: Processing bans... ${totalProcessed} checked | ${totalImported} imported | ${totalSkipped} skipped`);
 
             if (bans.size < batchSize) {
                 break;
             }
 
-            // Small delay to avoid rate limits
-            await new Promise(resolve => setTimeout(resolve, 100));
+            // Dynamic delay based on rate limit status
+            await waitForRateLimit(yuno.dC);
         }
 
         const unknownMods = totalImported - auditBanMap.size;
@@ -160,239 +224,136 @@ async function scanBanList(yuno, msg) {
     } catch (e) {
         console.error("scan-bans error:", e);
         await statusMsg.edit(`:x: Error scanning ban list: ${e.message}`);
+    } finally {
+        cleanupRateLimitListener();
     }
 }
 
+/**
+ * Fetch all audit log entries of a specific type with batch processing
+ * @param {Object} guild - Discord guild
+ * @param {number} auditLogType - AuditLogEvent type
+ * @param {String} action - Action type string (ban, kick, etc.)
+ * @param {Function} filterFn - Optional filter function for entries
+ * @returns {Array} Array of action entries
+ */
+async function fetchAuditLogEntries(guild, auditLogType, action, filterFn = null) {
+    const entries = [];
+    let hasMore = true;
+    let lastId = null;
+
+    while (hasMore) {
+        const fetchOptions = { type: auditLogType, limit: AUDIT_BATCH_SIZE };
+        if (lastId) fetchOptions.before = lastId;
+
+        const auditLogs = await guild.fetchAuditLogs(fetchOptions);
+        const logEntries = auditLogs.entries;
+
+        if (logEntries.size === 0) {
+            hasMore = false;
+            break;
+        }
+
+        for (const [id, entry] of logEntries) {
+            lastId = id;
+
+            // Apply custom filter if provided
+            if (filterFn && !filterFn(entry)) continue;
+
+            const targetId = entry.target?.id;
+            if (!targetId) continue;
+
+            entries.push({
+                targetId,
+                action,
+                moderatorId: entry.executor?.id || "unknown",
+                reason: entry.reason,
+                timestamp: entry.createdTimestamp
+            });
+        }
+
+        if (logEntries.size < AUDIT_BATCH_SIZE) hasMore = false;
+    }
+
+    return entries;
+}
+
 async function scanAuditLogs(yuno, msg) {
-    const statusMsg = await msg.channel.send(":hourglass: Scanning audit logs for moderation actions... This may take a while.");
+    const statusMsg = await msg.channel.send(":hourglass: Scanning audit logs for moderation actions in parallel...");
+
+    // Setup rate limit listener for dynamic delays
+    const cleanupRateLimitListener = setupRateLimitListener(yuno.dC);
 
     try {
+        // Initialize guild first
+        await yuno.dbCommands.initGuild(yuno.database, msg.guild.id);
+
+        // Fetch all audit log types in parallel
+        await statusMsg.edit(":hourglass: Fetching all audit log types in parallel...");
+
+        const [banEntries, kickEntries, unbanEntries, timeoutEntries] = await Promise.all([
+            fetchAuditLogEntries(msg.guild, AuditLogEvent.MemberBanAdd, "ban"),
+            fetchAuditLogEntries(msg.guild, AuditLogEvent.MemberKick, "kick"),
+            fetchAuditLogEntries(msg.guild, AuditLogEvent.MemberBanRemove, "unban"),
+            fetchAuditLogEntries(
+                msg.guild,
+                AuditLogEvent.MemberUpdate,
+                "timeout",
+                (entry) => {
+                    const timeoutChange = entry.changes?.find(c => c.key === "communication_disabled_until");
+                    return timeoutChange && timeoutChange.new;
+                }
+            )
+        ]);
+
+        const allEntries = [...banEntries, ...kickEntries, ...unbanEntries, ...timeoutEntries];
+
+        await statusMsg.edit(`:hourglass: Found ${allEntries.length} entries (${banEntries.length} bans, ${kickEntries.length} kicks, ${unbanEntries.length} unbans, ${timeoutEntries.length} timeouts). Processing...`);
+
         let totalImported = 0;
         let totalSkipped = 0;
 
-        // Scan for bans
-        await statusMsg.edit(":hourglass: Scanning ban entries from audit log...");
-        let hasMore = true;
-        let lastId = null;
+        // Process in batches for database operations
+        for (let i = 0; i < allEntries.length; i += BATCH_SIZE) {
+            const batch = allEntries.slice(i, i + BATCH_SIZE);
 
-        while (hasMore) {
-            const fetchOptions = { type: AuditLogEvent.MemberBanAdd, limit: 100 };
-            if (lastId) fetchOptions.before = lastId;
+            // Batch check which entries already exist
+            const existingSet = await batchCheckExistsWithTimestamp(yuno.database, msg.guild.id, batch);
 
-            const auditLogs = await msg.guild.fetchAuditLogs(fetchOptions);
-            const entries = auditLogs.entries;
-
-            if (entries.size === 0) {
-                hasMore = false;
-                break;
-            }
-
-            for (const [id, entry] of entries) {
-                lastId = id;
-                const timestamp = entry.createdTimestamp;
-                const moderatorId = entry.executor?.id || "unknown";
-                const targetId = entry.target?.id;
-                const reason = entry.reason;
-
-                if (!targetId) continue;
-
-                const exists = await yuno.dbCommands.modActionExists(
-                    yuno.database,
-                    msg.guild.id,
-                    targetId,
-                    "ban",
-                    timestamp
-                );
-
-                if (exists) {
+            // Filter out existing entries
+            const toInsert = [];
+            for (const entry of batch) {
+                const key = `${entry.targetId}:${entry.action}:${entry.timestamp}`;
+                if (existingSet.has(key)) {
                     totalSkipped++;
                 } else {
-                    await yuno.dbCommands.addModAction(
-                        yuno.database,
-                        msg.guild.id,
-                        moderatorId,
-                        targetId,
-                        "ban",
-                        reason,
-                        timestamp
-                    );
-                    totalImported++;
+                    toInsert.push(entry);
                 }
             }
 
-            if (entries.size < 100) hasMore = false;
-            await statusMsg.edit(`:hourglass: Scanning bans... Imported: ${totalImported} | Skipped: ${totalSkipped}`);
-        }
-
-        // Scan for kicks
-        hasMore = true;
-        lastId = null;
-        await statusMsg.edit(`:hourglass: Scanning kick entries... Imported: ${totalImported}`);
-
-        while (hasMore) {
-            const fetchOptions = { type: AuditLogEvent.MemberKick, limit: 100 };
-            if (lastId) fetchOptions.before = lastId;
-
-            const auditLogs = await msg.guild.fetchAuditLogs(fetchOptions);
-            const entries = auditLogs.entries;
-
-            if (entries.size === 0) {
-                hasMore = false;
-                break;
+            // Batch insert new entries
+            if (toInsert.length > 0) {
+                await batchInsertModActions(yuno.database, msg.guild.id, toInsert);
+                totalImported += toInsert.length;
             }
 
-            for (const [id, entry] of entries) {
-                lastId = id;
-                const timestamp = entry.createdTimestamp;
-                const moderatorId = entry.executor?.id || "unknown";
-                const targetId = entry.target?.id;
-                const reason = entry.reason;
-
-                if (!targetId) continue;
-
-                const exists = await yuno.dbCommands.modActionExists(
-                    yuno.database,
-                    msg.guild.id,
-                    targetId,
-                    "kick",
-                    timestamp
-                );
-
-                if (exists) {
-                    totalSkipped++;
-                } else {
-                    await yuno.dbCommands.addModAction(
-                        yuno.database,
-                        msg.guild.id,
-                        moderatorId,
-                        targetId,
-                        "kick",
-                        reason,
-                        timestamp
-                    );
-                    totalImported++;
-                }
+            // Update status every batch
+            if ((i + BATCH_SIZE) % (BATCH_SIZE * 5) === 0 || i + BATCH_SIZE >= allEntries.length) {
+                await statusMsg.edit(`:hourglass: Processing entries... ${i + batch.length}/${allEntries.length} | Imported: ${totalImported} | Skipped: ${totalSkipped}`);
             }
-
-            if (entries.size < 100) hasMore = false;
-        }
-
-        // Scan for unbans
-        hasMore = true;
-        lastId = null;
-        await statusMsg.edit(`:hourglass: Scanning unban entries... Imported: ${totalImported}`);
-
-        while (hasMore) {
-            const fetchOptions = { type: AuditLogEvent.MemberBanRemove, limit: 100 };
-            if (lastId) fetchOptions.before = lastId;
-
-            const auditLogs = await msg.guild.fetchAuditLogs(fetchOptions);
-            const entries = auditLogs.entries;
-
-            if (entries.size === 0) {
-                hasMore = false;
-                break;
-            }
-
-            for (const [id, entry] of entries) {
-                lastId = id;
-                const timestamp = entry.createdTimestamp;
-                const moderatorId = entry.executor?.id || "unknown";
-                const targetId = entry.target?.id;
-                const reason = entry.reason;
-
-                if (!targetId) continue;
-
-                const exists = await yuno.dbCommands.modActionExists(
-                    yuno.database,
-                    msg.guild.id,
-                    targetId,
-                    "unban",
-                    timestamp
-                );
-
-                if (exists) {
-                    totalSkipped++;
-                } else {
-                    await yuno.dbCommands.addModAction(
-                        yuno.database,
-                        msg.guild.id,
-                        moderatorId,
-                        targetId,
-                        "unban",
-                        reason,
-                        timestamp
-                    );
-                    totalImported++;
-                }
-            }
-
-            if (entries.size < 100) hasMore = false;
-        }
-
-        // Scan for timeouts
-        hasMore = true;
-        lastId = null;
-        await statusMsg.edit(`:hourglass: Scanning timeout entries... Imported: ${totalImported}`);
-
-        while (hasMore) {
-            const fetchOptions = { type: AuditLogEvent.MemberUpdate, limit: 100 };
-            if (lastId) fetchOptions.before = lastId;
-
-            const auditLogs = await msg.guild.fetchAuditLogs(fetchOptions);
-            const entries = auditLogs.entries;
-
-            if (entries.size === 0) {
-                hasMore = false;
-                break;
-            }
-
-            for (const [id, entry] of entries) {
-                lastId = id;
-
-                const timeoutChange = entry.changes?.find(c => c.key === "communication_disabled_until");
-                if (!timeoutChange || !timeoutChange.new) continue;
-
-                const timestamp = entry.createdTimestamp;
-                const moderatorId = entry.executor?.id || "unknown";
-                const targetId = entry.target?.id;
-                const reason = entry.reason;
-
-                if (!targetId) continue;
-
-                const exists = await yuno.dbCommands.modActionExists(
-                    yuno.database,
-                    msg.guild.id,
-                    targetId,
-                    "timeout",
-                    timestamp
-                );
-
-                if (exists) {
-                    totalSkipped++;
-                } else {
-                    await yuno.dbCommands.addModAction(
-                        yuno.database,
-                        msg.guild.id,
-                        moderatorId,
-                        targetId,
-                        "timeout",
-                        reason,
-                        timestamp
-                    );
-                    totalImported++;
-                }
-            }
-
-            if (entries.size < 100) hasMore = false;
         }
 
         const embed = new EmbedBuilder()
             .setTitle("Audit Log Scan Complete")
             .setColor("#00ff00")
             .addFields(
+                { name: "Total Entries Found", value: allEntries.length.toString(), inline: true },
                 { name: "Imported", value: totalImported.toString(), inline: true },
-                { name: "Skipped (duplicates)", value: totalSkipped.toString(), inline: true }
+                { name: "Skipped (duplicates)", value: totalSkipped.toString(), inline: true },
+                { name: "Bans", value: banEntries.length.toString(), inline: true },
+                { name: "Kicks", value: kickEntries.length.toString(), inline: true },
+                { name: "Unbans", value: unbanEntries.length.toString(), inline: true },
+                { name: "Timeouts", value: timeoutEntries.length.toString(), inline: true }
             )
             .setFooter({ text: "Note: Audit logs only go back ~45 days. Use .scan-bans bans for full ban list." })
             .setTimestamp();
@@ -402,6 +363,8 @@ async function scanAuditLogs(yuno, msg) {
     } catch (e) {
         console.error("scan-bans audit error:", e);
         await statusMsg.edit(`:x: Error scanning audit logs: ${e.message}`);
+    } finally {
+        cleanupRateLimitListener();
     }
 }
 
