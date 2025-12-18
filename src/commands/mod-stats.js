@@ -24,21 +24,22 @@ module.exports.run = async function(yuno, author, args, msg) {
     try {
         const guild = msg.guild;
 
-        // Get basic guild stats
-        const bans = await guild.bans.fetch();
+        // Fetch everything in parallel instead of sequentially
+        // This prevents blocking while waiting for each API call
+        const [bans, dbStats, totalTrackedActions] = await Promise.all([
+            guild.bans.fetch().catch(() => new Map()), // Don't fail if no ban permission
+            yuno.dbCommands.getModStats(yuno.database, guild.id),
+            yuno.dbCommands.getModActionsCount(yuno.database, guild.id)
+        ]);
+
         const totalBans = bans.size;
 
-        // Get members with mod permissions
-        const members = await guild.members.fetch();
-        const moderators = members.filter(m =>
+        // Use cached members instead of fetching all (much faster, doesn't block)
+        const moderators = guild.members.cache.filter(m =>
             m.permissions.has(PermissionsBitField.Flags.ManageMessages) ||
             m.permissions.has(PermissionsBitField.Flags.KickMembers) ||
             m.permissions.has(PermissionsBitField.Flags.BanMembers)
         );
-
-        // Get database stats
-        const dbStats = await yuno.dbCommands.getModStats(yuno.database, guild.id);
-        const totalTrackedActions = await yuno.dbCommands.getModActionsCount(yuno.database, guild.id);
 
         // Build action counts object
         const actionTotals = {};
@@ -91,24 +92,32 @@ module.exports.run = async function(yuno, author, args, msg) {
 
         // Top moderators
         if (dbStats.topMods.length > 0) {
-            const topModsText = [];
-            for (let i = 0; i < Math.min(5, dbStats.topMods.length); i++) {
-                const mod = dbStats.topMods[i];
-                let modName = mod.moderatorId;
+            const topMods = dbStats.topMods.slice(0, 5);
 
-                // Try to get the username
+            // Fetch all moderator names in parallel instead of one by one
+            const modNamePromises = topMods.map(async (mod) => {
+                // Check cache first (instant)
+                const cachedMember = guild.members.cache.get(mod.moderatorId);
+                if (cachedMember) return cachedMember.user.tag;
+
+                const cachedUser = yuno.dC.users.cache.get(mod.moderatorId);
+                if (cachedUser) return cachedUser.tag;
+
+                // Only fetch if not cached, with timeout
                 try {
-                    const member = await guild.members.fetch(mod.moderatorId).catch(() => null);
-                    if (member) {
-                        modName = member.user.tag;
-                    } else {
-                        const user = await yuno.dC.users.fetch(mod.moderatorId).catch(() => null);
-                        if (user) modName = user.tag;
-                    }
+                    const user = await Promise.race([
+                        yuno.dC.users.fetch(mod.moderatorId),
+                        new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 2000))
+                    ]);
+                    return user.tag;
                 } catch (e) {
-                    // Keep the ID if we can't resolve
+                    return mod.moderatorId; // Fall back to ID
                 }
+            });
 
+            const modNames = await Promise.all(modNamePromises);
+
+            const topModsText = topMods.map((mod, i) => {
                 const modData = modStats[mod.moderatorId] || {};
                 const breakdown = [];
                 if (modData.ban) breakdown.push(`${modData.ban} bans`);
@@ -116,8 +125,8 @@ module.exports.run = async function(yuno, author, args, msg) {
                 if (modData.timeout) breakdown.push(`${modData.timeout} timeouts`);
                 if (modData.unban) breakdown.push(`${modData.unban} unbans`);
 
-                topModsText.push(`**${i + 1}. ${modName}** - ${mod.count} actions\n   ${breakdown.join(", ") || "No details"}`);
-            }
+                return `**${i + 1}. ${modNames[i]}** - ${mod.count} actions\n   ${breakdown.join(", ") || "No details"}`;
+            });
 
             embed.addFields({
                 name: "Top Moderators",
