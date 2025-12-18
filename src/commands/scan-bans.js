@@ -99,10 +99,12 @@ async function scanBanList(yuno, msg) {
         let totalImported = 0;
         let totalSkipped = 0;
         let totalProcessed = 0;
-        let totalAutoBans = 0;      // Fully automatic (spam filter, etc.)
+        let totalAutoBans = 0;       // Fully automatic (spam filter, etc.)
         let totalBotCommandBans = 0; // Manual ban via bot command
         let totalManualBans = 0;     // Not through the bot at all
         let totalSelfBans = 0;       // Users who banned themselves (tried to use ban command without perms)
+        let totalNoReason = 0;       // Bans with no reason (likely imported or server bans)
+        let totalServerBans = 0;     // Bans done outside the bot (no bot patterns in reason)
         let lastBanId = null;
         const batchSize = 1000;
 
@@ -184,6 +186,12 @@ async function scanBanList(yuno, msg) {
                 const isSelfBan = (auditInfo?.moderatorId === userId) ||
                     (isAutoBan && reason && reason.toLowerCase().includes("usage of"));
 
+                // Check if ban has no reason (likely imported or native Discord ban)
+                const hasNoReason = !reason || reason.trim() === "";
+
+                // Server/other bans: has a reason but not from the bot
+                const isServerBan = !hasNoReason && !isBotBan;
+
                 banEntries.push({
                     targetId: userId,
                     action: "ban",
@@ -192,7 +200,9 @@ async function scanBanList(yuno, msg) {
                     timestamp: auditInfo?.timestamp || Date.now(),
                     isBotBan: isBotBan,
                     isAutoBan: isAutoBan,
-                    isSelfBan: isSelfBan
+                    isSelfBan: isSelfBan,
+                    hasNoReason: hasNoReason,
+                    isServerBan: isServerBan
                 });
             }
 
@@ -208,6 +218,12 @@ async function scanBanList(yuno, msg) {
                     totalSkipped++;
                 } else {
                     toInsert.push(entry);
+
+                    // Count no-reason bans (imported/no reason provided)
+                    if (entry.hasNoReason) {
+                        totalNoReason++;
+                    }
+
                     // Count ban types (self-bans are counted separately)
                     if (entry.isSelfBan) {
                         totalSelfBans++;
@@ -215,6 +231,8 @@ async function scanBanList(yuno, msg) {
                         totalAutoBans++;
                     } else if (entry.isBotBan) {
                         totalBotCommandBans++;
+                    } else if (entry.isServerBan) {
+                        totalServerBans++;
                     } else {
                         totalManualBans++;
                     }
@@ -239,20 +257,16 @@ async function scanBanList(yuno, msg) {
         }
 
         const unknownMods = totalImported - auditBanMap.size;
+        const totalBotBans = totalAutoBans + totalBotCommandBans + totalSelfBans;
 
         const embed = new EmbedBuilder()
             .setTitle("Ban List Scan Complete")
             .setColor("#00ff00")
             .addFields(
-                { name: "Total Processed", value: totalProcessed.toString(), inline: true },
-                { name: "Imported", value: totalImported.toString(), inline: true },
-                { name: "Skipped (existing)", value: totalSkipped.toString(), inline: true },
-                { name: "Auto Bans (spam filter)", value: totalAutoBans.toString(), inline: true },
-                { name: "Bot Command Bans", value: totalBotCommandBans.toString(), inline: true },
-                { name: "Self Bans (no perms)", value: totalSelfBans.toString(), inline: true },
-                { name: "Manual/Other Bans", value: totalManualBans.toString(), inline: true },
-                { name: "With Moderator Info", value: Math.min(totalImported, auditBanMap.size).toString(), inline: true },
-                { name: "Unknown Moderator", value: Math.max(0, unknownMods).toString(), inline: true }
+                { name: "📊 Summary", value: `**Total Bans:** ${totalProcessed}\n**Imported:** ${totalImported}\n**Skipped:** ${totalSkipped}`, inline: true },
+                { name: "🤖 Bot Bans", value: `**Total:** ${totalBotBans}\n├ Auto (spam): ${totalAutoBans}\n├ Commands: ${totalBotCommandBans}\n└ Self-bans: ${totalSelfBans}`, inline: true },
+                { name: "🔨 Server Bans/Other", value: `**Total:** ${totalServerBans + totalNoReason}\n├ With reason: ${totalServerBans}\n└ No reason: ${totalNoReason}`, inline: true },
+                { name: "ℹ️ Moderator Info", value: `**Known:** ${Math.min(totalImported, auditBanMap.size)}\n**Unknown:** ${Math.max(0, unknownMods)}`, inline: true }
             )
             .setFooter({ text: "Use .mod-stats to view moderator statistics" })
             .setTimestamp();
