@@ -18,6 +18,7 @@
 
 const fs = require("fs").promises;
 const path = require("path");
+const { setupRateLimitListener, waitForRateLimit } = require("../lib/rateLimitHelper");
 
 module.exports.runTerminal = async function(yuno, args) {
     if (args.length < 2) {
@@ -83,10 +84,11 @@ module.exports.runTerminal = async function(yuno, args) {
     console.log("This may take a while due to rate limits.");
     console.log("");
 
+    // Setup rate limit listener for dynamic delays
+    const cleanupRateLimitListener = setupRateLimitListener(yuno.dC);
+
     // Process in batches
     const batchSize = 5;
-    const delayBetweenBans = 1000;
-    const delayBetweenBatches = 5000;
 
     let totalBanned = 0;
     let totalFailed = 0;
@@ -94,38 +96,44 @@ module.exports.runTerminal = async function(yuno, args) {
     let processedCount = 0;
     const totalBatches = Math.ceil(bans.length / batchSize);
 
-    for (let i = 0; i < bans.length; i += batchSize) {
-        const batch = bans.slice(i, i + batchSize);
-        const batchNum = Math.floor(i / batchSize) + 1;
+    try {
+        for (let i = 0; i < bans.length; i += batchSize) {
+            const batch = bans.slice(i, i + batchSize);
+            const batchNum = Math.floor(i / batchSize) + 1;
 
-        // Update status
-        process.stdout.write(`\rProcessing batch ${batchNum}/${totalBatches} - ${processedCount}/${bans.length} (${Math.round((processedCount/bans.length)*100)}%)`);
+            // Update status
+            process.stdout.write(`\rProcessing batch ${batchNum}/${totalBatches} - ${processedCount}/${bans.length} (${Math.round((processedCount/bans.length)*100)}%)`);
 
-        for (const userId of batch) {
-            try {
-                await guild.members.ban(userId, {
-                    deleteMessageSeconds: 0,
-                    reason: "Terminal ban import"
-                });
-                totalBanned++;
-            } catch (error) {
-                if (error.code === 10026 || error.message.includes("already banned")) {
-                    totalAlreadyBanned++;
-                } else {
-                    totalFailed++;
+            for (const userId of batch) {
+                try {
+                    await guild.members.ban(userId, {
+                        deleteMessageSeconds: 0,
+                        reason: "Terminal ban import"
+                    });
+                    totalBanned++;
+                } catch (error) {
+                    if (error.code === 10026 || error.message.includes("already banned")) {
+                        totalAlreadyBanned++;
+                    } else {
+                        totalFailed++;
+                    }
+                }
+
+                processedCount++;
+
+                // Dynamic delay based on rate limit status
+                if (processedCount < bans.length) {
+                    await waitForRateLimit(yuno.dC);
                 }
             }
 
-            processedCount++;
-
-            if (processedCount < bans.length) {
-                await new Promise(resolve => setTimeout(resolve, delayBetweenBans));
+            // Dynamic delay between batches
+            if (i + batchSize < bans.length) {
+                await waitForRateLimit(yuno.dC);
             }
         }
-
-        if (i + batchSize < bans.length) {
-            await new Promise(resolve => setTimeout(resolve, delayBetweenBatches));
-        }
+    } finally {
+        cleanupRateLimitListener();
     }
 
     console.log("\n\n=== Import Complete ===");
