@@ -20,8 +20,11 @@
     "stack-trace": "0.0.10"
   },
   "dependencies": {
+    "bufferutil": "^4.0.9",
     "discord.js": "^14.25.1",
-    "urban": "^0.3.2"
+    "urban": "^0.3.2",
+    "utf-8-validate": "^6.0.5",
+    "zlib-sync": "^0.1.10"
   },
   "optionalDependencies": {
     "@journeyapps/sqlcipher": "^5.3.1",

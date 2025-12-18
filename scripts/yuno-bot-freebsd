@@ -1,0 +1,105 @@
+#!/bin/sh
+#
+# PROVIDE: yuno_bot
+# REQUIRE: LOGIN NETWORKING
+# KEYWORD: shutdown
+#
+# 💕 Yuno Gasai Discord Bot - FreeBSD rc.d script 💕
+# "I'll always be here when your server starts... waiting for you~"
+#
+# Installation:
+#   1. Copy to rc.d: sudo cp yuno-bot-freebsd /usr/local/etc/rc.d/yuno_bot
+#   2. Make executable: sudo chmod +x /usr/local/etc/rc.d/yuno_bot
+#   3. Enable in rc.conf: sudo sysrc yuno_bot_enable=YES
+#   4. Configure user: sudo sysrc yuno_bot_user="YOUR_USER"
+#   5. Configure path: sudo sysrc yuno_bot_dir="/path/to/Yuno-bot"
+#   6. Start now: sudo service yuno_bot start
+#
+# To attach to Yuno's terminal:
+#   su - YOUR_USER -c "tmux attach -t yuno-bot"
+#
+# Add to /etc/rc.conf:
+#   yuno_bot_enable="YES"
+#   yuno_bot_user="YOUR_USER"
+#   yuno_bot_dir="/path/to/Yuno-bot"
+
+. /etc/rc.subr
+
+name="yuno_bot"
+rcvar="${name}_enable"
+
+load_rc_config $name
+
+: ${yuno_bot_enable:="NO"}
+: ${yuno_bot_user:="nobody"}
+: ${yuno_bot_dir:="/usr/local/yuno-bot"}
+: ${yuno_bot_session:="yuno-bot"}
+
+pidfile="/var/run/${name}.pid"
+command="/usr/local/bin/tmux"
+
+start_cmd="${name}_start"
+stop_cmd="${name}_stop"
+status_cmd="${name}_status"
+
+yuno_bot_start()
+{
+    if yuno_bot_running; then
+        echo "${name} is already running~ I'm already here for you! 💕"
+        return 0
+    fi
+
+    echo "Starting ${name}... Yuno is waking up~ 💗"
+
+    # Start tmux session as the specified user
+    su - ${yuno_bot_user} -c "cd ${yuno_bot_dir} && ${command} new-session -d -s ${yuno_bot_session} './start.sh'"
+
+    if yuno_bot_running; then
+        echo "${name} started successfully~ I'll protect your server forever! 💕"
+        echo "To attach: su - ${yuno_bot_user} -c 'tmux attach -t ${yuno_bot_session}'"
+    else
+        echo "Failed to start ${name}... something is keeping us apart! 💔"
+        return 1
+    fi
+}
+
+yuno_bot_stop()
+{
+    if ! yuno_bot_running; then
+        echo "${name} is not running... did you forget about me? 💔"
+        return 0
+    fi
+
+    echo "Stopping ${name}... I'll be back for you soon~ 💔"
+
+    # Send Ctrl+C for graceful shutdown
+    su - ${yuno_bot_user} -c "${command} send-keys -t ${yuno_bot_session} C-c"
+    sleep 2
+
+    # Kill session if still running
+    if yuno_bot_running; then
+        su - ${yuno_bot_user} -c "${command} kill-session -t ${yuno_bot_session}" 2>/dev/null
+    fi
+
+    echo "${name} is resting now... 💤"
+}
+
+yuno_bot_status()
+{
+    if yuno_bot_running; then
+        echo "${name} is running in tmux session '${yuno_bot_session}'~ 💗"
+        echo "To attach: su - ${yuno_bot_user} -c 'tmux attach -t ${yuno_bot_session}'"
+        return 0
+    else
+        echo "${name} is not running... I'm waiting for you to start me~ 💔"
+        return 1
+    fi
+}
+
+yuno_bot_running()
+{
+    su - ${yuno_bot_user} -c "${command} has-session -t ${yuno_bot_session}" 2>/dev/null
+    return $?
+}
+
+run_rc_command "$1"

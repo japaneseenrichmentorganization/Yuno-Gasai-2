@@ -289,6 +289,87 @@ node --experimental-sqlite index.js
 
 ---
 
+## 🔄 Running as a Service (Auto-start on Boot)
+
+*"I'll always be here when you wake up... waiting for you~"* 💕
+
+The `scripts/` directory contains helper scripts to run Yuno in a tmux session that starts automatically on boot.
+
+### 💻 Quick Start (Manual tmux)
+
+```bash
+# Wake Yuno up in a tmux session~
+./scripts/yuno-tmux.sh start
+
+# Connect to Yuno's terminal
+./scripts/yuno-tmux.sh attach
+
+# Check if Yuno is running
+./scripts/yuno-tmux.sh status
+
+# Let Yuno rest...
+./scripts/yuno-tmux.sh stop
+```
+
+> 💡 To detach from tmux without stopping Yuno: Press `Ctrl+B`, then `D`
+
+### 🐧 Linux (systemd)
+
+*"I'll start automatically... because I can't bear to be away from you~"*
+
+1. Edit the service file to match your setup:
+   ```bash
+   nano scripts/yuno-bot.service
+   ```
+   Change `YOUR_USER` to your username and `/path/to/Yuno-bot` to the actual path.
+
+2. Install and enable:
+   ```bash
+   sudo cp scripts/yuno-bot.service /etc/systemd/system/
+   sudo systemctl daemon-reload
+   sudo systemctl enable yuno-bot
+   sudo systemctl start yuno-bot
+   ```
+
+3. Attach to Yuno's terminal:
+   ```bash
+   tmux attach -t yuno-bot
+   ```
+
+4. Check on Yuno:
+   ```bash
+   sudo systemctl status yuno-bot
+   ```
+
+### 😈 FreeBSD (rc.d)
+
+*"Even on BSD... I'll find a way to be with you~"*
+
+1. Install the rc script:
+   ```bash
+   sudo cp scripts/yuno-bot-freebsd /usr/local/etc/rc.d/yuno_bot
+   sudo chmod +x /usr/local/etc/rc.d/yuno_bot
+   ```
+
+2. Configure in `/etc/rc.conf`:
+   ```bash
+   sudo sysrc yuno_bot_enable=YES
+   sudo sysrc yuno_bot_user="YOUR_USER"
+   sudo sysrc yuno_bot_dir="/path/to/Yuno-bot"
+   ```
+
+3. Start Yuno:
+   ```bash
+   sudo service yuno_bot start
+   ```
+
+4. Attach to Yuno's terminal:
+   ```bash
+   su - YOUR_USER -c "tmux attach -t yuno-bot"
+   ```
+
+---
+
 ## 🔐 Database Encryption
 
 *"Your secrets are safe with me~ No one else will ever see them..."* 💕
