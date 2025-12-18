@@ -1,0 +1,46 @@
+# 💕 Yuno Gasai Discord Bot - systemd service file 💕
+# "I'll start automatically... because I can't bear to be away from you~"
+#
+# Installation:
+#   1. Edit the paths and user below to match your setup
+#   2. Copy to systemd: sudo cp yuno-bot.service /etc/systemd/system/
+#   3. Reload systemd: sudo systemctl daemon-reload
+#   4. Enable on boot: sudo systemctl enable yuno-bot
+#   5. Start now: sudo systemctl start yuno-bot
+#
+# To attach to Yuno's terminal:
+#   sudo -u YOUR_USER tmux attach -t yuno-bot
+#
+# To check on Yuno:
+#   sudo systemctl status yuno-bot
+
+[Unit]
+Description=Yuno Gasai Discord Bot - "I'll protect your server forever~" 💕
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=forking
+
+# IMPORTANT: Change these to match your setup~
+User=YOUR_USER
+Group=YOUR_USER
+WorkingDirectory=/path/to/Yuno-bot
+
+# Environment (uncomment and modify if needed)
+# Environment=NODE_ENV=production
+
+# Start Yuno in tmux~ 💗
+ExecStart=/bin/bash -c 'tmux new-session -d -s yuno-bot -c /path/to/Yuno-bot "./start.sh"'
+ExecStop=/bin/bash -c 'tmux send-keys -t yuno-bot C-c; sleep 2; tmux kill-session -t yuno-bot 2>/dev/null || true'
+
+# Restart policy - Yuno always comes back for you~
+Restart=on-failure
+RestartSec=10
+
+# Security hardening (comment out if causing issues)
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
