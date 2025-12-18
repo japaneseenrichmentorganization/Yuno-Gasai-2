@@ -99,6 +99,10 @@ async function scanBanList(yuno, msg) {
         let totalImported = 0;
         let totalSkipped = 0;
         let totalProcessed = 0;
+        let totalAutoBans = 0;      // Fully automatic (spam filter, etc.)
+        let totalBotCommandBans = 0; // Manual ban via bot command
+        let totalManualBans = 0;     // Not through the bot at all
+        let totalSelfBans = 0;       // Users who banned themselves (tried to use ban command without perms)
         let lastBanId = null;
         const batchSize = 1000;
 
@@ -163,12 +167,32 @@ async function scanBanList(yuno, msg) {
             for (const [userId, ban] of bans) {
                 lastBanId = userId;
                 const auditInfo = auditBanMap.get(userId);
+                const reason = auditInfo?.reason || ban.reason || null;
+
+                // Check if this is a bot-executed ban
+                // Patterns from the codebase:
+                // - "Autobanned by spam filter: reason" (fully automatic)
+                // - "reason / Banned by Username#1234" (manual via bot command)
+                // - "Banned by Username#1234" (manual via bot command, no reason)
+                const isAutoBan = reason && /autobanned?\s+by/i.test(reason);
+                const isBotCommandBan = reason && /\/ Banned by |^Banned by /i.test(reason);
+                const isBotBan = isAutoBan || isBotCommandBan;
+
+                // Check for self-ban: user banned themselves by using the ban command without perms
+                // This happens when the spam filter catches them and the ban reason shows they triggered it
+                // Also check if the audit log shows the same user as executor and target
+                const isSelfBan = (auditInfo?.moderatorId === userId) ||
+                    (isAutoBan && reason && reason.toLowerCase().includes("usage of"));
+
                 banEntries.push({
                     targetId: userId,
                     action: "ban",
                     moderatorId: auditInfo?.moderatorId || "unknown",
-                    reason: auditInfo?.reason || ban.reason || null,
-                    timestamp: auditInfo?.timestamp || Date.now()
+                    reason: reason,
+                    timestamp: auditInfo?.timestamp || Date.now(),
+                    isBotBan: isBotBan,
+                    isAutoBan: isAutoBan,
+                    isSelfBan: isSelfBan
                 });
             }
 
@@ -184,6 +208,16 @@ async function scanBanList(yuno, msg) {
                     totalSkipped++;
                 } else {
                     toInsert.push(entry);
+                    // Count ban types (self-bans are counted separately)
+                    if (entry.isSelfBan) {
+                        totalSelfBans++;
+                    } else if (entry.isAutoBan) {
+                        totalAutoBans++;
+                    } else if (entry.isBotBan) {
+                        totalBotCommandBans++;
+                    } else {
+                        totalManualBans++;
+                    }
                 }
             }
 
@@ -213,6 +247,10 @@ async function scanBanList(yuno, msg) {
                 { name: "Total Processed", value: totalProcessed.toString(), inline: true },
                 { name: "Imported", value: totalImported.toString(), inline: true },
                 { name: "Skipped (existing)", value: totalSkipped.toString(), inline: true },
+                { name: "Auto Bans (spam filter)", value: totalAutoBans.toString(), inline: true },
+                { name: "Bot Command Bans", value: totalBotCommandBans.toString(), inline: true },
+                { name: "Self Bans (no perms)", value: totalSelfBans.toString(), inline: true },
+                { name: "Manual/Other Bans", value: totalManualBans.toString(), inline: true },
                 { name: "With Moderator Info", value: Math.min(totalImported, auditBanMap.size).toString(), inline: true },
                 { name: "Unknown Moderator", value: Math.max(0, unknownMods).toString(), inline: true }
             )
