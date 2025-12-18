@@ -99,6 +99,11 @@ async function scanBanList(yuno, msg) {
         let totalImported = 0;
         let totalSkipped = 0;
         let totalProcessed = 0;
+        let totalAutoBans = 0;       // Fully automatic (spam filter, etc.)
+        let totalBotCommandBans = 0; // Manual ban via bot command
+        let totalSelfBans = 0;       // Users who banned themselves (tried to use ban command without perms)
+        let totalNoReason = 0;       // Bans with no reason (likely imported or server bans)
+        let totalServerBans = 0;     // Bans done outside the bot (non-bot bans with reasons)
         let lastBanId = null;
         const batchSize = 1000;
 
@@ -163,12 +168,40 @@ async function scanBanList(yuno, msg) {
             for (const [userId, ban] of bans) {
                 lastBanId = userId;
                 const auditInfo = auditBanMap.get(userId);
+                const reason = auditInfo?.reason || ban.reason || null;
+
+                // Check if this is a bot-executed ban
+                // Patterns from the codebase:
+                // - "Autobanned by spam filter: reason" (fully automatic)
+                // - "reason / Banned by Username#1234" (manual via bot command)
+                // - "Banned by Username#1234" (manual via bot command, no reason)
+                const isAutoBan = reason && /autobanned?\s+by/i.test(reason);
+                const isBotCommandBan = reason && /\/ Banned by |^Banned by /i.test(reason);
+                const isBotBan = isAutoBan || isBotCommandBan;
+
+                // Check for self-ban: user banned themselves by using the ban command without perms
+                // This happens when the spam filter catches them and the ban reason shows they triggered it
+                // Also check if the audit log shows the same user as executor and target
+                const isSelfBan = (auditInfo?.moderatorId === userId) ||
+                    (isAutoBan && reason && reason.toLowerCase().includes("usage of"));
+
+                // Check if ban has no reason (likely imported or native Discord ban)
+                const hasNoReason = !reason || reason.trim() === "";
+
+                // Server/other bans: has a reason but not from the bot
+                const isServerBan = !hasNoReason && !isBotBan;
+
                 banEntries.push({
                     targetId: userId,
                     action: "ban",
                     moderatorId: auditInfo?.moderatorId || "unknown",
-                    reason: auditInfo?.reason || ban.reason || null,
-                    timestamp: auditInfo?.timestamp || Date.now()
+                    reason: reason,
+                    timestamp: auditInfo?.timestamp || Date.now(),
+                    isBotBan: isBotBan,
+                    isAutoBan: isAutoBan,
+                    isSelfBan: isSelfBan,
+                    hasNoReason: hasNoReason,
+                    isServerBan: isServerBan
                 });
             }
 
@@ -184,6 +217,22 @@ async function scanBanList(yuno, msg) {
                     totalSkipped++;
                 } else {
                     toInsert.push(entry);
+
+                    // Count no-reason bans (imported/no reason provided)
+                    if (entry.hasNoReason) {
+                        totalNoReason++;
+                    }
+
+                    // Count ban types (self-bans are counted separately)
+                    if (entry.isSelfBan) {
+                        totalSelfBans++;
+                    } else if (entry.isAutoBan) {
+                        totalAutoBans++;
+                    } else if (entry.isBotBan) {
+                        totalBotCommandBans++;
+                    } else if (entry.isServerBan) {
+                        totalServerBans++;
+                    }
                 }
             }
 
@@ -205,16 +254,16 @@ async function scanBanList(yuno, msg) {
         }
 
         const unknownMods = totalImported - auditBanMap.size;
+        const totalBotBans = totalAutoBans + totalBotCommandBans + totalSelfBans;
 
         const embed = new EmbedBuilder()
             .setTitle("Ban List Scan Complete")
             .setColor("#00ff00")
             .addFields(
-                { name: "Total Processed", value: totalProcessed.toString(), inline: true },
-                { name: "Imported", value: totalImported.toString(), inline: true },
-                { name: "Skipped (existing)", value: totalSkipped.toString(), inline: true },
-                { name: "With Moderator Info", value: Math.min(totalImported, auditBanMap.size).toString(), inline: true },
-                { name: "Unknown Moderator", value: Math.max(0, unknownMods).toString(), inline: true }
+                { name: "📊 Summary", value: `**Total Bans:** ${totalProcessed}\n**Imported:** ${totalImported}\n**Skipped:** ${totalSkipped}`, inline: true },
+                { name: "🤖 Bot Bans", value: `**Total:** ${totalBotBans}\n├ Auto (spam): ${totalAutoBans}\n├ Commands: ${totalBotCommandBans}\n└ Self-bans: ${totalSelfBans}`, inline: true },
+                { name: "🔨 Server Bans/Other", value: `**Total:** ${totalServerBans + totalNoReason}\n├ With reason: ${totalServerBans}\n└ No reason: ${totalNoReason}`, inline: true },
+                { name: "ℹ️ Moderator Info", value: `**Known:** ${Math.min(totalImported, auditBanMap.size)}\n**Unknown:** ${Math.max(0, unknownMods)}`, inline: true }
             )
             .setFooter({ text: "Use .mod-stats to view moderator statistics" })
             .setTimestamp();
