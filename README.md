@@ -781,9 +781,49 @@ Yuno can check for updates from git, download them, and apply them via hot-reloa
 
 ## 📜 License
 
-This project is licensed under the **GNU Affero General Public License v3.0**
+This project is licensed under the **GNU Affero General Public License v3.0 (AGPL-3.0)** 💕
 
-See the [LICENSE](LICENSE) file for details~ 💕
+### 💘 What This Means For You~
+
+*"I want to share everything with you... and everyone else too~"* 💗
+
+The AGPL-3.0 is a **copyleft license** that ensures this software remains free and open. Here's what you need to know:
+
+#### ✅ You CAN:
+- 💕 **Use** this bot for any purpose (personal, commercial, whatever~)
+- 🔧 **Modify** the code to your heart's content
+- 📤 **Distribute** copies to others
+- 🌐 **Run** it as a network service (like a public Discord bot)
+
+#### 📋 You MUST:
+- 📖 **Keep it open source** - ANY modifications you make must be released under AGPL-3.0
+- 🔗 **Publish your source code** - Your modified source code must be made publicly available
+- 📝 **State changes** - Document what you've modified from the original
+- 💌 **Include license** - Keep the LICENSE file and copyright notices intact
+
+#### 🌐 The Network Clause (This is the important part!):
+*"Even if we're apart... I'll always be connected to you~"* 💗
+
+Unlike regular GPL, **AGPL has a network provision**. This means:
+- If you modify this code **at all**, you must make your source public
+- Running a modified version as a network service (like a Discord bot) requires source disclosure
+- This applies whether you "distribute" the code or not - network use counts!
+- The `?source` command in this bot helps satisfy this requirement!
+
+#### ❌ You CANNOT:
+- 🚫 Make it closed source or keep modifications private
+- 🚫 Remove the license or copyright notices
+- 🚫 Use a different license for modified versions
+- 🚫 Run modified code without publishing your source
+
+#### 💡 In Simple Terms:
+> *"If you use my code to create something, you must share it with everyone too~ That's only fair, right?"* 💕
+
+This ensures that improvements to the bot benefit the entire community, not just one person. Yuno wants everyone to be happy~ 💗
+
+See the [LICENSE](LICENSE) file for the full legal text.
+
+**Source Code:** https://github.com/japaneseenrichmentorganization/Yuno-Gasai-2
 
 ---
 
