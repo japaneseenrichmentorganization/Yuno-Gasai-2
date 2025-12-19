@@ -687,6 +687,8 @@ ${YUNO_PINK}           "I'll protect this server forever... just for you~"${RESE
         let dbPath = this.config.get("database"),
             dbPassword = this.config.get("database.password"),
             dbPragmas = this.config.get("database.pragmas"),
+            fieldEncryptionEnabled = this.config.get("database.fieldEncryption.enabled"),
+            fieldEncryptionKey = this.config.get("database.fieldEncryption.key"),
             newDb;
 
         try { await fsPromises.stat(dbPath) } catch(e) {
@@ -721,6 +723,18 @@ ${YUNO_PINK}           "I'll protect this server forever... just for you~"${RESE
 
         try {
             await this.database.open(dbPath, dbOptions);
+
+            // Set up field-level encryption if configured
+            if (fieldEncryptionEnabled) {
+                if (!fieldEncryptionKey) {
+                    this.prompt.error("Field-level encryption is enabled but no key is set! Set database.fieldEncryption.key in config.");
+                    this.shutdown(-1);
+                    return;
+                }
+                this.database.setFieldEncryptionKey(fieldEncryptionKey);
+                this.prompt.info("Field-level encryption enabled for sensitive data.");
+            }
+
             await DatabaseCommands.initDB(this.database, this, newDb);
         } catch(e) {
             this.prompt.error("Cannot open database.", e);
@@ -730,7 +744,7 @@ ${YUNO_PINK}           "I'll protect this server forever... just for you~"${RESE
 
         // Log database status
         if (this.database.isEncrypted) {
-            this.prompt.success("SQLite database opened with encryption enabled.");
+            this.prompt.success("SQLite database opened with database-level encryption (SQLCipher).");
         } else {
             this.prompt.success("SQLite database opened.");
             if (dbPassword && !this.database.isEncryptionAvailable()) {

@@ -22,6 +22,9 @@ let encryptionAvailable = false;
 let useNativeSQLite = false;
 let DatabaseImpl;
 
+// Field-level encryption support
+const { createEncryptionHelper } = require('./lib/cryptoUtils');
+
 // Try Node.js 24+ native SQLite first
 try {
     const { DatabaseSync } = require('node:sqlite');
@@ -51,10 +54,44 @@ class NativeDatabase {
     constructor() {
         this.db = null;
         this.isEncrypted = false;
+        this.fieldEncryption = createEncryptionHelper(null);
     }
 
     isEncryptionAvailable() {
-        return false; // Native SQLite doesn't support encryption
+        return false; // Native SQLite doesn't support database-level encryption
+    }
+
+    isFieldEncryptionAvailable() {
+        return true; // Field-level encryption is always available
+    }
+
+    /**
+     * Enable field-level encryption with the given passphrase
+     * @param {string} passphrase - The encryption passphrase
+     */
+    setFieldEncryptionKey(passphrase) {
+        this.fieldEncryption = createEncryptionHelper(passphrase);
+        if (this.fieldEncryption.enabled) {
+            console.log("[Database] Field-level encryption enabled");
+        }
+    }
+
+    /**
+     * Encrypt a value for storage
+     * @param {string|null} value - Value to encrypt
+     * @returns {string|null} Encrypted value
+     */
+    encrypt(value) {
+        return this.fieldEncryption.encrypt(value);
+    }
+
+    /**
+     * Decrypt a value from storage
+     * @param {string|null} value - Value to decrypt
+     * @returns {string|null} Decrypted value
+     */
+    decrypt(value) {
+        return this.fieldEncryption.decrypt(value);
     }
 
     async open(file, options = {}) {
@@ -337,10 +374,44 @@ class LegacyDatabase {
     constructor() {
         this.db = null;
         this.isEncrypted = false;
+        this.fieldEncryption = createEncryptionHelper(null);
     }
 
     isEncryptionAvailable() {
         return encryptionAvailable;
+    }
+
+    isFieldEncryptionAvailable() {
+        return true; // Field-level encryption is always available
+    }
+
+    /**
+     * Enable field-level encryption with the given passphrase
+     * @param {string} passphrase - The encryption passphrase
+     */
+    setFieldEncryptionKey(passphrase) {
+        this.fieldEncryption = createEncryptionHelper(passphrase);
+        if (this.fieldEncryption.enabled) {
+            console.log("[Database] Field-level encryption enabled");
+        }
+    }
+
+    /**
+     * Encrypt a value for storage
+     * @param {string|null} value - Value to encrypt
+     * @returns {string|null} Encrypted value
+     */
+    encrypt(value) {
+        return this.fieldEncryption.encrypt(value);
+    }
+
+    /**
+     * Decrypt a value from storage
+     * @param {string|null} value - Value to decrypt
+     * @returns {string|null} Decrypted value
+     */
+    decrypt(value) {
+        return this.fieldEncryption.decrypt(value);
     }
 
     open(file, options = {}) {
@@ -504,5 +575,6 @@ DatabaseImpl = useNativeSQLite ? NativeDatabase : LegacyDatabase;
 // Add static method to check which implementation is in use
 DatabaseImpl.isNativeSQLite = () => useNativeSQLite;
 DatabaseImpl.isEncryptionAvailable = () => encryptionAvailable;
+DatabaseImpl.isFieldEncryptionAvailable = () => true; // Always available via Node.js crypto
 
 module.exports = DatabaseImpl;

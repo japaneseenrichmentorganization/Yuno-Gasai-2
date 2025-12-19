@@ -416,6 +416,75 @@ You can also set encryption in `config.json`:
 }
 ```
 
+### 🔒 Field-Level Encryption (Node.js 24 Compatible)
+
+*"Even without SQLCipher, I'll keep your secrets safe~"* 💕
+
+If you're using **Node.js 24 native SQLite** (which doesn't support SQLCipher), you can use **field-level encryption** instead. This encrypts sensitive data using Node.js's built-in `crypto` module with AES-256-GCM.
+
+#### What Gets Encrypted
+
+| Data Type | Fields Encrypted |
+|-----------|-----------------|
+| Join messages | Message content, title |
+| Mention responses | Trigger, response, image URL |
+| Ban images | Image URLs |
+| DM inbox | Message content, attachments |
+| Bot bans | Ban reasons |
+| Mod actions | Action reasons |
+
+#### Configuration
+
+```json
+{
+    "database.fieldEncryption.enabled": true,
+    "database.fieldEncryption.key": "YourStrongPassphraseHere"
+}
+```
+
+#### Important Notes
+
+> ⚠️ **Security:**
+> - Use a strong passphrase (12+ characters recommended)
+> - **Keep your key safe!** Lost keys = lost data
+> - Key is stored in `config.json` - keep this file secure!
+
+> 💡 **Compatibility:**
+> - Works with Node.js 24 native SQLite
+> - Works alongside or instead of SQLCipher
+> - Backward compatible - existing unencrypted data remains readable
+> - New data will be encrypted automatically
+
+> 🔧 **Performance:**
+> - Small overhead for encrypt/decrypt operations
+> - Encrypted fields cannot be searched via SQL (by design)
+
+### 🔐 Alternative: VeraCrypt Volume Encryption
+
+*"Another way to keep everything locked away~"* 💕
+
+For full filesystem-level encryption, you can store your database on a **VeraCrypt encrypted volume**:
+
+1. Create a VeraCrypt encrypted container or partition
+2. Mount the volume and place your `yuno-2-database.db` inside
+3. Update `config.json` to point to the database path on the mounted volume:
+   ```json
+   {
+       "database": "/path/to/veracrypt/mount/yuno-2-database.db"
+   }
+   ```
+
+**Benefits:**
+- Encrypts the entire database file (not just specific fields)
+- Works with any SQLite implementation including native
+- All data is encrypted at rest when unmounted
+- No application-level changes needed
+
+**Considerations:**
+- Requires VeraCrypt to be installed and volume mounted before starting the bot
+- Database inaccessible when volume is unmounted
+- Manual mount/unmount process (can be scripted)
+
 ---
 
 ## 🚀 Node.js 24 Optimizations
@@ -454,7 +523,7 @@ npm run start:legacy
 | **Encrypted** | Install `@journeyapps/sqlcipher` | SQLCipher (supports encryption) |
 | **Legacy** | `npm run start:legacy` | sqlite3 npm package |
 
-> 💡 **Note:** Native SQLite doesn't support encryption. Use SQLCipher if you need database encryption.
+> 💡 **Note:** Native SQLite doesn't support database-level encryption. Use SQLCipher for full database encryption, or use field-level encryption (see above) for sensitive data protection with native SQLite.
 
 ---
 
