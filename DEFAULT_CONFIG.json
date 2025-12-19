@@ -27,6 +27,11 @@
     "_comment": "Database encryption password. Requires @journeyapps/sqlcipher (npm install @journeyapps/sqlcipher). Leave null for no encryption.",
     "database.password": null,
 
+    "_comment": "Field-level encryption for sensitive data (works with native SQLite). Set to true and provide a key to enable.",
+    "database.fieldEncryption.enabled": false,
+    "_comment": "Field-level encryption key. Required if fieldEncryption is enabled. Use a strong passphrase.",
+    "database.fieldEncryption.key": null,
+
     "_comment": "Database performance optimizations. Enable based on your hosting situation.",
     "database.pragmas": {
         "_comment": "WAL mode improves concurrent read/write performance",

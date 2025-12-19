@@ -288,7 +288,7 @@ module.exports = self = {
         let messages = await database.allPromise("SELECT id, onJoinDMMsg FROM guilds"),
             finalObj = {};
 
-        for (const el of messages) finalObj[el.id] = el.onJoinDMMsg;
+        for (const el of messages) finalObj[el.id] = database.decrypt(el.onJoinDMMsg);
 
         return finalObj;
     },
@@ -302,7 +302,7 @@ module.exports = self = {
      */
     "setJoinDMMessage": async function(database, guildid, message) {
         await self.initGuild(database, guildid);
-        await database.runPromise("UPDATE guilds SET onJoinDMMsg = ? WHERE id = ?", [message, guildid]);
+        await database.runPromise("UPDATE guilds SET onJoinDMMsg = ? WHERE id = ?", [database.encrypt(message), guildid]);
     },
 
     /**
@@ -315,7 +315,7 @@ module.exports = self = {
         let messages = await database.allPromise("SELECT id, onJoinDMMsgTitle FROM guilds"),
             finalObj = {};
 
-        for (const el of messages) finalObj[el.id] = el.onJoinDMMsgTitle;
+        for (const el of messages) finalObj[el.id] = database.decrypt(el.onJoinDMMsgTitle);
 
         return finalObj;
     },
@@ -329,7 +329,7 @@ module.exports = self = {
      */
     "setJoinDMMessageTitle": async function(database, guildid, messageTitle) {
         await self.initGuild(database, guildid);
-        await database.runPromise("UPDATE guilds SET onJoinDMMsgTitle = ? WHERE id = ?", [messageTitle, guildid]);
+        await database.runPromise("UPDATE guilds SET onJoinDMMsgTitle = ? WHERE id = ?", [database.encrypt(messageTitle), guildid]);
     },
 
     /**
@@ -602,7 +602,12 @@ module.exports = self = {
             image = "null";
 
         await self.initGuild(database, guildid);
-        return await database.runPromise("INSERT INTO mentionResponses(id, gid, trigger, response, image) VALUES(null, ?, ?, ?, ?)", [guildid, trigger, response, image])
+        return await database.runPromise("INSERT INTO mentionResponses(id, gid, trigger, response, image) VALUES(null, ?, ?, ?, ?)", [
+            guildid,
+            database.encrypt(trigger),
+            database.encrypt(response),
+            database.encrypt(image)
+        ]);
     },
 
     /**
@@ -618,9 +623,9 @@ module.exports = self = {
             r.push({
                 "id": el.id,
                 "guildId": el.gid,
-                "trigger": el.trigger,
-                "response": el.response,
-                "image": el.image
+                "trigger": database.decrypt(el.trigger),
+                "response": database.decrypt(el.response),
+                "image": database.decrypt(el.image)
             })
         }
 
@@ -635,7 +640,9 @@ module.exports = self = {
      * @async
      */
     "getMentionResponseFromTrigger": async function(database, guildid, trigger) {
-        let mentionResponse = (await database.allPromise("SELECT * FROM mentionResponses WHERE gid = ? AND trigger = ?", [guildid, trigger]))[0];
+        // Since triggers are encrypted, we need to search all and compare decrypted values
+        const allResponses = await database.allPromise("SELECT * FROM mentionResponses WHERE gid = ?", [guildid]);
+        const mentionResponse = allResponses.find(el => database.decrypt(el.trigger) === trigger);
 
         if (typeof mentionResponse === "undefined")
             return null;
@@ -643,9 +650,9 @@ module.exports = self = {
             return {
                 "id": mentionResponse.id,
                 "guildId": mentionResponse.gid,
-                "trigger": mentionResponse.trigger,
-                "response": mentionResponse.response,
-                "image": mentionResponse.image
+                "trigger": database.decrypt(mentionResponse.trigger),
+                "response": database.decrypt(mentionResponse.response),
+                "image": database.decrypt(mentionResponse.image)
             }
     },
 
@@ -670,12 +677,13 @@ module.exports = self = {
     "setBanImage": async function(database, guildid, bannerid, imageurl) {
         await self.initGuild(database, guildid);
         let entry = await database.allPromise("SELECT image FROM banImages WHERE gid = ? AND banner = ?;", [guildid, bannerid]);
+        const encryptedImage = database.encrypt(imageurl);
 
         if (entry.length === 0) {
-            let dbr = await database.runPromise("INSERT INTO banImages(gid, banner, image) VALUES(?, ?, ?);", [guildid, bannerid, imageurl]);
+            let dbr = await database.runPromise("INSERT INTO banImages(gid, banner, image) VALUES(?, ?, ?);", [guildid, bannerid, encryptedImage]);
             return ["creating", dbr]
         } else {
-            let dbr = await database.runPromise("UPDATE banImages SET image = ? WHERE gid = ? AND banner = ?;", [imageurl, guildid, bannerid]);
+            let dbr = await database.runPromise("UPDATE banImages SET image = ? WHERE gid = ? AND banner = ?;", [encryptedImage, guildid, bannerid]);
             return ["updating", dbr]
         }
     },
@@ -696,7 +704,7 @@ module.exports = self = {
         if (result.length === 0)
             return null;
 
-        return result[0].image;
+        return database.decrypt(result[0].image);
     },
 
     /**
@@ -744,9 +752,10 @@ module.exports = self = {
      */
     "addModAction": async function(database, guildid, moderatorId, targetId, action, reason, timestamp) {
         await self.initGuild(database, guildid);
+        const encryptedReason = reason ? database.encrypt(reason) : null;
         return await database.runPromise(
             "INSERT INTO modActions(id, gid, moderatorId, targetId, action, reason, timestamp) VALUES(null, ?, ?, ?, ?, ?, ?)",
-            [guildid, moderatorId, targetId, action, reason || null, timestamp]
+            [guildid, moderatorId, targetId, action, encryptedReason, timestamp]
         );
     },
 
@@ -1327,16 +1336,17 @@ module.exports = self = {
             "SELECT id FROM botBans WHERE id = ?",
             [id]
         );
+        const encryptedReason = reason ? database.encrypt(reason) : null;
 
         if (existing.length === 0) {
             await database.runPromise(
                 "INSERT INTO botBans(id, type, reason, bannedAt, bannedBy) VALUES(?, ?, ?, ?, ?)",
-                [id, type, reason || null, Date.now(), bannedBy]
+                [id, type, encryptedReason, Date.now(), bannedBy]
             );
         } else {
             await database.runPromise(
                 "UPDATE botBans SET type = ?, reason = ?, bannedAt = ?, bannedBy = ? WHERE id = ?",
-                [type, reason || null, Date.now(), bannedBy, id]
+                [type, encryptedReason, Date.now(), bannedBy, id]
             );
         }
     },
@@ -1382,7 +1392,7 @@ module.exports = self = {
         const ban = {
             id: result[0].id,
             type: result[0].type,
-            reason: result[0].reason,
+            reason: database.decrypt(result[0].reason),
             bannedAt: result[0].bannedAt,
             bannedBy: result[0].bannedBy
         };
@@ -1413,7 +1423,7 @@ module.exports = self = {
         return result.map(row => ({
             id: row.id,
             type: row.type,
-            reason: row.reason,
+            reason: database.decrypt(row.reason),
             bannedAt: row.bannedAt,
             bannedBy: row.bannedBy
         }));
@@ -1459,7 +1469,7 @@ module.exports = self = {
         const attachmentsJson = JSON.stringify(attachments || []);
         const result = await database.runPromise(
             "INSERT INTO dmInbox(usrId, userTag, content, attachments, timestamp, replied) VALUES(?, ?, ?, ?, ?, 0)",
-            [usrId, userTag, content, attachmentsJson, Date.now()]
+            [usrId, userTag, database.encrypt(content), database.encrypt(attachmentsJson), Date.now()]
         );
         return result.lastID;
     },
@@ -1482,8 +1492,8 @@ module.exports = self = {
             id: row.id,
             usrId: row.usrId,
             userTag: row.userTag,
-            content: row.content,
-            attachments: JSON.parse(row.attachments || '[]'),
+            content: database.decrypt(row.content),
+            attachments: JSON.parse(database.decrypt(row.attachments) || '[]'),
             timestamp: row.timestamp,
             replied: row.replied === 1
         }));
@@ -1507,8 +1517,8 @@ module.exports = self = {
             id: row.id,
             usrId: row.usrId,
             userTag: row.userTag,
-            content: row.content,
-            attachments: JSON.parse(row.attachments || '[]'),
+            content: database.decrypt(row.content),
+            attachments: JSON.parse(database.decrypt(row.attachments) || '[]'),
             timestamp: row.timestamp,
             replied: row.replied === 1
         }));
@@ -1533,8 +1543,8 @@ module.exports = self = {
             id: result[0].id,
             usrId: result[0].usrId,
             userTag: result[0].userTag,
-            content: result[0].content,
-            attachments: JSON.parse(result[0].attachments || '[]'),
+            content: database.decrypt(result[0].content),
+            attachments: JSON.parse(database.decrypt(result[0].attachments) || '[]'),
             timestamp: result[0].timestamp,
             replied: result[0].replied === 1
         };
