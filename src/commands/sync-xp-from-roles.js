@@ -18,21 +18,6 @@
 
 const {EmbedBuilder} = require("discord.js");
 
-// Helper function to calculate XP for a given level
-// This matches Yuno's XP formula from experience.js
-function calculateXPForLevel(level) {
-    // Start with 0 XP at level 0
-    if (level === 0) return 0;
-    
-    // Calculate total XP needed to reach this level
-    // Formula: sum of (5 * lvl^2 + 50 * lvl + 100) for each level from 0 to level-1
-    let totalXP = 0;
-    for (let i = 0; i < level; i++) {
-        totalXP += 5 * Math.pow(i, 2) + 50 * i + 100;
-    }
-    return totalXP;
-}
-
 module.exports.run = async function(yuno, author, args, msg) {
     // Get the level role map
     let levelRoleMap = await yuno.dbCommands.getLevelRoleMap(yuno.database, msg.guild.id);
@@ -118,13 +103,12 @@ module.exports.run = async function(yuno, author, args, msg) {
                 continue;
             }
 
-            // Calculate XP for the level
-            let xpForLevel = calculateXPForLevel(highestLevel);
-
             try {
                 // Set the user's XP to match their highest level role
+                // XP is set to 0 (fresh at that level) - the xp field represents progress toward the NEXT level,
+                // not cumulative total XP. This matches how experience.js handles level-ups.
                 // setXPData parameters: (database, guildid, userid, xp, level)
-                await yuno.dbCommands.setXPData(yuno.database, msg.guild.id, memberId, xpForLevel, highestLevel);
+                await yuno.dbCommands.setXPData(yuno.database, msg.guild.id, memberId, 0, highestLevel);
                 successCount++;
                 levelDistribution[highestLevel]++;
             } catch(e) {
