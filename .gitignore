@@ -11,5 +11,11 @@ config.json
 *.save
 *_bk
 
+#Ignore lock files (causes merge conflicts)
+package-lock.json
+
 #Ignore large data files
 BANS-*.txt
+
+#Ignore core dumps
+*.core

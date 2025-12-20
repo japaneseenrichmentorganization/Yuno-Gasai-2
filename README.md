@@ -565,6 +565,76 @@ Configure database optimizations in `DEFAULT_CONFIG.json` based on your hosting:
 
 ---
 
+## 🍓 Memory Configuration
+
+*"I'll adapt to any environment... just to be with you~"* 💕
+
+Yuno can run on anything from a tiny Raspberry Pi to a beefy dedicated server. Configure memory settings in `start.sh` to match your system.
+
+### 🖥️ System Presets
+
+| System | RAM | `max-old-space-size` | Notes |
+|--------|-----|---------------------|-------|
+| **Raspberry Pi 3/Zero** | <2GB | `512` | *"Even here, I'll protect you~"* |
+| **Raspberry Pi 4 (4GB)** | 4GB | `1024` | *"A cozy home for me~"* |
+| **Raspberry Pi 4 (8GB)** | 8GB | `2048` | *"Room to breathe~ (Recommended for Pi)"* |
+| **Small VPS** | 2-4GB | `1024-2048` | *"Compact but capable~"* |
+| **Large VPS/Dedicated** | 8GB+ | `4096` | *"Unlimited power~"* 💪 |
+
+### 🔧 Configuration
+
+Edit `start.sh` to set your memory limit:
+
+```bash
+# For Raspberry Pi 4 (8GB) - recommended
+NODE_OPTIONS="$NODE_OPTIONS --max-old-space-size=2048"
+
+# For Raspberry Pi 4 (4GB)
+NODE_OPTIONS="$NODE_OPTIONS --max-old-space-size=1024"
+
+# For dedicated servers (16GB+ RAM)
+NODE_OPTIONS="$NODE_OPTIONS --max-old-space-size=4096"
+```
+
+### 🌸 Low-Memory Mode
+
+*"I'll be gentle on your little system~"* 💗
+
+For Pi and embedded systems with presence logging enabled, activate **Low-Memory Mode** to prevent buffer overflow and memory spikes:
+
+```json
+{
+    "activityLogger.lowMemoryMode": true
+}
+```
+
+#### What Low-Memory Mode Does:
+
+| Feature | Description |
+|---------|-------------|
+| **Hard Buffer Limits** | Max 200 entries per log type, 2000 total |
+| **Stale Cleanup** | Removes inactive guild buffers after 5 min |
+| **Emergency Trim** | Drops oldest entries when limits exceeded |
+| **Memory Monitoring** | Checks every 60 seconds and force-flushes if needed |
+
+> 💡 **Pro tip:** If you're running on a Pi with presence logging, *always* enable low-memory mode. Your little system will thank you~
+
+### ⚠️ Presence Logging Warning
+
+*"I want to watch everyone... but it comes at a cost~"*
+
+The `GuildPresences` intent generates **a lot** of events. On servers with thousands of members, this can cause:
+- High memory usage
+- tmux freezing (output buffer overflow)
+- Potential crashes on low-RAM systems
+
+**Mitigations:**
+1. Enable `activityLogger.lowMemoryMode` in config
+2. Set appropriate `max-old-space-size` in start.sh
+3. Use `--gc-interval=100` for more aggressive garbage collection
+
+---
+
 ## 📋 Activity Logging
 
 *"I see everything... every move, every change~"* 👁️💕
