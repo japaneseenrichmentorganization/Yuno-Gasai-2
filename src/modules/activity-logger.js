@@ -54,6 +54,99 @@ const GLOBAL_CHECK_INTERVAL = 5000; // Check every 5 seconds
 // Track last flush time per guild
 const lastFlushTime = new Map();
 
+// === LOW MEMORY MODE (for Pi/embedded systems) ===
+// Enable via config: "activityLogger.lowMemoryMode": true
+let lowMemoryMode = false;
+const LOW_MEM_HARD_BUFFER_LIMIT = 200;      // Max entries per log type per guild
+const LOW_MEM_HARD_TOTAL_LIMIT = 2000;      // Max total entries across all guilds
+const LOW_MEM_STALE_TIMEOUT = 300000;       // 5 min - remove inactive guild buffers
+const LOW_MEM_CHECK_INTERVAL = 60000;       // Check memory every 60 seconds
+
+// Track last activity time per guild (for stale cleanup in low-memory mode)
+const lastActivityTime = new Map();
+
+// Memory monitoring interval
+let memoryCheckInterval = null;
+
+/**
+ * Get total buffer entry count across all guilds
+ */
+function getTotalBufferCount() {
+    let total = 0;
+    for (const guildBuffer of logBuffer.values()) {
+        for (const entries of guildBuffer.values()) {
+            total += entries.length;
+        }
+    }
+    return total;
+}
+
+/**
+ * Emergency flush - drops oldest entries when limits exceeded
+ */
+function emergencyTrim(guildId, logType, maxEntries) {
+    const guildBuffer = logBuffer.get(guildId);
+    if (!guildBuffer) return;
+
+    const entries = guildBuffer.get(logType);
+    if (!entries || entries.length <= maxEntries) return;
+
+    // Keep only the most recent entries
+    const dropped = entries.length - maxEntries;
+    guildBuffer.set(logType, entries.slice(dropped));
+
+    if (yunoInstance?.prompt) {
+        yunoInstance.prompt.warning(`[activity-logger] Dropped ${dropped} old ${logType} entries for guild ${guildId} (low-memory mode)`);
+    }
+}
+
+/**
+ * Cleanup stale guild buffers (low-memory mode only)
+ */
+function cleanupStaleBuffers() {
+    if (!lowMemoryMode) return;
+
+    const now = Date.now();
+    const staleGuilds = [];
+
+    for (const [guildId, lastTime] of lastActivityTime.entries()) {
+        if (now - lastTime > LOW_MEM_STALE_TIMEOUT) {
+            staleGuilds.push(guildId);
+        }
+    }
+
+    for (const guildId of staleGuilds) {
+        logBuffer.delete(guildId);
+        lastActivityTime.delete(guildId);
+        lastFlushTime.delete(guildId);
+        settingsCache.delete(guildId);
+    }
+
+    if (staleGuilds.length > 0 && yunoInstance?.prompt) {
+        yunoInstance.prompt.info(`[activity-logger] Cleaned up ${staleGuilds.length} stale guild buffers`);
+    }
+}
+
+/**
+ * Memory check for low-memory mode
+ */
+function lowMemoryCheck() {
+    if (!lowMemoryMode) return;
+
+    const totalCount = getTotalBufferCount();
+
+    // If over total limit, force flush everything
+    if (totalCount > LOW_MEM_HARD_TOTAL_LIMIT) {
+        if (yunoInstance?.prompt) {
+            yunoInstance.prompt.warning(`[activity-logger] Buffer limit exceeded (${totalCount}/${LOW_MEM_HARD_TOTAL_LIMIT}), forcing flush`);
+        }
+        forceFlushAllLogs();
+    }
+
+    // Cleanup stale buffers
+    cleanupStaleBuffers();
+}
+
 // Embed colors
 const COLORS = {
     voiceJoin: 0x00ff00,      // green
@@ -144,6 +237,14 @@ async function bufferLog(guildId, logType, entry) {
         ...entry,
         timestamp: Date.now()
     });
+
+    // Track activity time for stale cleanup (low-memory mode)
+    if (lowMemoryMode) {
+        lastActivityTime.set(guildId, Date.now());
+
+        // Enforce hard limits in low-memory mode
+        emergencyTrim(guildId, logType, LOW_MEM_HARD_BUFFER_LIMIT);
+    }
 
     // Get guild-specific max buffer size
     const settings = await getGuildSettings(guildId);
@@ -507,13 +608,46 @@ module.exports.init = async function(Yuno, hotReloaded) {
         Yuno.on("discord-connected", discordConnected);
 };
 
-module.exports.configLoaded = function() {};
+module.exports.configLoaded = function(Yuno, config) {
+    // Check for low-memory mode setting
+    const newLowMemoryMode = config.get("activityLogger.lowMemoryMode") === true;
+
+    if (newLowMemoryMode !== lowMemoryMode) {
+        lowMemoryMode = newLowMemoryMode;
+
+        if (lowMemoryMode) {
+            Yuno.prompt.info("[activity-logger] Low-memory mode ENABLED (for Pi/embedded systems)");
+
+            // Start memory check interval if not already running
+            if (!memoryCheckInterval) {
+                memoryCheckInterval = setInterval(lowMemoryCheck, LOW_MEM_CHECK_INTERVAL);
+            }
+        } else {
+            Yuno.prompt.info("[activity-logger] Low-memory mode disabled");
+
+            // Stop memory check interval
+            if (memoryCheckInterval) {
+                clearInterval(memoryCheckInterval);
+                memoryCheckInterval = null;
+            }
+
+            // Clear low-memory tracking data
+            lastActivityTime.clear();
+        }
+    }
+};
 
 module.exports.beforeShutdown = async function(Yuno) {
     // Stop flush interval
     if (flushInterval) {
         clearInterval(flushInterval);
         flushInterval = null;
+    }
+
+    // Stop memory check interval (low-memory mode)
+    if (memoryCheckInterval) {
+        clearInterval(memoryCheckInterval);
+        memoryCheckInterval = null;
     }
 
     // Force flush remaining logs before shutdown
@@ -524,6 +658,7 @@ module.exports.beforeShutdown = async function(Yuno) {
     rateLimitState.clear();
     settingsCache.clear();
     lastFlushTime.clear();
+    lastActivityTime.clear();
 
     if (discClient) {
         if (voiceStateHandler) {

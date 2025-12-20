@@ -57,5 +57,9 @@
     "chat.exppermsg": 20,
 
     "_comment": "Object describing presence (https://discord.js.org/docs/packages/discord.js/14.24.2/ClientPresence). JSON not supported.",
-    "discord.presence": null
+    "discord.presence": null,
+
+    "_comment": "Activity logger settings",
+    "_comment": "Low memory mode for Pi/embedded systems. Enforces hard buffer limits and cleans up stale data.",
+    "activityLogger.lowMemoryMode": false
 }
