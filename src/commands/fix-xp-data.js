@@ -28,8 +28,9 @@ module.exports.run = async function(yuno, author, args, msg) {
 
     try {
         // Query all XP records for this guild
+        // Cast userID to TEXT to avoid BigInt issues with Node.js 24 native SQLite
         const allXPData = await yuno.database.allPromise(
-            "SELECT userID, exp, level FROM experiences WHERE guildID = ?",
+            "SELECT CAST(userID AS TEXT) as userID, exp, level FROM experiences WHERE guildID = ?",
             [msg.guild.id]
         );
 
