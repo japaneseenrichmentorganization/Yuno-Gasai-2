@@ -28,11 +28,12 @@ NODE_OPTIONS="$NODE_OPTIONS --max-old-space-size=2048"
 # === GARBAGE COLLECTION ===
 # More aggressive GC for low-memory systems (reduces memory spikes)
 # Uncomment for Pi/embedded systems:
-NODE_OPTIONS="$NODE_OPTIONS --gc-interval=100"
+GC_OPTIONS="--gc-interval=100"
 
 # === NOTES ===
 # If running on Pi with presence logging enabled, also set in config.json:
 #   "activityLogger.lowMemoryMode": true
 # This enables buffer limits and automatic cleanup of stale data.
 
-exec node $NODE_OPTIONS index.js "$@"
+export NODE_OPTIONS
+exec node $GC_OPTIONS index.js "$@"
