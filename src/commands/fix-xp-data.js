@@ -23,6 +23,9 @@ function getNeededXPForLevel(level) {
     return 5 * Math.pow(level, 2) + 50 * level + 100;
 }
 
+// Yield to event loop to keep bot responsive
+const yieldToEventLoop = () => new Promise(resolve => setImmediate(resolve));
+
 module.exports.run = async function(yuno, author, args, msg) {
     const processingMsg = await msg.channel.send(`:hourglass: **Scanning for corrupted XP data...**\n\nThis will find users whose XP exceeds what's needed for their next level (causing negative "XP needed" display).`);
 
@@ -38,61 +41,58 @@ module.exports.run = async function(yuno, author, args, msg) {
             return processingMsg.edit(`:information_source: No XP data found for this guild.`);
         }
 
-        let corruptedCount = 0;
-        let fixedCount = 0;
-        let failedCount = 0;
-        let corruptedUsers = [];
-
+        // First pass: identify corrupted records (fast, no API calls)
+        const corruptedRecords = [];
         for (const record of allXPData) {
             const neededXP = getNeededXPForLevel(record.level);
-
-            // Check if XP exceeds what's needed for next level
             if (record.exp > neededXP) {
-                corruptedCount++;
-
-                // Try to get the member info for display
-                let memberTag = record.userID;
-                try {
-                    const member = await msg.guild.members.fetch(record.userID);
-                    memberTag = member.user.tag;
-                } catch(e) {
-                    // User might have left the server
-                }
-
-                corruptedUsers.push({
+                corruptedRecords.push({
                     userId: record.userID,
-                    tag: memberTag,
                     level: record.level,
                     currentXP: record.exp,
-                    neededXP: neededXP,
-                    overflow: record.exp - neededXP
+                    neededXP: neededXP
                 });
             }
         }
 
-        if (corruptedCount === 0) {
+        if (corruptedRecords.length === 0) {
             return processingMsg.edit(`:white_check_mark: **No corrupted XP data found!**\n\nAll ${allXPData.length} users have valid XP values.`);
         }
 
-        // Show what we found
-        let previewText = corruptedUsers.slice(0, 5).map(u =>
-            `• **${u.tag}** - Level ${u.level}, XP: ${u.currentXP} (should be < ${u.neededXP})`
-        ).join('\n');
+        const totalCorrupted = corruptedRecords.length;
+        await processingMsg.edit(`:warning: **Found ${totalCorrupted} corrupted XP records.**\n\n:hourglass: **Fixing now...** This may take a while for large datasets.\n\nProgress: 0/${totalCorrupted} (0%)`);
 
-        if (corruptedUsers.length > 5) {
-            previewText += `\n... and ${corruptedUsers.length - 5} more`;
-        }
+        // Second pass: fix records in batches with progress updates
+        const BATCH_SIZE = 100;
+        let fixedCount = 0;
+        let failedCount = 0;
+        let lastUpdateTime = Date.now();
 
-        await processingMsg.edit(`:warning: **Found ${corruptedCount} users with corrupted XP data:**\n\n${previewText}\n\n:hourglass: **Fixing now...** (setting XP to 0 at their current level)`);
+        for (let i = 0; i < corruptedRecords.length; i++) {
+            const record = corruptedRecords[i];
 
-        // Fix the corrupted data
-        for (const user of corruptedUsers) {
             try {
-                await yuno.dbCommands.setXPData(yuno.database, msg.guild.id, user.userId, 0, user.level);
+                await yuno.dbCommands.setXPData(yuno.database, msg.guild.id, record.userId, 0, record.level);
                 fixedCount++;
             } catch(e) {
                 failedCount++;
-                console.error(`Failed to fix XP for user ${user.userId}:`, e);
+                // Only log first few errors to avoid spam
+                if (failedCount <= 5) {
+                    console.error(`Failed to fix XP for user ${record.userId}:`, e);
+                }
+            }
+
+            // Yield every batch to keep bot responsive
+            if ((i + 1) % BATCH_SIZE === 0) {
+                await yieldToEventLoop();
+
+                // Update progress every 5 seconds or every 1000 records
+                const now = Date.now();
+                if (now - lastUpdateTime > 5000 || (i + 1) % 1000 === 0) {
+                    const percent = Math.round(((i + 1) / totalCorrupted) * 100);
+                    await processingMsg.edit(`:hourglass: **Fixing corrupted XP records...**\n\nProgress: ${i + 1}/${totalCorrupted} (${percent}%)\nFixed: ${fixedCount} | Failed: ${failedCount}`);
+                    lastUpdateTime = now;
+                }
             }
         }
 
@@ -100,12 +100,12 @@ module.exports.run = async function(yuno, author, args, msg) {
         const embed = new EmbedBuilder()
             .setColor(failedCount === 0 ? "#43cc24" : "#ffcc00")
             .setTitle(":wrench: XP Data Fix Complete")
-            .setDescription(`Fixed corrupted XP records for ${fixedCount} users.`)
+            .setDescription(`Fixed corrupted XP records for ${fixedCount.toLocaleString()} users.`)
             .addFields([
-                {name: "Total Records Scanned", value: allXPData.length.toString(), inline: true},
-                {name: "Corrupted Found", value: corruptedCount.toString(), inline: true},
-                {name: "Successfully Fixed", value: fixedCount.toString(), inline: true},
-                {name: "Failed to Fix", value: failedCount.toString(), inline: true}
+                {name: "Total Records Scanned", value: allXPData.length.toLocaleString(), inline: true},
+                {name: "Corrupted Found", value: totalCorrupted.toLocaleString(), inline: true},
+                {name: "Successfully Fixed", value: fixedCount.toLocaleString(), inline: true},
+                {name: "Failed to Fix", value: failedCount.toLocaleString(), inline: true}
             ])
             .setFooter({text: "Users now have 0 XP at their current level"})
             .setTimestamp();
