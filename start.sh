@@ -30,10 +30,21 @@ NODE_OPTIONS="$NODE_OPTIONS --max-old-space-size=2048"
 # Uncomment for Pi/embedded systems:
 GC_OPTIONS="--gc-interval=100"
 
+# === ARM/FreeBSD FIX ===
+# Disable Turbofan JIT optimizer - it generates illegal instructions on ARM FreeBSD
+# This prevents SIGILL crashes (signal 4)
+ARCH=$(uname -m)
+if [[ "$ARCH" == "aarch64" || "$ARCH" == "arm64" || "$ARCH" == "armv"* ]]; then
+    ARM_FIX="--no-turbofan"
+    echo "Detected ARM architecture ($ARCH) - disabling Turbofan JIT"
+else
+    ARM_FIX=""
+fi
+
 # === NOTES ===
 # If running on Pi with presence logging enabled, also set in config.json:
 #   "activityLogger.lowMemoryMode": true
 # This enables buffer limits and automatic cleanup of stale data.
 
 export NODE_OPTIONS
-exec node $GC_OPTIONS index.js "$@"
+exec node $GC_OPTIONS $ARM_FIX index.js "$@"
