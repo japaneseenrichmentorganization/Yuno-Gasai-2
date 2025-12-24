@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 # Yuno Gasai 2 - Production Startup Script
 # Requires Node.js 24.0.0 or higher
@@ -34,12 +34,15 @@ GC_OPTIONS="--gc-interval=100"
 # Disable Turbofan JIT optimizer - it generates illegal instructions on ARM FreeBSD
 # This prevents SIGILL crashes (signal 4)
 ARCH=$(uname -m)
-if [[ "$ARCH" == "aarch64" || "$ARCH" == "arm64" || "$ARCH" == "armv"* ]]; then
-    ARM_FIX="--no-turbofan"
-    echo "Detected ARM architecture ($ARCH) - disabling Turbofan JIT"
-else
-    ARM_FIX=""
-fi
+case "$ARCH" in
+    aarch64|arm64|armv*)
+        ARM_FIX="--no-turbofan"
+        echo "Detected ARM architecture ($ARCH) - disabling Turbofan JIT"
+        ;;
+    *)
+        ARM_FIX=""
+        ;;
+esac
 
 # === NOTES ===
 # If running on Pi with presence logging enabled, also set in config.json:
