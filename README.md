@@ -109,10 +109,10 @@ Yuno is a **yandere-themed Discord bot** combining powerful moderation tools wit
 
 ### 🔐 Database Security
 *"I'll keep your secrets safe... forever~"*
-- 🔒 AES-256 database encryption
-- 🛡️ SQLCipher integration
+- 🔒 AES-256 field-level encryption
 - 🔑 Password management command
 - 💾 Secure config storage
+- 🛡️ VeraCrypt volume support
 
 </td>
 </tr>
@@ -374,53 +374,13 @@ The `scripts/` directory contains helper scripts to run Yuno in a tmux session t
 
 *"Your secrets are safe with me~ No one else will ever see them..."* 💕
 
-Yuno supports **AES-256 database encryption** to protect your server data.
+Yuno supports **AES-256 field-level encryption** to protect your server data, using Node.js's built-in `crypto` module with AES-256-GCM.
 
-### 📦 Installing Encryption Support
+### 🔒 Field-Level Encryption
 
-```bash
-# Optional - only if you want encryption
-npm install @journeyapps/sqlcipher
-```
+*"I'll keep your secrets safe~"* 💕
 
-### 🔑 Managing Encryption
-
-Use the `db-encrypt` command (master users only):
-
-| Command | Description |
-|---------|-------------|
-| `.db-encrypt status` | *"Am I keeping secrets?"* - Check encryption status |
-| `.db-encrypt set <password>` | *"I'll lock it away~"* - Enable/change encryption |
-| `.db-encrypt remove` | *"If you insist..."* - Remove encryption |
-
-```bash
-# Enable encryption
-.db-encrypt set YourSecurePassword123
-
-# Check status
-.db-encrypt status
-```
-
-> ⚠️ **Security Notes:**
-> - Passwords must be at least 8 characters
-> - Your Discord message is auto-deleted after setting a password
-> - Password is stored in `config.json` - keep this file secure!
-
-### 📝 Config File Method
-
-You can also set encryption in `config.json`:
-
-```json
-{
-    "database.password": "YourSecurePassword123"
-}
-```
-
-### 🔒 Field-Level Encryption (Node.js 24 Compatible)
-
-*"Even without SQLCipher, I'll keep your secrets safe~"* 💕
-
-If you're using **Node.js 24 native SQLite** (which doesn't support SQLCipher), you can use **field-level encryption** instead. This encrypts sensitive data using Node.js's built-in `crypto` module with AES-256-GCM.
+This encrypts sensitive data at the field level within the Node.js 24 native SQLite database.
 
 #### What Gets Encrypted
 
@@ -451,7 +411,6 @@ If you're using **Node.js 24 native SQLite** (which doesn't support SQLCipher), 
 
 > 💡 **Compatibility:**
 > - Works with Node.js 24 native SQLite
-> - Works alongside or instead of SQLCipher
 > - Backward compatible - existing unencrypted data remains readable
 > - New data will be encrypted automatically
 
@@ -510,20 +469,11 @@ Yuno v2.8.0+ is optimized for Node.js 24 with native features:
 
 # Or manually with the experimental flag
 node --experimental-sqlite index.js
-
-# Legacy mode (uses sqlite3 npm package)
-npm run start:legacy
 ```
 
-### 📦 Dependency Modes
+### 📦 SQLite
 
-| Mode | Command | SQLite Source |
-|------|---------|---------------|
-| **Native (recommended)** | `npm start` | Node.js 24 built-in |
-| **Encrypted** | Install `@journeyapps/sqlcipher` | SQLCipher (supports encryption) |
-| **Legacy** | `npm run start:legacy` | sqlite3 npm package |
-
-> 💡 **Note:** Native SQLite doesn't support database-level encryption. Use SQLCipher for full database encryption, or use field-level encryption (see above) for sensitive data protection with native SQLite.
+Yuno uses **Node.js 24's built-in native SQLite** — no external SQLite packages needed. For sensitive data protection, use field-level encryption (see above) or a VeraCrypt volume.
 
 ---
 
@@ -887,7 +837,7 @@ Yuno can check for updates from git, download them, and apply them via hot-reloa
 | `neko` | *"Nya~"* 🐱 |
 | `set-presence` | *"Let me show you how I'm feeling~"* 🎭 |
 | `auto-update` | *"Always improving... for you~"* 🔄 |
-| `db-encrypt` | *"Your secrets are mine to keep~"* 🔐 |
+| `db-encrypt` | *"Your secrets are mine to keep~"* 🔐 (legacy, use field encryption) |
 | `set-logchannel` | *"I'll watch over everything~"* 📋 |
 | `log-status` | *"Here's what I'm watching~"* 👁️ |
 | `set-vcxp` | *"Time with me is rewarding~"* 🎤 |
