@@ -104,6 +104,12 @@ module.exports.runTerminal = async function(yuno, args, rawInput, rl) {
 
         console.log(`Successfully sent DM to ${user.tag}`);
 
+        // Notify dm-handler rate limiter that a human replied (grants leniency window)
+        const dmHandlerMod = yuno.modules.find(m => m.modulename === "dm-handler");
+        if (dmHandlerMod?.notifyHumanReply) {
+            dmHandlerMod.notifyHumanReply(userId);
+        }
+
         // Mark inbox message as replied if we have an inbox ID
         if (inboxId) {
             await yuno.dbCommands.markDmReplied(yuno.database, inboxId);
