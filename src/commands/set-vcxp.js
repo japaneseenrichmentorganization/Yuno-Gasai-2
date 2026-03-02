@@ -16,6 +16,8 @@
     along with this program.  If not, see https://www.gnu.org/licenses/.
 */
 
+const { parseToggle } = require("../lib/parseToggle");
+
 module.exports.run = async function(yuno, author, args, msg) {
     if (args.length < 1) {
         return msg.channel.send(`:negative_squared_cross_mark: Not enough arguments.
@@ -71,7 +73,10 @@ Users will earn **${config.xpPerInterval} XP** every **${config.intervalSeconds}
             if (args.length < 2) {
                 return msg.channel.send(":negative_squared_cross_mark: Please specify true or false. Usage: `set-vcxp ignore-afk <true|false>`");
             }
-            const ignoreAfk = args[1].toLowerCase() === "true" || args[1] === "1" || args[1].toLowerCase() === "yes";
+            const ignoreAfk = parseToggle(args[1]);
+            if (ignoreAfk === null) {
+                return msg.channel.send(":negative_squared_cross_mark: Couldn't determine whether you wanted to enable or disable it. Usage: `set-vcxp ignore-afk <true|false>`");
+            }
             config.ignoreAfkChannel = ignoreAfk;
             await yuno.dbCommands.setVcXpConfig(yuno.database, msg.guild.id, config);
             if (ignoreAfk) {
