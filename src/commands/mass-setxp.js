@@ -16,6 +16,8 @@
     along with this program.  If not, see https://www.gnu.org/licenses/.
 */
 
+const { fetchNonBotMembers } = require("../lib/discordHelpers");
+
 module.exports.run = async function(yuno, author, args, msg) {
     if (args.length < 2)
         return msg.channel.send(":negative_squared_cross_mark: Not enough arguments. Usage: `mass-setxp <level> <@role>`");
@@ -45,11 +47,11 @@ module.exports.run = async function(yuno, author, args, msg) {
     const processingMsg = await msg.channel.send(`:hourglass: Processing... Fetching all members with role **${role.name}**...`);
 
     try {
-        // Fetch all guild members (needed to ensure we have all members in cache)
-        await msg.guild.members.fetch();
+        // Fetch all non-bot guild members
+        const members = await fetchNonBotMembers(msg.guild);
 
         // Filter members who have the role
-        const membersWithRole = msg.guild.members.cache.filter(member => member.roles.cache.has(role.id));
+        const membersWithRole = members.filter(member => member.roles.cache.has(role.id));
 
         if (membersWithRole.size === 0) {
             return processingMsg.edit(`:negative_squared_cross_mark: No members found with the role **${role.name}**.`);
@@ -66,11 +68,6 @@ module.exports.run = async function(yuno, author, args, msg) {
 
         // Update XP for each member
         for (const [memberId, member] of membersWithRole) {
-            // Skip bots
-            if (member.user.bot) {
-                continue;
-            }
-
             try {
                 await yuno.dbCommands.setXPData(yuno.database, msg.guild.id, memberId, xp, level);
                 successCount++;
