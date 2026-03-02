@@ -14,6 +14,7 @@
 */
 
 const { PermissionsBitField } = require("discord.js");
+const crypto = require("crypto");
 
 // Regex patterns
 const DISCORD_INVITE_REGEX = /(https)*(http)*:*(\/\/)*discord(.gg|app.com\/invite)\/[a-zA-Z0-9]{1,}/i;
@@ -26,6 +27,46 @@ const warnings = {
     textInNsfw: new Set(),
     imageLink: new Set()
 };
+
+// Sliding window base (ms) — both rules share this
+const BASE_WINDOW_MS = 5000;
+
+// Rule 1: per-user nsfw repeat-text tracking
+// userId -> { history: [{text: string, ts: number}], jitter: number }
+const nsfwRepeatState = new Map();
+
+// Rule 2: per-user image checksum tracking
+// userId -> { history: [{checksum: string, ts: number, msg: Message}], jitter: number }
+const imageChecksumState = new Map();
+
+// Yuno reference (set by discordConnected export)
+let yunoRef = null;
+
+/**
+ * Get or create per-user sliding window state.
+ * Jitter is randomized per burst (re-randomized when history is empty after prune).
+ */
+function getOrCreateState(stateMap, userId) {
+    let state = stateMap.get(userId);
+    if (!state) {
+        state = { history: [], jitter: 0.5 + Math.random() };
+        stateMap.set(userId, state);
+    }
+    return state;
+}
+
+/**
+ * Prune entries older than the effective window.
+ * Re-randomizes jitter if history empties (new burst will have a different window).
+ */
+function pruneHistory(state) {
+    const window = BASE_WINDOW_MS * state.jitter;
+    const cutoff = Date.now() - window;
+    state.history = state.history.filter(e => e.ts > cutoff);
+    if (state.history.length === 0) {
+        state.jitter = 0.5 + Math.random();
+    }
+}
 
 // Ban configuration
 const BAN_CONFIG = {
@@ -120,6 +161,38 @@ const spamRules = [
                 banDM: "You have been banned for repeatedly posting text in NSFW channels.",
                 warnDM: "8. Text other than links is not allowed in hentai channels. If you wish to comment on something in a hentai channel, #media or #meme-machine do so in main chat and reference the channel youre commenting on. This is to prevent unnecessary clutter so people can easily see the content posted in the channels."
             });
+        }
+    },
+
+    // NSFW channels - same text+media posted rapidly = spam bot
+    {
+        name: "nsfw-repeat-text-media",
+        test: (content, msg) => {
+            const channelName = msg.channel.name.toLowerCase();
+            if (!channelName.startsWith("nsfw_")) return false;
+            // Must have a link or attachment (pure-text is handled by nsfw-text-only above)
+            const hasLink = content.toLowerCase().includes("http");
+            const hasAttachment = msg.attachments.size > 0;
+            return hasLink || hasAttachment;
+        },
+        action: async (msg, content) => {
+            const userId = msg.author.id;
+            const text = content.trim().toLowerCase();
+
+            const state = getOrCreateState(nsfwRepeatState, userId);
+            pruneHistory(state);
+
+            const matchCount = state.history.filter(e => e.text === text).length;
+
+            if (matchCount >= 2) {
+                // 3rd repetition (2 prior + current) — ban
+                safeDelete(msg);
+                await banUser(msg.member, "Autobanned: repeated text+media spam in nsfw channels");
+                nsfwRepeatState.delete(userId);
+                return;
+            }
+
+            state.history.push({ text, ts: Date.now() });
         }
     },
 
