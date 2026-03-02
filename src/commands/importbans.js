@@ -18,6 +18,7 @@
 
 const fs = require("fs").promises;
 const { setupRateLimitListener, waitForRateLimit } = require("../lib/rateLimitHelper");
+const { isValidSnowflake } = require("../lib/discordHelpers");
 
 module.exports.run = async function(yuno, author, args, msg) {
     if (!args[0])
@@ -27,7 +28,7 @@ module.exports.run = async function(yuno, author, args, msg) {
 
     // Security: Validate guild ID to prevent path traversal attacks
     // Guild IDs should only contain digits (Discord snowflake IDs)
-    if (!/^[0-9]+$/.test(guid)) {
+    if (!isValidSnowflake(guid)) {
         return msg.channel.send(":negative_squared_cross_mark: Invalid guild ID. Guild IDs should only contain numbers.");
     }
 

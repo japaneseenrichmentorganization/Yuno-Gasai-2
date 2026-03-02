@@ -16,6 +16,8 @@
     along with this program.  If not, see https://www.gnu.org/licenses/.
 */
 
+const { isValidSnowflake } = require("../lib/discordHelpers");
+
 module.exports.run = async function(yuno, author, args, msg) {
     if (args.length < 1) {
         return msg.channel.send(`:negative_squared_cross_mark: Usage: \`bot-unban <id>\`
@@ -25,7 +27,7 @@ module.exports.run = async function(yuno, author, args, msg) {
     }
 
     const id = args[0];
-    if (!/^\d{17,19}$/.test(id)) {
+    if (!isValidSnowflake(id)) {
         return msg.channel.send(":negative_squared_cross_mark: Invalid ID format. Must be a Discord snowflake (17-19 digits).");
     }
 
@@ -69,7 +71,7 @@ module.exports.runTerminal = async function(yuno, args) {
     }
 
     const id = args[0];
-    if (!/^\d{17,19}$/.test(id)) {
+    if (!isValidSnowflake(id)) {
         console.log("Error: Invalid ID format. Must be a Discord snowflake (17-19 digits).");
         return;
     }
