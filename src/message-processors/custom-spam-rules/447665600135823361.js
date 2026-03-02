@@ -68,6 +68,84 @@ function pruneHistory(state) {
     }
 }
 
+const MAX_IMAGE_BYTES = 4 * 1024 * 1024; // 4 MB hard cap per image
+
+/**
+ * Download an image URL into a Buffer.
+ * Returns null on error, timeout, or if the file exceeds MAX_IMAGE_BYTES.
+ */
+async function downloadImage(url) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 10000); // 10s timeout
+    try {
+        const res = await fetch(url, { signal: controller.signal });
+        if (!res.ok) return null;
+        const len = parseInt(res.headers.get("content-length") || "0", 10);
+        if (len > MAX_IMAGE_BYTES) return null;
+        const buf = Buffer.from(await res.arrayBuffer());
+        if (buf.length > MAX_IMAGE_BYTES) return null;
+        return buf;
+    } catch {
+        return null;
+    } finally {
+        clearTimeout(timer);
+    }
+}
+
+/**
+ * Non-blocking image checksum processor.
+ * Called fire-and-forget from the image-checksum rule action.
+ */
+async function processImageChecksums(msg) {
+    if (!yunoRef || !msg.member) return;
+
+    const imageAttachments = [...msg.attachments.values()].filter(
+        a => a.contentType?.startsWith("image/")
+    );
+
+    for (const attachment of imageAttachments) {
+        const buf = await downloadImage(attachment.url);
+        if (!buf) continue;
+
+        const checksum = crypto.createHash("sha256").update(buf).digest("hex");
+        const guildId = msg.guild.id;
+
+        // Fast path: known spam checksum in DB
+        const isKnown = await yunoRef.dbCommands.isKnownSpamChecksum(
+            yunoRef.database, checksum, guildId
+        );
+        if (isKnown) {
+            safeDelete(msg);
+            await banUser(msg.member, "Autobanned: known spam image detected");
+            return;
+        }
+
+        // Accumulation path: rolling window
+        const userId = msg.author.id;
+        const state = getOrCreateState(imageChecksumState, userId);
+        pruneHistory(state);
+
+        const matching = state.history.filter(e => e.checksum === checksum);
+
+        if (matching.length >= 2) {
+            // 3rd match (2 prior + current) — store checksum + ban + delete messages
+            await yunoRef.dbCommands.addSpamChecksum(yunoRef.database, checksum, guildId);
+
+            // Delete all matching prior messages
+            for (const entry of matching) {
+                safeDelete(entry.msg);
+            }
+            safeDelete(msg);
+
+            await banUser(msg.member, "Autobanned: repeated image spam detected");
+            imageChecksumState.delete(userId);
+            return;
+        }
+
+        state.history.push({ checksum, ts: Date.now(), msg });
+    }
+}
+
 // Ban configuration
 const BAN_CONFIG = {
     deleteMessageSeconds: 86400
@@ -239,6 +317,21 @@ const spamRules = [
                 warnDM: "Please keep your messages under 4 messages long. This is your one and only warning.\nFailure to comply will result in a ban."
             });
         }
+    },
+
+    // Cross-channel rapid image spam - checksum-based detection
+    {
+        name: "image-checksum",
+        test: (content, msg) => {
+            return msg.attachments.size > 0 &&
+                [...msg.attachments.values()].some(a => a.contentType?.startsWith("image/"));
+        },
+        action: (msg) => {
+            // Non-blocking: heavy async work runs in background, message pipeline unblocked
+            processImageChecksums(msg).catch(e =>
+                console.error("[image-checksum]", e.message)
+            );
+        }
     }
 ];
 
@@ -273,4 +366,8 @@ module.exports.message = async function(content, msg) {
             return;
         }
     }
+};
+
+module.exports.discordConnected = function(Yuno) {
+    yunoRef = Yuno;
 };
