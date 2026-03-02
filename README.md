@@ -932,6 +932,7 @@ Yuno can check for updates from git, download them, and apply them via hot-reloa
 | `bot-banlist` | *"The ones I've cast aside..."* 📋 |
 | `alt-detector` | *"I can always tell when someone's pretending~"* 🔍 |
 | `scan-alts` | *"Let me check everyone for fakes~"* 🕵️ |
+| `dm-rate-limit` | *"Don't message me too fast~"* 🛡️ |
 
 ### 💻 Terminal-Only Commands
 
