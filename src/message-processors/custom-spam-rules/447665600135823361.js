@@ -36,7 +36,7 @@ const BASE_WINDOW_MS = 5000;
 const nsfwRepeatState = new Map();
 
 // Rule 2: per-user image checksum tracking
-// userId -> { history: [{checksum: string, ts: number, msg: Message}], jitter: number }
+// userId -> { history: [{checksum: string, ts: number}], jitter: number }
 const imageChecksumState = new Map();
 
 // Yuno reference (set by discordConnected export)
@@ -128,21 +128,16 @@ async function processImageChecksums(msg) {
         const matching = state.history.filter(e => e.checksum === checksum);
 
         if (matching.length >= 2) {
-            // 3rd match (2 prior + current) — store checksum + ban + delete messages
+            // 3rd match — store checksum, delete triggering message, ban
+            // (ban with deleteMessageSeconds:86400 cleans up prior messages server-side)
             await yunoRef.dbCommands.addSpamChecksum(yunoRef.database, checksum, guildId);
-
-            // Delete all matching prior messages
-            for (const entry of matching) {
-                safeDelete(entry.msg);
-            }
             safeDelete(msg);
-
             await banUser(msg.member, "Autobanned: repeated image spam detected");
             imageChecksumState.delete(userId);
             return;
         }
 
-        state.history.push({ checksum, ts: Date.now(), msg });
+        state.history.push({ checksum, ts: Date.now() });
     }
 }
 
