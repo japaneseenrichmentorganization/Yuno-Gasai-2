@@ -162,6 +162,23 @@ Yuno is a **yandere-themed Discord bot** combining powerful moderation tools wit
 
 </td>
 </tr>
+<tr>
+<td width="50%">
+
+### 🔍 Alt Account Detection
+*"I can always tell when someone's pretending~"*
+- 🆔 Multi-signal suspicion scoring
+- 🚨 Auto-detect alts on member join
+- ⚡ Per-severity configurable actions
+- 🔍 Scan existing members on-demand
+- 🔨 Bulk kick / ban / quarantine
+- 📢 Dedicated alert log channel
+
+</td>
+<td width="50%">
+
+</td>
+</tr>
 </table>
 
 ---
@@ -791,6 +808,73 @@ timportbans <server-id> ./BANS-123456.txt
 
 ---
 
+## 🔍 Alt Account Detection
+
+*"I can always tell when someone's an imposter... I won't let them near you~"* 💢
+
+Yuno uses [`discord-alt-detector`](https://github.com/DJj123dj/discord-alt-detector) to score new members across multiple signals — account age, avatar, badges, Nitro, username patterns, and more — and automatically acts on suspicious ones.
+
+### 🎯 Trust Levels
+
+| Level | Description |
+|-------|-------------|
+| `newbie` | New account, low suspicion |
+| `suspicious` | Moderate suspicion |
+| `highly-suspicious` | High suspicion |
+| `mega-suspicious` | Almost certainly an alt |
+
+### ⚡ Actions
+
+For each trust level you can configure one action:
+
+| Action | Description |
+|--------|-------------|
+| `none` | Do nothing |
+| `log` | Post an alert embed to the log channel |
+| `kick` | Kick the member |
+| `ban` | Ban the member |
+| `role` | Assign the configured quarantine role |
+
+### 🔧 Setup Commands
+
+```bash
+# Enable/disable auto-detection on join
+.alt-detector enable
+.alt-detector disable
+
+# Set where alert embeds are posted
+.alt-detector setchannel #mod-alerts
+
+# Set the quarantine role (used with 'role' action)
+.alt-detector setrole @Quarantine
+
+# Configure action per suspicion level
+.alt-detector setaction newbie log
+.alt-detector setaction suspicious log
+.alt-detector setaction highly-suspicious kick
+.alt-detector setaction mega-suspicious ban
+
+# View current configuration
+.alt-detector status
+```
+
+### 🔍 Scanning Existing Members
+
+```bash
+# Scan all current members and flag suspicious ones
+.scan-alts
+```
+
+After scanning, a select menu lets you choose a bulk action:
+- **Do nothing** — keep the report, decide later
+- **Kick all flagged** — kick every flagged member
+- **Ban all flagged** — ban every flagged member
+- **Assign quarantine role** — apply the quarantine role to all flagged members *(requires `setrole` to be configured)*
+
+> 💡 *Also available as slash commands: `/alt-detector` and `/scan-alts`*
+
+---
+
 ## 🔄 Auto-Update
 
 *"I'll always be the best version of myself... for you~"* 💕
@@ -846,6 +930,8 @@ Yuno can check for updates from git, download them, and apply them via hot-reloa
 | `dm-status` | *"Am I receiving your messages?"* 📬 |
 | `bot-ban` | *"You're dead to me now~"* 🚫 |
 | `bot-banlist` | *"The ones I've cast aside..."* 📋 |
+| `alt-detector` | *"I can always tell when someone's pretending~"* 🔍 |
+| `scan-alts` | *"Let me check everyone for fakes~"* 🕵️ |
 
 ### 💻 Terminal-Only Commands
 
