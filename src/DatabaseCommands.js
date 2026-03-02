@@ -31,6 +31,8 @@ const vcXpConfigCache = new LRUCache(500, 5 * 60 * 1000);
 const dmConfigCache = new LRUCache(500, 5 * 60 * 1000);
 // Cache for bot bans (5 minute TTL, max 1000 entries)
 const botBanCache = new LRUCache(1000, 5 * 60 * 1000);
+// Cache for alt detector config (5 minute TTL, max 500 guilds)
+const altDetectorConfigCache = new LRUCache(500, 5 * 60 * 1000);
 
 let self;
 
@@ -219,6 +221,16 @@ module.exports = self = {
                 attachments TEXT,
                 timestamp INTEGER,
                 replied INTEGER DEFAULT 0
+            )`),
+            database.runPromise(`CREATE TABLE IF NOT EXISTS altDetectorConfig (
+                gid TEXT PRIMARY KEY,
+                enabled INTEGER DEFAULT 0,
+                logChannelId TEXT,
+                quarantineRoleId TEXT,
+                actionNewbie TEXT DEFAULT 'none',
+                actionSuspicious TEXT DEFAULT 'log',
+                actionHighlySuspicious TEXT DEFAULT 'log',
+                actionMegaSuspicious TEXT DEFAULT 'ban'
             )`)
         ]);
 
@@ -728,6 +740,7 @@ module.exports = self = {
         vcXpConfigCache.clear();
         dmConfigCache.clear();
         botBanCache.clear();
+        altDetectorConfigCache.clear();
     },
 
     /**
@@ -737,6 +750,7 @@ module.exports = self = {
     "invalidateGuildCache": function(guildid) {
         guildSettingsCache.invalidatePrefix(`guild:`);
         xpDataCache.invalidatePrefix(`xp:${guildid}:`);
+        altDetectorConfigCache.delete(`altDetectorConfig:${guildid}`);
     },
 
     /**
@@ -1648,5 +1662,54 @@ module.exports = self = {
      */
     "clearPresence": async function(database) {
         await database.runPromise("DELETE FROM botPresence WHERE id = 1");
+    },
+
+    /**
+     * Get alt detector config for a guild
+     * @param {Database} database
+     * @param {string} guildId
+     * @returns {Promise<Object|null>}
+     */
+    "getAltDetectorConfig": async function(database, guildId) {
+        const cached = altDetectorConfigCache.get(`altDetectorConfig:${guildId}`);
+        if (cached !== undefined) return cached;
+        const rows = await database.allPromise("SELECT * FROM altDetectorConfig WHERE gid = ?", [guildId]);
+        const result = rows.length > 0 ? {
+            gid: rows[0].gid,
+            enabled: rows[0].enabled === 1,
+            logChannelId: rows[0].logChannelId || null,
+            quarantineRoleId: rows[0].quarantineRoleId || null,
+            actionNewbie: rows[0].actionNewbie || 'none',
+            actionSuspicious: rows[0].actionSuspicious || 'log',
+            actionHighlySuspicious: rows[0].actionHighlySuspicious || 'log',
+            actionMegaSuspicious: rows[0].actionMegaSuspicious || 'ban'
+        } : null;
+        altDetectorConfigCache.set(`altDetectorConfig:${guildId}`, result);
+        return result;
+    },
+
+    /**
+     * Set a single field in alt detector config for a guild
+     * Creates the row if it doesn't exist
+     * @param {Database} database
+     * @param {string} guildId
+     * @param {string} field - Column name to update (validated by caller)
+     * @param {*} value
+     */
+    "setAltDetectorConfig": async function(database, guildId, field, value) {
+        const ALLOWED_FIELDS = new Set([
+            'enabled', 'logChannelId', 'quarantineRoleId',
+            'actionNewbie', 'actionSuspicious',
+            'actionHighlySuspicious', 'actionMegaSuspicious'
+        ]);
+        if (!ALLOWED_FIELDS.has(field)) {
+            throw new Error(`Invalid altDetectorConfig field: ${field}`);
+        }
+        altDetectorConfigCache.delete(`altDetectorConfig:${guildId}`);
+        const exists = await database.allPromise("SELECT gid FROM altDetectorConfig WHERE gid = ?", [guildId]);
+        if (exists.length === 0) {
+            await database.runPromise("INSERT INTO altDetectorConfig(gid) VALUES(?)", [guildId]);
+        }
+        await database.runPromise(`UPDATE altDetectorConfig SET ${field} = ? WHERE gid = ?`, [value, guildId]);
     }
 }

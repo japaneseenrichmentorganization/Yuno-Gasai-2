@@ -16,15 +16,12 @@
     "node": ">=24.0.0"
   },
   "devDependencies": {
-    "docdash": "^2.0.2",
-    "stack-trace": "0.0.10"
+    "docdash": "^2.0.2"
   },
   "dependencies": {
-    "bufferutil": "^4.0.9",
+    "discord-alt-detector": "^1.0.4",
     "discord.js": "^14.25.1",
-    "urban": "^0.3.2",
-    "utf-8-validate": "^6.0.5",
-    "zlib-sync": "^0.1.10"
+    "urban": "^0.3.2"
   },
   "overrides": {
     "undici": "6.23.0"
