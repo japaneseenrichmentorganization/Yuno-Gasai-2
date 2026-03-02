@@ -101,7 +101,7 @@ module.exports.about = {
     "terminal": false,
     "list": true,
     "listTerminal": false,
-    "requiredPermissions": ["ManageGuild"],
+    "onlyMasterUsers": true,
     "aliases": ["dmratelimit", "dmrl"],
     "dangerous": false
 };

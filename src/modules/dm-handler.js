@@ -113,6 +113,9 @@ async function executeSpamAction(userId) {
         userRateCache.set(userId, state);
     }
 
+    // Always apply in-memory temp block as an immediate backstop
+    tempBlockList.set(userId, true);
+
     const spamAction = (yunoInstance.config.get("dm-rate-limit.spamAction") || "ignore").toLowerCase();
 
     if (spamAction === "ban") {
@@ -129,11 +132,9 @@ async function executeSpamAction(userId) {
                 yunoInstance.prompt.warn(`[DM Rate Limit] Auto-banned ${userId} for DM spam`);
             }
         } catch (e) {
-            yunoInstance.prompt.error(`[DM Rate Limit] Failed to auto-ban ${userId}: ${e.message}`);
+            yunoInstance.prompt.error(`[DM Rate Limit] Failed to auto-ban ${userId}, temp block applied: ${e.message}`);
         }
     } else {
-        // "ignore" — temp block for 1 hour
-        tempBlockList.set(userId, true); // value is irrelevant; TTL handles expiry
         yunoInstance.prompt.warn(`[DM Rate Limit] Temp-blocked ${userId} for 1 hour (DM spam)`);
     }
 }
@@ -367,8 +368,17 @@ module.exports.configLoaded = function() {};
  * @param {string} userId
  */
 module.exports.notifyHumanReply = function(userId) {
-    const state = userRateCache.get(userId);
-    if (!state) return; // no active session for this user, nothing to update
+    let state = userRateCache.get(userId);
+    if (!state) {
+        // No active session; create one to preserve the reply leniency for their next message
+        state = {
+            messages: [],
+            baseLimit: 6 + Math.floor(Math.random() * 5),
+            droppedCount: 0,
+            lastHumanReply: 0,
+            spamActionTaken: false
+        };
+    }
     state.lastHumanReply = Date.now();
     userRateCache.set(userId, state);
 };
