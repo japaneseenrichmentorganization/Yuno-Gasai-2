@@ -24,8 +24,8 @@ const LRUCache = require("../lib/lruCache");
 // Per-user rate limit state. TTL of 5 min = state re-randomizes after 5 min of silence.
 const userRateCache = new LRUCache(2000, 5 * 60 * 1000);
 
-// Temporary block list for "ignore" spam action: userId -> unblockTimestamp
-const tempBlockList = new Map();
+// Temporary block list for "ignore" spam action: bounded LRU with 1-hour TTL
+const tempBlockList = new LRUCache(1000, 60 * 60 * 1000); // 1-hour TTL, max 1000 entries
 
 const RATE_WINDOW_MS = 60 * 1000;               // 60-second sliding window
 const HUMAN_REPLY_LENIENCY_MS = 10 * 60 * 1000; // +5 boost lasts 10 min after reply
@@ -104,6 +104,8 @@ function isSpam(userId) {
  * "ban"    = permanent bot-ban via existing addBotBan().
  */
 async function executeSpamAction(userId) {
+    if (!yunoInstance) return; // guard against pre-init calls
+
     // Mark as actioned to prevent repeat
     const state = userRateCache.get(userId);
     if (state) {
@@ -131,7 +133,7 @@ async function executeSpamAction(userId) {
         }
     } else {
         // "ignore" — temp block for 1 hour
-        tempBlockList.set(userId, Date.now() + 60 * 60 * 1000);
+        tempBlockList.set(userId, true); // value is irrelevant; TTL handles expiry
         yunoInstance.prompt.warn(`[DM Rate Limit] Temp-blocked ${userId} for 1 hour (DM spam)`);
     }
 }
@@ -251,11 +253,7 @@ async function onMessage(message) {
     const rateLimitEnabled = yunoInstance?.config?.get("dm-rate-limit.enabled");
     if (rateLimitEnabled !== false) {
         // Check in-memory temp block list
-        const tempBlockExpiry = tempBlockList.get(userId);
-        if (tempBlockExpiry) {
-            if (Date.now() < tempBlockExpiry) return; // still blocked
-            tempBlockList.delete(userId);             // expired, clean up
-        }
+        if (tempBlockList.has(userId)) return; // LRU TTL handles 1-hour expiry
 
         const allowed = checkAndRecord(userId);
         if (!allowed) {
@@ -369,7 +367,8 @@ module.exports.configLoaded = function() {};
  * @param {string} userId
  */
 module.exports.notifyHumanReply = function(userId) {
-    const state = getOrCreateState(userId);
+    const state = userRateCache.get(userId);
+    if (!state) return; // no active session for this user, nothing to update
     state.lastHumanReply = Date.now();
     userRateCache.set(userId, state);
 };
