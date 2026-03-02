@@ -171,6 +171,51 @@ const slashCommands = [
             option.setName("command")
                 .setDescription("Get help for a specific command")
                 .setRequired(false)),
+
+    new SlashCommandBuilder()
+        .setName("alt-detector")
+        .setDescription("Configure the alt account detector")
+        .addSubcommand(sub => sub
+            .setName("enable")
+            .setDescription("Enable alt detection for this server"))
+        .addSubcommand(sub => sub
+            .setName("disable")
+            .setDescription("Disable alt detection for this server"))
+        .addSubcommand(sub => sub
+            .setName("setchannel")
+            .setDescription("Set the channel for alt detection alerts")
+            .addChannelOption(opt => opt.setName("channel").setDescription("Alert channel").setRequired(true)))
+        .addSubcommand(sub => sub
+            .setName("setrole")
+            .setDescription("Set the quarantine role for detected alts")
+            .addRoleOption(opt => opt.setName("role").setDescription("Quarantine role").setRequired(true)))
+        .addSubcommand(sub => sub
+            .setName("setaction")
+            .setDescription("Set the action for a suspicion level")
+            .addStringOption(opt => opt.setName("level").setDescription("Suspicion level").setRequired(true)
+                .addChoices(
+                    { name: "newbie", value: "newbie" },
+                    { name: "suspicious", value: "suspicious" },
+                    { name: "highly-suspicious", value: "highly-suspicious" },
+                    { name: "mega-suspicious", value: "mega-suspicious" }
+                ))
+            .addStringOption(opt => opt.setName("action").setDescription("Action to take").setRequired(true)
+                .addChoices(
+                    { name: "none", value: "none" },
+                    { name: "log", value: "log" },
+                    { name: "kick", value: "kick" },
+                    { name: "ban", value: "ban" },
+                    { name: "role (assign quarantine role)", value: "role" }
+                )))
+        .addSubcommand(sub => sub
+            .setName("status")
+            .setDescription("Show current alt detector configuration"))
+        .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild),
+
+    new SlashCommandBuilder()
+        .setName("scan-alts")
+        .setDescription("Scan all server members for alt account indicators")
+        .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild),
 ];
 
 // Register slash commands with Discord
@@ -259,7 +304,27 @@ const COMMAND_HANDLERS = {
     help: (interaction) => {
         const cmd = interaction.options.getString("command");
         return cmd ? `help ${cmd}` : "help";
-    }
+    },
+
+    "alt-detector": (interaction) => {
+        const sub = interaction.options.getSubcommand();
+        if (sub === "setchannel") {
+            const channel = interaction.options.getChannel("channel");
+            return `alt-detector setchannel <#${channel.id}>`;
+        }
+        if (sub === "setrole") {
+            const role = interaction.options.getRole("role");
+            return `alt-detector setrole <@&${role.id}>`;
+        }
+        if (sub === "setaction") {
+            const level = interaction.options.getString("level");
+            const action = interaction.options.getString("action");
+            return `alt-detector setaction ${level} ${action}`;
+        }
+        return `alt-detector ${sub}`;
+    },
+
+    "scan-alts": () => "scan-alts",
 };
 
 // Create fake message object for command compatibility
