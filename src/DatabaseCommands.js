@@ -893,22 +893,10 @@ module.exports = self = {
         await self.initGuild(database, guildid);
         logChannelCache.delete(`logChannels:${guildid}`);
 
-        const existing = await database.allPromise(
-            "SELECT channelId FROM logChannels WHERE gid = ? AND logType = ?",
-            [guildid, logType]
+        await database.runPromise(
+            "INSERT INTO logChannels(gid, logType, channelId, enabled) VALUES(?, ?, ?, 1) ON CONFLICT(gid, logType) DO UPDATE SET channelId = excluded.channelId, enabled = 1",
+            [guildid, logType, channelId]
         );
-
-        if (existing.length === 0) {
-            await database.runPromise(
-                "INSERT INTO logChannels(gid, logType, channelId, enabled) VALUES(?, ?, ?, 1)",
-                [guildid, logType, channelId]
-            );
-        } else {
-            await database.runPromise(
-                "UPDATE logChannels SET channelId = ?, enabled = 1 WHERE gid = ? AND logType = ?",
-                [channelId, guildid, logType]
-            );
-        }
     },
 
     /**
@@ -982,22 +970,10 @@ module.exports = self = {
         const flushInterval = Math.max(10, Math.min(300, settings.flushInterval || 30));
         const maxBufferSize = Math.max(10, Math.min(100, settings.maxBufferSize || 50));
 
-        const existing = await database.allPromise(
-            "SELECT gid FROM logSettings WHERE gid = ?",
-            [guildid]
+        await database.runPromise(
+            "INSERT OR REPLACE INTO logSettings(gid, flushInterval, maxBufferSize) VALUES(?, ?, ?)",
+            [guildid, flushInterval, maxBufferSize]
         );
-
-        if (existing.length === 0) {
-            await database.runPromise(
-                "INSERT INTO logSettings(gid, flushInterval, maxBufferSize) VALUES(?, ?, ?)",
-                [guildid, flushInterval, maxBufferSize]
-            );
-        } else {
-            await database.runPromise(
-                "UPDATE logSettings SET flushInterval = ?, maxBufferSize = ? WHERE gid = ?",
-                [flushInterval, maxBufferSize, guildid]
-            );
-        }
     },
 
     // ==================== VC XP Config Functions ====================
@@ -1054,34 +1030,16 @@ module.exports = self = {
         await self.initGuild(database, guildid);
         vcXpConfigCache.delete(`vcXpConfig:${guildid}`);
 
-        const existing = await database.allPromise(
-            "SELECT gid FROM vcXpConfig WHERE gid = ?",
-            [guildid]
+        await database.runPromise(
+            "INSERT OR REPLACE INTO vcXpConfig(gid, enabled, xpPerInterval, intervalSeconds, ignoreAfkChannel) VALUES(?, ?, ?, ?, ?)",
+            [
+                guildid,
+                config.enabled ? 1 : 0,
+                config.xpPerInterval || 10,
+                config.intervalSeconds || 300,
+                config.ignoreAfkChannel !== false ? 1 : 0
+            ]
         );
-
-        if (existing.length === 0) {
-            await database.runPromise(
-                "INSERT INTO vcXpConfig(gid, enabled, xpPerInterval, intervalSeconds, ignoreAfkChannel) VALUES(?, ?, ?, ?, ?)",
-                [
-                    guildid,
-                    config.enabled ? 1 : 0,
-                    config.xpPerInterval || 10,
-                    config.intervalSeconds || 300,
-                    config.ignoreAfkChannel !== false ? 1 : 0
-                ]
-            );
-        } else {
-            await database.runPromise(
-                "UPDATE vcXpConfig SET enabled = ?, xpPerInterval = ?, intervalSeconds = ?, ignoreAfkChannel = ? WHERE gid = ?",
-                [
-                    config.enabled ? 1 : 0,
-                    config.xpPerInterval || 10,
-                    config.intervalSeconds || 300,
-                    config.ignoreAfkChannel !== false ? 1 : 0,
-                    guildid
-                ]
-            );
-        }
     },
 
     // ==================== VC Session Functions ====================
@@ -1096,22 +1054,11 @@ module.exports = self = {
      */
     "startVcSession": async function(database, guildid, userId, channelId) {
         const now = Date.now();
-        const existing = await database.allPromise(
-            "SELECT usrId FROM vcSessions WHERE gid = ? AND usrId = ?",
-            [guildid, userId]
-        );
 
-        if (existing.length === 0) {
-            await database.runPromise(
-                "INSERT INTO vcSessions(gid, usrId, channelId, joinedAt, lastXpGrant) VALUES(?, ?, ?, ?, ?)",
-                [guildid, userId, channelId, now, now]
-            );
-        } else {
-            await database.runPromise(
-                "UPDATE vcSessions SET channelId = ?, joinedAt = ?, lastXpGrant = ? WHERE gid = ? AND usrId = ?",
-                [channelId, now, now, guildid, userId]
-            );
-        }
+        await database.runPromise(
+            "INSERT INTO vcSessions(gid, usrId, channelId, joinedAt, lastXpGrant) VALUES(?, ?, ?, ?, ?) ON CONFLICT(gid, usrId) DO UPDATE SET channelId = excluded.channelId, joinedAt = excluded.joinedAt, lastXpGrant = excluded.lastXpGrant",
+            [guildid, userId, channelId, now, now]
+        );
     },
 
     /**
@@ -1291,22 +1238,10 @@ module.exports = self = {
         await self.initGuild(database, guildid);
         dmConfigCache.delete(`dmConfig:${guildid}`);
 
-        const existing = await database.allPromise(
-            "SELECT gid FROM dmConfig WHERE gid = ?",
-            [guildid]
+        await database.runPromise(
+            "INSERT OR REPLACE INTO dmConfig(gid, channelId, enabled) VALUES(?, ?, 1)",
+            [guildid, channelId]
         );
-
-        if (existing.length === 0) {
-            await database.runPromise(
-                "INSERT INTO dmConfig(gid, channelId, enabled) VALUES(?, ?, 1)",
-                [guildid, channelId]
-            );
-        } else {
-            await database.runPromise(
-                "UPDATE dmConfig SET channelId = ?, enabled = 1 WHERE gid = ?",
-                [channelId, guildid]
-            );
-        }
     },
 
     /**
@@ -1353,23 +1288,13 @@ module.exports = self = {
      */
     "addBotBan": async function(database, id, type, reason, bannedBy) {
         botBanCache.delete(`botBan:${id}`);
-        const existing = await database.allPromise(
-            "SELECT id FROM botBans WHERE id = ?",
-            [id]
-        );
         const encryptedReason = reason ? database.encrypt(reason) : null;
+        const now = Date.now();
 
-        if (existing.length === 0) {
-            await database.runPromise(
-                "INSERT INTO botBans(id, type, reason, bannedAt, bannedBy) VALUES(?, ?, ?, ?, ?)",
-                [id, type, encryptedReason, Date.now(), bannedBy]
-            );
-        } else {
-            await database.runPromise(
-                "UPDATE botBans SET type = ?, reason = ?, bannedAt = ?, bannedBy = ? WHERE id = ?",
-                [type, encryptedReason, Date.now(), bannedBy, id]
-            );
-        }
+        await database.runPromise(
+            "INSERT OR REPLACE INTO botBans(id, type, reason, bannedAt, bannedBy) VALUES(?, ?, ?, ?, ?)",
+            [id, type, encryptedReason, now, bannedBy]
+        );
     },
 
     /**
@@ -1645,21 +1570,10 @@ module.exports = self = {
      * @async
      */
     "setPresence": async function(database, presence) {
-        const existing = await database.allPromise(
-            "SELECT id FROM botPresence WHERE id = 1"
+        await database.runPromise(
+            "INSERT OR REPLACE INTO botPresence(id, type, text, status, streamUrl) VALUES(1, ?, ?, ?, ?)",
+            [presence.type || null, presence.text || null, presence.status || 'online', presence.streamUrl || null]
         );
-
-        if (existing.length === 0) {
-            await database.runPromise(
-                "INSERT INTO botPresence(id, type, text, status, streamUrl) VALUES(1, ?, ?, ?, ?)",
-                [presence.type || null, presence.text || null, presence.status || 'online', presence.streamUrl || null]
-            );
-        } else {
-            await database.runPromise(
-                "UPDATE botPresence SET type = ?, text = ?, status = ?, streamUrl = ? WHERE id = 1",
-                [presence.type || null, presence.text || null, presence.status || 'online', presence.streamUrl || null]
-            );
-        }
     },
 
     /**
