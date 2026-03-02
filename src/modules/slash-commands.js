@@ -338,6 +338,7 @@ const createFakeMessage = (interaction) => {
         author: interaction.user,
         mentions: {
             channels: { first: () => interaction.options.getChannel("channel") },
+            roles: { first: () => interaction.options.getRole("role") },
             users: { first: () => interaction.options.getUser("user") }
         },
         content: "",

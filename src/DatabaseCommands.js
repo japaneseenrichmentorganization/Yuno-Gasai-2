@@ -750,7 +750,7 @@ module.exports = self = {
     "invalidateGuildCache": function(guildid) {
         guildSettingsCache.invalidatePrefix(`guild:`);
         xpDataCache.invalidatePrefix(`xp:${guildid}:`);
-        altDetectorConfigCache.delete(guildid);
+        altDetectorConfigCache.delete(`altDetectorConfig:${guildid}`);
     },
 
     /**
