@@ -52,7 +52,7 @@ module.exports.run = async function(yuno, author, args, msg) {
         await yuno.dbCommands.setAltDetectorConfig(yuno.database, guildId, "enabled", 0);
         return msg.channel.send({ embeds: [new EmbedCmdResponse()
             .setColor("#ff6600")
-            .setTitle(":white_check_mark: Alt Detector Disabled")
+            .setTitle(":octagonal_sign: Alt Detector Disabled")
             .setDescription("Alt detection is now **disabled** for this server.")
             .setCMDRequester(msg.member)
         ]});
