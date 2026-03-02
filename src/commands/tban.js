@@ -16,6 +16,9 @@
     along with this program.  If not, see https://www.gnu.org/licenses/.
 */
 
+const { isValidSnowflake } = require("../lib/discordHelpers");
+const { resolveGuildForTerminal } = require("../lib/terminalHelpers");
+
 module.exports.runTerminal = async function(yuno, args) {
     if (args.length < 2) {
         console.log("Usage: tban <server-id> <user-id> [reason]");
@@ -32,29 +35,18 @@ module.exports.runTerminal = async function(yuno, args) {
     const userId = args[1];
     const reason = args.slice(2).join(" ") || "Terminal ban";
 
-    if (!/^\d{17,19}$/.test(serverId)) {
+    if (!isValidSnowflake(serverId)) {
         console.log("Error: Invalid server ID format.");
         return;
     }
 
-    if (!/^\d{17,19}$/.test(userId)) {
+    if (!isValidSnowflake(userId)) {
         console.log("Error: Invalid user ID format.");
         return;
     }
 
-    const guild = yuno.dC.guilds.cache.get(serverId);
-    if (!guild) {
-        console.log(`Error: Server not found: ${serverId}`);
-        console.log("Use 'servers' command to see available servers.");
-        return;
-    }
-
-    // Check if bot has ban permission
-    const botMember = guild.members.cache.get(yuno.dC.user.id);
-    if (!botMember?.permissions.has("BanMembers")) {
-        console.log("Error: Bot does not have ban permission in this server.");
-        return;
-    }
+    const guild = resolveGuildForTerminal(yuno, serverId);
+    if (!guild) return;
 
     // Try to get user info
     let userTag = userId;

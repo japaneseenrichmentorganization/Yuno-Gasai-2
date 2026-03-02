@@ -16,24 +16,13 @@
     along with this program.  If not, see https://www.gnu.org/licenses/.
 */
 
+const { parseToggle } = require("../lib/parseToggle");
+
 module.exports.run = async function(yuno, author, args, msg) {
     if (args.length === 0)
         return msg.channel.send(":negative_squared_cross_mark: Not enough arguments.");
 
-    let thing = args[0],
-        to = null;
-
-    if (thing.indexOf("enab") === 0)
-        to = true;
-
-    if (thing.indexOf("disab") === 0)
-        to = false;
-
-    if (thing.indexOf("tru") === 0)
-        to = true;
-
-    if (thing.indexOf("fa") === 0)
-        to = false;
+    const to = parseToggle(args[0]);
 
     if (to === null)
         return msg.channel.send("Couldn't determine whether you wanted to enable or disable the experience counter. Some examples: ```"  + ["enable", "disable", "true", "false", "enab", "disab", "tru", "fa"].join("\n") + " ```")

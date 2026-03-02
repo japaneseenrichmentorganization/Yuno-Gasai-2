@@ -16,26 +16,17 @@
     along with this program.  If not, see https://www.gnu.org/licenses/.
 */
 
-// Lookup table for enable/disable patterns
-const TOGGLE_PATTERNS = [
-    { prefix: "enab", value: true },
-    { prefix: "tru", value: true },
-    { prefix: "disab", value: false },
-    { prefix: "fa", value: false }
-];
+const { parseToggle } = require("../lib/parseToggle");
 
 module.exports.run = async function(yuno, author, args, msg) {
     if (args.length === 0) {
         return msg.channel.send(":negative_squared_cross_mark: Not enough arguments.");
     }
 
-    const thing = args[0].toLowerCase();
-    const match = TOGGLE_PATTERNS.find(({ prefix }) => thing.startsWith(prefix));
-    const to = match?.value ?? null;
+    const to = parseToggle(args[0]);
 
     if (to === null) {
-        const examples = TOGGLE_PATTERNS.map(p => p.prefix).concat(["enable", "disable", "true", "false"]);
-        return msg.channel.send(`Couldn't determine whether you wanted to enable or disable the spamfilter. Some examples: \`\`\`${examples.join("\n")}\`\`\``);
+        return msg.channel.send(`Couldn't determine whether you wanted to enable or disable the spamfilter. Some examples: \`\`\`${["enable", "disable", "true", "false"].join("\n")}\`\`\``);
     }
 
     await yuno.dbCommands.setSpamFilterEnabled(yuno.database, msg.guild.id, thing);

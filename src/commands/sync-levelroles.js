@@ -17,6 +17,7 @@
 */
 
 const {EmbedBuilder} = require("discord.js");
+const { fetchNonBotMembers } = require("../lib/discordHelpers");
 
 module.exports.run = async function(yuno, author, args, msg) {
     // Get the level role map
@@ -39,14 +40,12 @@ module.exports.run = async function(yuno, author, args, msg) {
     const processingMsg = await msg.channel.send(`:hourglass: Processing... Fetching all guild members and checking XP data for level **${targetLevel}**...`);
 
     try {
-        // Fetch all guild members
-        await msg.guild.members.fetch();
+        // Fetch all non-bot guild members
+        const members = await fetchNonBotMembers(msg.guild);
 
         // Get all members and check their XP data
         let usersAtLevel = [];
-        for (const [memberId, member] of msg.guild.members.cache) {
-            if (member.user.bot) continue;
-
+        for (const [memberId, member] of members) {
             let xpData = await yuno.dbCommands.getXPData(yuno.database, msg.guild.id, memberId);
             if (xpData && xpData.level === targetLevel) {
                 usersAtLevel.push(member);

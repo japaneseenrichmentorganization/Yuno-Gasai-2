@@ -14,25 +14,16 @@
 */
 
 const {EmbedBuilder} = require("discord.js");
-
-let whereExpIsEnabled = [];
+const { ensureMembersInCache } = require("../lib/discordHelpers");
+const { xpNeededForLevel } = require("../lib/xpFormulas");
 
 let getAvatarURL = function(user) {
     return user.displayAvatarURL({extension: 'png', size: 256});
 }
 
 module.exports.run = async function(yuno, author, args, msg) {
-    await fetchWhereExpIsEnabled(yuno);
-
-    
-    // Obtain the member if we don't have it
-    if(msg.guild && !msg.guild.members.cache.has(msg.author.id) && !msg.webhookID) {
-        msg.member = await msg.guild.members.fetch(msg.author);
-    }
-    // Obtain the member for the ClientUser if it doesn't already exist
-    if(msg.guild && !msg.guild.members.cache.has(yuno.dC.user.id)) {
-        await msg.guild.members.fetch(yuno.dC.user.id);
-    }
+    const whereExpIsEnabled = await yuno.dbCommands.getGuildsWhereExpIsEnabled(yuno.database);
+    await ensureMembersInCache(msg, yuno.dC);
     
     if (!whereExpIsEnabled.includes(msg.guild.id))
         return msg.channel.send("Experience counting is __disabled__ on the server.");
@@ -69,7 +60,7 @@ module.exports.run = async function(yuno, author, args, msg) {
         return msg.channel.send(":negative_squared_cross_mark: Cannot find the asked user. He's maybe not on the server :thinking: ?");
 
     let xpdata = await yuno.dbCommands.getXPData(yuno.database, msg.guild.id, user.id),
-        neededExp = 5 * Math.pow(xpdata.level, 2) + 50 * xpdata.level + 100;
+        neededExp = xpNeededForLevel(xpdata.level);
 
     msg.channel.send({embeds: [new EmbedBuilder()
         .setAuthor({name: user.displayName + "'s experience card", iconURL: yuno.UTIL.getAvatarURL(user.user)})
@@ -80,14 +71,6 @@ module.exports.run = async function(yuno, author, args, msg) {
             {name: "Exp needed until next level (" + (xpdata.level + 1) + ")", value: (neededExp - xpdata.xp).toString()}
         )
     ]});
-}
-
-
-let fetchWhereExpIsEnabled = async function(yuno) {
-    if (whereExpIsEnabled.length > 0)
-        return;
-
-    whereExpIsEnabled = await yuno.dbCommands.getGuildsWhereExpIsEnabled(yuno.database)
 }
 
 

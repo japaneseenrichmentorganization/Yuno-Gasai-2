@@ -17,6 +17,7 @@
 */
 
 const {EmbedBuilder} = require("discord.js");
+const { fetchNonBotMembers } = require("../lib/discordHelpers");
 
 module.exports.run = async function(yuno, author, args, msg) {
     // Get the level role map
@@ -38,10 +39,10 @@ module.exports.run = async function(yuno, author, args, msg) {
     const processingMsg = await msg.channel.send(`:hourglass: **Step 1/3:** Fetching all guild members...\n\n**Configured level roles:**\n${rolesList.slice(0, 10).join('\n')}${rolesList.length > 10 ? `\n... and ${rolesList.length - 10} more` : ''}`);
 
     try {
-        // Fetch all guild members
-        await msg.guild.members.fetch();
-        
-        const totalMembers = msg.guild.members.cache.filter(m => !m.user.bot).size;
+        // Fetch all non-bot guild members
+        const members = await fetchNonBotMembers(msg.guild);
+
+        const totalMembers = members.size;
         await processingMsg.edit(`:hourglass: **Step 2/3:** Fetched **${totalMembers}** members. Now analyzing their level roles...`);
 
         let successCount = 0;
@@ -53,9 +54,7 @@ module.exports.run = async function(yuno, author, args, msg) {
         let levelDistribution = {}; // Track how many users at each level
 
         // Process each member
-        for (const [memberId, member] of msg.guild.members.cache) {
-            if (member.user.bot) continue;
-
+        for (const [memberId, member] of members) {
             processedCount++;
 
             // Update progress message every 5 seconds or every 50 users
@@ -142,7 +141,7 @@ module.exports.run = async function(yuno, author, args, msg) {
             {name: "🚫 No level roles", value: noRoleCount.toString(), inline: true},
             {name: "❌ Failed", value: failCount.toString(), inline: true},
             {name: "📊 Total processed", value: processedCount.toString(), inline: true},
-            {name: "🤖 Bots skipped", value: (msg.guild.members.cache.size - totalMembers).toString(), inline: true}
+            {name: "🤖 Bots skipped", value: (msg.guild.members.cache.size - members.size).toString(), inline: true}
         ];
 
         // Add level distribution if we have it

@@ -16,6 +16,8 @@
     along with this program.  If not, see https://www.gnu.org/licenses/.
 */
 
+const { xpNeededForLevel } = require("../lib/xpFormulas");
+
 module.exports.messageProcName = "experience"
 
 // Use Set for O(1) lookup instead of Array O(n)
@@ -46,7 +48,7 @@ module.exports.message = async function(content, msg) {
     const { dbCommands, database: db } = yuno;
 
     const xp = await dbCommands.getXPData(db, msg.guild.id, msg.author.id);
-    const neededXP = 5 * Math.pow(xp.level, 2) + 50 * xp.level + 100;
+    const neededXP = xpNeededForLevel(xp.level);
 
     let leveledUp = false;
     xp.xp += exppermsg;

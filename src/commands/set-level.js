@@ -17,16 +17,10 @@
 */
 
 const {EmbedBuilder} = require("discord.js");
-
-let whereExpIsEnabled = [];
-
-async function fetchWhereExpIsEnabled(yuno) {
-    if (whereExpIsEnabled.length > 0) return;
-    whereExpIsEnabled = await yuno.dbCommands.getGuildsWhereExpIsEnabled(yuno.database);
-}
+const { xpNeededForLevel } = require("../lib/xpFormulas");
 
 module.exports.run = async function(yuno, author, args, msg) {
-    await fetchWhereExpIsEnabled(yuno);
+    const whereExpIsEnabled = await yuno.dbCommands.getGuildsWhereExpIsEnabled(yuno.database);
 
     const { id: guildId } = msg.guild;
 
@@ -50,7 +44,7 @@ module.exports.run = async function(yuno, author, args, msg) {
     await dbCommands.setXPData(database, guildId, user.id, 0, givenLvl);
 
     const xpdata = await dbCommands.getXPData(database, guildId, user.id);
-    const neededExp = 5 * Math.pow(xpdata.level, 2) + 50 * xpdata.level + 100;
+    const neededExp = xpNeededForLevel(xpdata.level);
 
     return msg.channel.send({embeds: [new EmbedBuilder()
         .setAuthor({name: `${user.displayName}'s experience card`, iconURL: UTIL.getAvatarURL(user.user)})

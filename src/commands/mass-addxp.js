@@ -3,6 +3,8 @@
     ♥ Showering them with love... whether they want it or not~ ♥
 */
 
+const { fetchNonBotMembers } = require("../lib/discordHelpers");
+
 module.exports.run = async function(yuno, author, args, trigger) {
     const isSlash = !!trigger?.replied;
     const send = (c) => isSlash ? trigger.reply({content: c, ephemeral: false}) : trigger.channel.send(c);
@@ -17,8 +19,8 @@ module.exports.run = async function(yuno, author, args, trigger) {
 
     const proc = await send(`⡷⢿ Hunting every member with **${role.name}** to gift them **${xpToAdd}** XP...`);
 
-    await trigger.guild.members.fetch();
-    const targets = trigger.guild.members.cache.filter(m => m.roles.cache.has(role.id) && !m.user.bot);
+    const members = await fetchNonBotMembers(trigger.guild);
+    const targets = members.filter(m => m.roles.cache.has(role.id));
 
     if (targets.size === 0) return proc.edit("❌ No one to love... empty role~ ♥");
 

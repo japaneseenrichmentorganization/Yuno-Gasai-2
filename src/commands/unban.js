@@ -25,6 +25,7 @@ delete require.cache[require.resolve("../lib/EmbedCmdResponse")];
 let EmbedCmdResponse = require("../lib/EmbedCmdResponse");
 
 const {GuildMember} = require("discord.js");
+const { parseModArgs } = require("../lib/discordHelpers");
 
 module.exports.run = async function(yuno, author, args, msg) {
     args = args.join(" ");
@@ -33,12 +34,9 @@ module.exports.run = async function(yuno, author, args, msg) {
         toBanIds = [],
         mutli
 
-    if (args.includes("|")) {
-        reason = (args.split("|")[1] + " / Unbanned by " + msg.author.tag).trim();
-        args = args.split("|")[0];
-    } else {
-        reason = "Unbanned by " + msg.author.tag
-    }
+    const parsed = parseModArgs(args, "Unbanned", msg.author.tag);
+    args = parsed.targets;
+    reason = parsed.reason;
 
     let toBanThings = args.split(" ")
 

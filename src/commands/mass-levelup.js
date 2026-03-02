@@ -3,6 +3,8 @@
     ♥ They will rise exactly to your will. No more. No less. Forever bound~ ♥
 */
 
+const { totalXPForLevel } = require("../lib/xpFormulas");
+
 module.exports.run = async function(yuno, author, args, trigger) {
     const isSlash = !!trigger?.replied;
     const send = (c) => isSlash ? trigger.reply({content: c, allowedMentions: {repliedUser: false}}) : trigger.channel.send(c);
@@ -24,15 +26,6 @@ module.exports.run = async function(yuno, author, args, trigger) {
     await trigger.guild.members.fetch();
     const targets = trigger.guild.members.cache.filter(m => m.roles.cache.has(role.id) && !m.user.bot);
     if (targets.size === 0) return proc.edit("❌ Empty role... no one to love today~ ♥");
-
-    // True Yuno Gasai formula: total XP to reach level N (inclusive)
-    const totalXPForLevel = (lvl) => {
-        let total = 0;
-        for (let i = 1; i <= lvl; i++) {
-            total += 5 * Math.pow(i, 2) + 50 * i + 100;
-        }
-        return total;
-    };
 
     const neededTotal = totalXPForLevel(targetLevel);
 

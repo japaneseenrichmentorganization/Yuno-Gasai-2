@@ -18,6 +18,8 @@
 
 const fs = require("fs").promises;
 const path = require("path");
+const { isValidSnowflake, fetchAllBannedUserIds } = require("../lib/discordHelpers");
+const { resolveGuildForTerminal } = require("../lib/terminalHelpers");
 
 module.exports.runTerminal = async function(yuno, args) {
     if (args.length < 1) {
@@ -33,24 +35,13 @@ module.exports.runTerminal = async function(yuno, args) {
     }
 
     const serverId = args[0];
-    if (!/^\d{17,19}$/.test(serverId)) {
+    if (!isValidSnowflake(serverId)) {
         console.log("Error: Invalid server ID format.");
         return;
     }
 
-    const guild = yuno.dC.guilds.cache.get(serverId);
-    if (!guild) {
-        console.log(`Error: Server not found: ${serverId}`);
-        console.log("Use 'servers' command to see available servers.");
-        return;
-    }
-
-    // Check bot permissions
-    const botMember = guild.members.cache.get(yuno.dC.user.id);
-    if (!botMember?.permissions.has("BanMembers")) {
-        console.log("Error: Bot does not have ban permission in this server.");
-        return;
-    }
+    const guild = resolveGuildForTerminal(yuno, serverId);
+    if (!guild) return;
 
     // Determine output file
     let outputFile = args[1] || `./BANS-${serverId}.txt`;
@@ -65,46 +56,19 @@ module.exports.runTerminal = async function(yuno, args) {
     console.log(`Exporting bans from ${guild.name}...`);
 
     try {
-        const allBannedUserIds = [];
-        let lastBanId = null;
-        let totalFetched = 0;
-        const batchSize = 1000;
-
-        while (true) {
-            const fetchOptions = { limit: batchSize };
-            if (lastBanId) {
-                fetchOptions.after = lastBanId;
+        const allIds = await fetchAllBannedUserIds(guild, (count) => {
+            if (count % 5000 === 0) {
+                console.log(`  Fetched ${count} bans...`);
             }
+        });
 
-            const bans = await guild.bans.fetch(fetchOptions);
-
-            if (bans.size === 0) {
-                break;
-            }
-
-            const batchUserIds = Array.from(bans.values()).map(ban => ban.user.id);
-            allBannedUserIds.push(...batchUserIds);
-            totalFetched += bans.size;
-
-            // Progress update
-            if (totalFetched % 5000 === 0) {
-                console.log(`  Fetched ${totalFetched} bans...`);
-            }
-
-            lastBanId = batchUserIds[batchUserIds.length - 1];
-
-            if (bans.size < batchSize) {
-                break;
-            }
-        }
-
-        console.log(`Fetched ${allBannedUserIds.length} total bans.`);
+        console.log(`Fetched ${allIds.length} total bans.`);
 
         // Write to file
-        const banstr = JSON.stringify(allBannedUserIds);
+        const banstr = JSON.stringify(allIds);
         await fs.writeFile(outputFile, banstr);
 
-        console.log(`Successfully exported ${allBannedUserIds.length} bans to ${outputFile}`);
+        console.log(`Successfully exported ${allIds.length} bans to ${outputFile}`);
     } catch (e) {
         console.log(`Error exporting bans: ${e.message}`);
     }

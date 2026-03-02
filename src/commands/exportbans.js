@@ -17,6 +17,7 @@
 */
 const fs = require("fs").promises;
 const {PermissionsBitField} = require("discord.js");
+const { fetchAllBannedUserIds } = require("../lib/discordHelpers");
 
 module.exports.run = async function(yuno, author, args, msg) {
     if (!msg.member.permissions.has(PermissionsBitField.Flags.BanMembers))
@@ -28,42 +29,11 @@ module.exports.run = async function(yuno, author, args, msg) {
         const statusMsg = await msg.channel.send(':hourglass: Fetching bans... This may take a while for large ban lists.');
 
         // Fetch all bans with pagination
-        const allBannedUserIds = [];
-        let lastBanId = null;
-        let totalFetched = 0;
-        const batchSize = 1000; // Discord API limit
-
-        while (true) {
-            // Fetch a batch of bans
-            const fetchOptions = { limit: batchSize };
-            if (lastBanId) {
-                fetchOptions.after = lastBanId;
-            }
-
-            const bans = await msg.guild.bans.fetch(fetchOptions);
-
-            if (bans.size === 0) {
-                break; // No more bans to fetch
-            }
-
-            // Extract user IDs from this batch
-            const batchUserIds = Array.from(bans.values()).map(ban => ban.user.id);
-            allBannedUserIds.push(...batchUserIds);
-            totalFetched += bans.size;
-
-            // Update status message every 10k bans
-            if (totalFetched % 10000 === 0 || totalFetched === bans.size) {
+        const allBannedUserIds = await fetchAllBannedUserIds(msg.guild, async (totalFetched) => {
+            if (totalFetched % 10000 === 0) {
                 await statusMsg.edit(`:hourglass: Fetching bans... ${totalFetched} fetched so far...`);
             }
-
-            // Get the last ban ID for pagination
-            lastBanId = batchUserIds[batchUserIds.length - 1];
-
-            // If we got fewer than the batch size, we've reached the end
-            if (bans.size < batchSize) {
-                break;
-            }
-        }
+        });
 
         console.log(`[ExportBans] Fetched ${allBannedUserIds.length} total bans for guild ${guid}`);
 

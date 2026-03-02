@@ -15,6 +15,8 @@
 
 module.exports.messageProcName = "spam-filter"
 
+const { ensureMembersInCache } = require("../lib/discordHelpers");
+
 const {EmbedBuilder, PermissionsBitField} = require("discord.js"),
     fs = require("fs"),
     fsPromises = require("fs").promises,
@@ -83,15 +85,7 @@ module.exports.message = async function(content, msg) {
     if (Object.prototype.hasOwnProperty.call(customspamrules, msg.guild.id)) {
         return customspamrules[msg.guild.id].message(content, msg);
     }
-// Obtain the member if we don't have it
-    if(msg.guild && !msg.guild.members.cache.has(msg.author.id) && !msg.webhookID) {
-        msg.member = await msg.guild.members.fetch(msg.author);
-    }
-    // Obtain the member for the ClientUser if it doesn't already exist
-    if(msg.guild && !msg.guild.members.cache.has(msg.client.user.id)) {
-        await msg.guild.members.fetch(msg.client.user.id);
-    }
-
+    await ensureMembersInCache(msg, msg.client);
 
     //If the user has the ability to manage messages, ignore them
     if (msg.member.permissions.has(PermissionsBitField.Flags.ManageMessages))

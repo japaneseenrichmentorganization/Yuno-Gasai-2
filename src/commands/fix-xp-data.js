@@ -17,11 +17,7 @@
 */
 
 const {EmbedBuilder} = require("discord.js");
-
-// Helper function to calculate XP needed for next level
-function getNeededXPForLevel(level) {
-    return 5 * Math.pow(level, 2) + 50 * level + 100;
-}
+const { xpNeededForLevel } = require("../lib/xpFormulas");
 
 // Yield to event loop to keep bot responsive
 const yieldToEventLoop = () => new Promise(resolve => setImmediate(resolve));
@@ -44,7 +40,7 @@ module.exports.run = async function(yuno, author, args, msg) {
         // First pass: identify corrupted records (fast, no API calls)
         const corruptedRecords = [];
         for (const record of allXPData) {
-            const neededXP = getNeededXPForLevel(record.level);
+            const neededXP = xpNeededForLevel(record.level);
             if (record.exp > neededXP) {
                 corruptedRecords.push({
                     userId: record.userID,

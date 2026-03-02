@@ -18,6 +18,7 @@
 
 const { EmbedBuilder, AuditLogEvent } = require("discord.js");
 const { setupRateLimitListener, waitForRateLimit } = require("../lib/rateLimitHelper");
+const { fetchAllBannedUserIds } = require("../lib/discordHelpers");
 
 // Batch size for parallel processing
 const BATCH_SIZE = 50;
@@ -104,8 +105,6 @@ async function scanBanList(yuno, msg) {
         let totalSelfBans = 0;       // Users who banned themselves (tried to use ban command without perms)
         let totalNoReason = 0;       // Bans with no reason (likely imported or server bans)
         let totalServerBans = 0;     // Bans done outside the bot (non-bot bans with reasons)
-        let lastBanId = null;
-        const batchSize = 1000;
 
         // Initialize guild first
         await yuno.dbCommands.initGuild(yuno.database, msg.guild.id);
@@ -151,24 +150,20 @@ async function scanBanList(yuno, msg) {
         await statusMsg.edit(`:hourglass: Found ${auditBanMap.size} bans in audit logs. Now scanning full ban list...`);
 
         // Now fetch all bans with pagination
-        while (true) {
-            const fetchOptions = { limit: batchSize };
-            if (lastBanId) {
-                fetchOptions.after = lastBanId;
-            }
+        const allIds = await fetchAllBannedUserIds(msg.guild, async (totalFetched) => {
+            await statusMsg.edit(`:hourglass: Fetching bans... ${totalFetched} fetched so far...`);
+        });
 
-            const bans = await msg.guild.bans.fetch(fetchOptions);
+        // Process all fetched ban IDs in batches for database operations
+        const processBatchSize = 1000;
+        for (let i = 0; i < allIds.length; i += processBatchSize) {
+            const batchIds = allIds.slice(i, i + processBatchSize);
 
-            if (bans.size === 0) {
-                break;
-            }
-
-            // Collect all bans from this batch for batch processing
+            // Collect ban entries from this batch for batch processing
             const banEntries = [];
-            for (const [userId, ban] of bans) {
-                lastBanId = userId;
+            for (const userId of batchIds) {
                 const auditInfo = auditBanMap.get(userId);
-                const reason = auditInfo?.reason || ban.reason || null;
+                const reason = auditInfo?.reason || null;
 
                 // Check if this is a bot-executed ban
                 // Patterns from the codebase:
@@ -244,10 +239,6 @@ async function scanBanList(yuno, msg) {
 
             // Update status every batch
             await statusMsg.edit(`:hourglass: Processing bans... ${totalProcessed} checked | ${totalImported} imported | ${totalSkipped} skipped`);
-
-            if (bans.size < batchSize) {
-                break;
-            }
 
             // Dynamic delay based on rate limit status
             await waitForRateLimit(yuno.dC);
