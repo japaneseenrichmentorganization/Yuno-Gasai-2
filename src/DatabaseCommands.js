@@ -231,6 +231,12 @@ module.exports = self = {
                 actionSuspicious TEXT DEFAULT 'log',
                 actionHighlySuspicious TEXT DEFAULT 'log',
                 actionMegaSuspicious TEXT DEFAULT 'ban'
+            )`),
+            database.runPromise(`CREATE TABLE IF NOT EXISTS spamChecksums (
+                checksum   TEXT NOT NULL,
+                guildId    TEXT NOT NULL,
+                detectedAt INTEGER,
+                PRIMARY KEY (checksum, guildId)
             )`)
         ]);
 
@@ -247,7 +253,8 @@ module.exports = self = {
             database.runPromise(`CREATE INDEX IF NOT EXISTS idx_mentionresponses_gid_trigger ON mentionResponses(gid, trigger)`),
             database.runPromise(`CREATE INDEX IF NOT EXISTS idx_banimages_gid_banner ON banImages(gid, banner)`),
             database.runPromise(`CREATE INDEX IF NOT EXISTS idx_logchannels_gid ON logChannels(gid)`),
-            database.runPromise(`CREATE INDEX IF NOT EXISTS idx_vcsessions_gid ON vcSessions(gid)`)
+            database.runPromise(`CREATE INDEX IF NOT EXISTS idx_vcsessions_gid ON vcSessions(gid)`),
+            database.runPromise(`CREATE INDEX IF NOT EXISTS idx_spamchecksums_guildid ON spamChecksums(guildId)`)
         ]);
     },
 
@@ -1711,5 +1718,35 @@ module.exports = self = {
             await database.runPromise("INSERT INTO altDetectorConfig(gid) VALUES(?)", [guildId]);
         }
         await database.runPromise(`UPDATE altDetectorConfig SET ${field} = ? WHERE gid = ?`, [value, guildId]);
+    },
+
+    // ==================== Spam Checksum Functions ====================
+
+    /**
+     * Check if a checksum is already known as spam for this guild.
+     * @param {Database} database
+     * @param {string} checksum - SHA-256 hex digest
+     * @param {string} guildId
+     * @returns {Promise<boolean>}
+     */
+    "isKnownSpamChecksum": async function(database, checksum, guildId) {
+        const rows = await database.allPromise(
+            "SELECT 1 FROM spamChecksums WHERE checksum = ? AND guildId = ?",
+            [checksum, guildId]
+        );
+        return rows.length > 0;
+    },
+
+    /**
+     * Store a checksum as known spam for this guild (INSERT OR IGNORE).
+     * @param {Database} database
+     * @param {string} checksum - SHA-256 hex digest
+     * @param {string} guildId
+     */
+    "addSpamChecksum": async function(database, checksum, guildId) {
+        await database.runPromise(
+            "INSERT OR IGNORE INTO spamChecksums(checksum, guildId, detectedAt) VALUES(?, ?, ?)",
+            [checksum, guildId, Date.now()]
+        );
     }
 }

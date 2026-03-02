@@ -14,6 +14,7 @@
 */
 
 const { PermissionsBitField } = require("discord.js");
+const crypto = require("crypto");
 
 // Regex patterns
 const DISCORD_INVITE_REGEX = /(https)*(http)*:*(\/\/)*discord(.gg|app.com\/invite)\/[a-zA-Z0-9]{1,}/i;
@@ -26,6 +27,119 @@ const warnings = {
     textInNsfw: new Set(),
     imageLink: new Set()
 };
+
+// Sliding window base (ms) — both rules share this
+const BASE_WINDOW_MS = 5000;
+
+// Rule 1: per-user nsfw repeat-text tracking
+// userId -> { history: [{text: string, ts: number}], jitter: number }
+const nsfwRepeatState = new Map();
+
+// Rule 2: per-user image checksum tracking
+// userId -> { history: [{checksum: string, ts: number}], jitter: number }
+const imageChecksumState = new Map();
+
+// Yuno reference (set by discordConnected export)
+let yunoRef = null;
+
+/**
+ * Get or create per-user sliding window state.
+ * Jitter is randomized per burst (re-randomized when history is empty after prune).
+ */
+function getOrCreateState(stateMap, userId) {
+    let state = stateMap.get(userId);
+    if (!state) {
+        state = { history: [], jitter: 0.5 + Math.random() };
+        stateMap.set(userId, state);
+    }
+    return state;
+}
+
+/**
+ * Prune entries older than the effective window.
+ * Re-randomizes jitter if history empties (new burst will have a different window).
+ */
+function pruneHistory(state) {
+    const window = BASE_WINDOW_MS * state.jitter;
+    const cutoff = Date.now() - window;
+    state.history = state.history.filter(e => e.ts > cutoff);
+    if (state.history.length === 0) {
+        state.jitter = 0.5 + Math.random();
+    }
+}
+
+const MAX_IMAGE_BYTES = 4 * 1024 * 1024; // 4 MB hard cap per image
+
+/**
+ * Download an image URL into a Buffer.
+ * Returns null on error, timeout, or if the file exceeds MAX_IMAGE_BYTES.
+ */
+async function downloadImage(url) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 10000); // 10s timeout
+    try {
+        const res = await fetch(url, { signal: controller.signal });
+        if (!res.ok) return null;
+        const len = parseInt(res.headers.get("content-length") || "0", 10);
+        if (len > MAX_IMAGE_BYTES) return null;
+        const buf = Buffer.from(await res.arrayBuffer());
+        if (buf.length > MAX_IMAGE_BYTES) return null;
+        return buf;
+    } catch {
+        return null;
+    } finally {
+        clearTimeout(timer);
+    }
+}
+
+/**
+ * Non-blocking image checksum processor.
+ * Called fire-and-forget from the image-checksum rule action.
+ */
+async function processImageChecksums(msg) {
+    if (!yunoRef || !msg.member) return;
+
+    const imageAttachments = [...msg.attachments.values()].filter(
+        a => a.contentType?.startsWith("image/")
+    );
+
+    for (const attachment of imageAttachments) {
+        const buf = await downloadImage(attachment.url);
+        if (!buf) continue;
+
+        const checksum = crypto.createHash("sha256").update(buf).digest("hex");
+        const guildId = msg.guild.id;
+
+        // Fast path: known spam checksum in DB
+        const isKnown = await yunoRef.dbCommands.isKnownSpamChecksum(
+            yunoRef.database, checksum, guildId
+        );
+        if (isKnown) {
+            safeDelete(msg);
+            await banUser(msg.member, "Autobanned: known spam image detected");
+            return;
+        }
+
+        // Accumulation path: rolling window
+        const userId = msg.author.id;
+        const state = getOrCreateState(imageChecksumState, userId);
+        pruneHistory(state);
+
+        const matching = state.history.filter(e => e.checksum === checksum);
+
+        if (matching.length >= 2) {
+            // 3rd match — store checksum, delete triggering message, ban
+            // (ban with deleteMessageSeconds:86400 cleans up prior messages server-side)
+            await yunoRef.dbCommands.addSpamChecksum(yunoRef.database, checksum, guildId);
+            safeDelete(msg);
+            await banUser(msg.member, "Autobanned: repeated image spam detected");
+            imageChecksumState.delete(userId);
+            return;
+        }
+
+        state.history.push({ checksum, ts: Date.now() });
+    }
+}
 
 // Ban configuration
 const BAN_CONFIG = {
@@ -123,6 +237,38 @@ const spamRules = [
         }
     },
 
+    // NSFW channels - same text+media posted rapidly = spam bot
+    {
+        name: "nsfw-repeat-text-media",
+        test: (content, msg) => {
+            const channelName = msg.channel.name.toLowerCase();
+            if (!channelName.startsWith("nsfw_")) return false;
+            // Must have a link or attachment (pure-text is handled by nsfw-text-only above)
+            const hasLink = content.toLowerCase().includes("http");
+            const hasAttachment = msg.attachments.size > 0;
+            return hasLink || hasAttachment;
+        },
+        action: async (msg, content) => {
+            const userId = msg.author.id;
+            const text = content.trim().toLowerCase();
+
+            const state = getOrCreateState(nsfwRepeatState, userId);
+            pruneHistory(state);
+
+            const matchCount = state.history.filter(e => e.text === text).length;
+
+            if (matchCount >= 2) {
+                // 3rd repetition (2 prior + current) — ban
+                safeDelete(msg);
+                await banUser(msg.member, "Autobanned: repeated text+media spam in nsfw channels");
+                nsfwRepeatState.delete(userId);
+                return;
+            }
+
+            state.history.push({ text, ts: Date.now() });
+        }
+    },
+
     // @everyone/@here mentions - immediate ban
     {
         name: "mass-mention",
@@ -166,6 +312,21 @@ const spamRules = [
                 warnDM: "Please keep your messages under 4 messages long. This is your one and only warning.\nFailure to comply will result in a ban."
             });
         }
+    },
+
+    // Cross-channel rapid image spam - checksum-based detection
+    {
+        name: "image-checksum",
+        test: (content, msg) => {
+            return msg.attachments.size > 0 &&
+                [...msg.attachments.values()].some(a => a.contentType?.startsWith("image/"));
+        },
+        action: (msg) => {
+            // Non-blocking: heavy async work runs in background, message pipeline unblocked
+            processImageChecksums(msg).catch(e =>
+                console.error("[image-checksum]", e.message)
+            );
+        }
     }
 ];
 
@@ -200,4 +361,8 @@ module.exports.message = async function(content, msg) {
             return;
         }
     }
+};
+
+module.exports.discordConnected = function(Yuno) {
+    yunoRef = Yuno;
 };
