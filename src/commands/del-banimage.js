@@ -16,22 +16,17 @@
     along with this program.  If not, see https://www.gnu.org/licenses/.
 */
 
+const { resolveTargetMember } = require("../lib/discordHelpers");
+
 module.exports.run = async function(yuno, author, args, msg) {
-    let user = msg.member;
+    const member = resolveTargetMember(msg, yuno);
 
-    if (msg.mentions.users.size) {
-        const target = msg.mentions.users.first();
-        const targetMember = msg.guild.members.cache.get(target.id);
-        if (targetMember && (yuno.commandMan._isUserMaster(msg.author.id) || msg.member.roles.highest.comparePositionTo(targetMember.roles.highest) > 0))
-            user = target;
-    }
+    await yuno.dbCommands.delBanImage(yuno.database, msg.guild.id, member.id);
 
-    await yuno.dbCommands.delBanImage(yuno.database, msg.guild.id, user.id);
-
-    if (user.id === msg.author.id)
+    if (member.id === msg.author.id)
         return await msg.channel.send(":white_check_mark: Your ban image has been deleted!");
     else
-        return await msg.channel.send(":white_check_mark: **" + (user.user?.username || user.username) + "**'s ban image has been deleted!");
+        return await msg.channel.send(":white_check_mark: **" + member.user.username + "**'s ban image has been deleted!");
 }
 
 module.exports.about = {

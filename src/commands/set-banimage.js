@@ -16,6 +16,8 @@
     along with this program.  If not, see https://www.gnu.org/licenses/.
 */
 
+const { resolveTargetMember } = require("../lib/discordHelpers");
+
 module.exports.run = async function(yuno, author, args, msg) {
     if (args.length === 0)
         return await msg.channel.send(":negative_squared_cross_mark: Not enough arguments.");
@@ -23,16 +25,9 @@ module.exports.run = async function(yuno, author, args, msg) {
     if (!yuno.UTIL.checkIfUrl(args[0]))
         return await msg.channel.send(":negative_squared_cross_mark: The first argument provided isn't a URL as required.");
 
-    let user = msg.member;
+    const member = resolveTargetMember(msg, yuno);
 
-    if (msg.mentions.users.size) {
-        const target = msg.mentions.users.first();
-        const targetMember = msg.guild.members.cache.get(target.id);
-        if (targetMember && (yuno.commandMan._isUserMaster(msg.author.id) || msg.member.roles.highest.comparePositionTo(targetMember.roles.highest) > 0))
-            user = target;
-    }
-
-    const r = await yuno.dbCommands.setBanImage(yuno.database, msg.guild.id, user.id, args[0]);
+    const r = await yuno.dbCommands.setBanImage(yuno.database, msg.guild.id, member.id, args[0]);
 
     if (r[0] === "creating")
         return await msg.channel.send(":white_check_mark: Ban image set!");
