@@ -76,7 +76,7 @@ async function postToLogChannel(logChannelId, member, category, score, guild) {
                 { name: "Score", value: String(score), inline: true },
                 { name: "Account Created", value: `<t:${Math.floor(member.user.createdTimestamp / 1000)}:R>`, inline: true }
             )
-            .setThumbnail(member.user.displayAvatarURL())
+            .setThumbnail(member.user.displayAvatarURL({ extension: 'png', size: 256 }))
             .setTimestamp();
 
         await channel.send({ embeds: [embed] });
