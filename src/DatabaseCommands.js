@@ -740,6 +740,7 @@ module.exports = self = {
         vcXpConfigCache.clear();
         dmConfigCache.clear();
         botBanCache.clear();
+        altDetectorConfigCache.clear();
     },
 
     /**
@@ -749,6 +750,7 @@ module.exports = self = {
     "invalidateGuildCache": function(guildid) {
         guildSettingsCache.invalidatePrefix(`guild:`);
         xpDataCache.invalidatePrefix(`xp:${guildid}:`);
+        altDetectorConfigCache.delete(guildid);
     },
 
     /**
@@ -1669,11 +1671,20 @@ module.exports = self = {
      * @returns {Promise<Object|null>}
      */
     "getAltDetectorConfig": async function(database, guildId) {
-        const cached = altDetectorConfigCache.get(guildId);
+        const cached = altDetectorConfigCache.get(`altDetectorConfig:${guildId}`);
         if (cached !== undefined) return cached;
         const rows = await database.allPromise("SELECT * FROM altDetectorConfig WHERE gid = ?", [guildId]);
-        const result = rows.length > 0 ? rows[0] : null;
-        altDetectorConfigCache.set(guildId, result);
+        const result = rows.length > 0 ? {
+            gid: rows[0].gid,
+            enabled: rows[0].enabled === 1,
+            logChannelId: rows[0].logChannelId || null,
+            quarantineRoleId: rows[0].quarantineRoleId || null,
+            actionNewbie: rows[0].actionNewbie || 'none',
+            actionSuspicious: rows[0].actionSuspicious || 'log',
+            actionHighlySuspicious: rows[0].actionHighlySuspicious || 'log',
+            actionMegaSuspicious: rows[0].actionMegaSuspicious || 'ban'
+        } : null;
+        altDetectorConfigCache.set(`altDetectorConfig:${guildId}`, result);
         return result;
     },
 
@@ -1686,7 +1697,15 @@ module.exports = self = {
      * @param {*} value
      */
     "setAltDetectorConfig": async function(database, guildId, field, value) {
-        altDetectorConfigCache.delete(guildId);
+        const ALLOWED_FIELDS = new Set([
+            'enabled', 'logChannelId', 'quarantineRoleId',
+            'actionNewbie', 'actionSuspicious',
+            'actionHighlySuspicious', 'actionMegaSuspicious'
+        ]);
+        if (!ALLOWED_FIELDS.has(field)) {
+            throw new Error(`Invalid altDetectorConfig field: ${field}`);
+        }
+        altDetectorConfigCache.delete(`altDetectorConfig:${guildId}`);
         const exists = await database.allPromise("SELECT gid FROM altDetectorConfig WHERE gid = ?", [guildId]);
         if (exists.length === 0) {
             await database.runPromise("INSERT INTO altDetectorConfig(gid) VALUES(?)", [guildId]);
