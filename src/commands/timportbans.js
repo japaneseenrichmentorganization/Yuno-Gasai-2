@@ -19,6 +19,7 @@
 const fs = require("fs").promises;
 const path = require("path");
 const { setupRateLimitListener, waitForRateLimit } = require("../lib/rateLimitHelper");
+const { resolveGuildForTerminal } = require("../lib/terminalHelpers");
 
 module.exports.runTerminal = async function(yuno, args) {
     if (args.length < 2) {
@@ -36,24 +37,8 @@ module.exports.runTerminal = async function(yuno, args) {
     const serverId = args[0];
     const filePath = args[1];
 
-    if (!/^\d{17,19}$/.test(serverId)) {
-        console.log("Error: Invalid server ID format.");
-        return;
-    }
-
-    const guild = yuno.dC.guilds.cache.get(serverId);
-    if (!guild) {
-        console.log(`Error: Server not found: ${serverId}`);
-        console.log("Use 'servers' command to see available servers.");
-        return;
-    }
-
-    // Check bot permissions
-    const botMember = guild.members.cache.get(yuno.dC.user.id);
-    if (!botMember?.permissions.has("BanMembers")) {
-        console.log("Error: Bot does not have ban permission in this server.");
-        return;
-    }
+    const guild = resolveGuildForTerminal(yuno, serverId);
+    if (!guild) return;
 
     // Validate file path
     const resolvedPath = path.resolve(filePath);
