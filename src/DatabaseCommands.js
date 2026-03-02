@@ -1718,8 +1718,7 @@ module.exports = self = {
             await database.runPromise("INSERT INTO altDetectorConfig(gid) VALUES(?)", [guildId]);
         }
         await database.runPromise(`UPDATE altDetectorConfig SET ${field} = ? WHERE gid = ?`, [value, guildId]);
-    }
-    ,
+    },
 
     // ==================== Spam Checksum Functions ====================
 
