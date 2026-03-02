@@ -17,6 +17,7 @@
 */
 
 const { EmbedBuilder } = require("discord.js");
+const { ensureMembersInCache, parseModArgs } = require("../lib/discordHelpers");
 
 module.exports.run = async function(yuno, author, args, msg) {
     if (args.length < 2) {
@@ -38,7 +39,7 @@ module.exports.run = async function(yuno, author, args, msg) {
         return msg.channel.send(":negative_squared_cross_mark: Maximum timeout duration is 28 days (40320 minutes).");
     }
 
-    const reason = args.slice(2).join(" ") || "No reason provided";
+    const { reason } = parseModArgs(args.slice(2).join(" "), "Timed out", msg.author.tag);
 
     try {
         const member = await msg.guild.members.fetch(target.id);
@@ -53,14 +54,15 @@ module.exports.run = async function(yuno, author, args, msg) {
         }
 
         // Check if bot can timeout this user
-        const botMember = await msg.guild.members.fetch(msg.client.user.id);
+        await ensureMembersInCache(msg, yuno.dC);
+        const botMember = msg.guild.members.cache.get(msg.client.user.id);
         if (member.roles.highest.position >= botMember.roles.highest.position) {
             return msg.channel.send(":negative_squared_cross_mark: I cannot timeout this user as they have equal or higher roles than me.");
         }
 
         // Apply the timeout
         const timeoutMs = duration * 60 * 1000;
-        await member.timeout(timeoutMs, `${reason} (by ${msg.author.tag})`);
+        await member.timeout(timeoutMs, reason);
 
         // Record to database
         await yuno.dbCommands.addModAction(
