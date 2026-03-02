@@ -58,6 +58,10 @@
     "_comment": "The number of warnings before a ban (when spamming)",
     "spam.max-warnings": 3,
 
+    "_comment": "DM rate limiting. Adaptively drops messages from users sending too fast. spamAction: 'ignore' (1-hour temp block) or 'ban' (permanent bot-ban).",
+    "dm-rate-limit.enabled": true,
+    "dm-rate-limit.spamAction": "ignore",
+
     "_comment": "Number of experience given per msg",
     "chat.exppermsg": 20,
 

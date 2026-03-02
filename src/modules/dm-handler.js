@@ -19,6 +19,17 @@
 module.exports.modulename = "dm-handler";
 
 const { EmbedBuilder } = require("discord.js");
+const LRUCache = require("../lib/lruCache");
+
+// Per-user rate limit state. TTL of 5 min = state re-randomizes after 5 min of silence.
+const userRateCache = new LRUCache(2000, 5 * 60 * 1000);
+
+// Temporary block list for "ignore" spam action: bounded LRU with 1-hour TTL
+const tempBlockList = new LRUCache(1000, 60 * 60 * 1000); // 1-hour TTL, max 1000 entries
+
+const RATE_WINDOW_MS = 60 * 1000;               // 60-second sliding window
+const HUMAN_REPLY_LENIENCY_MS = 10 * 60 * 1000; // +5 boost lasts 10 min after reply
+const SPAM_DROP_THRESHOLD = 5;                   // dropped messages before spam action fires
 
 let DISCORD_EVENTED = false,
     discClient = null,
@@ -27,6 +38,106 @@ let DISCORD_EVENTED = false,
 
 // Rate limit tracking for DM forwarding
 const rateLimitState = new Map();
+
+/**
+ * Get or create per-user rate limit state.
+ * baseLimit is randomized per session (re-randomizes on TTL expiry).
+ */
+function getOrCreateState(userId) {
+    let state = userRateCache.get(userId);
+    if (!state) {
+        state = {
+            messages: [],                                   // timestamps in current window
+            baseLimit: 6 + Math.floor(Math.random() * 5),  // jittered: 6-10
+            droppedCount: 0,                                // messages dropped this session
+            lastHumanReply: 0,                              // timestamp of last human reply
+            spamActionTaken: false
+        };
+    }
+    return state;
+}
+
+/**
+ * Check if a new message from userId is allowed. Records it if so.
+ * Returns true = allowed, false = rate limited (silently drop).
+ */
+function checkAndRecord(userId) {
+    const now = Date.now();
+    const state = getOrCreateState(userId);
+
+    // Prune messages outside the sliding window
+    state.messages = state.messages.filter(t => now - t < RATE_WINDOW_MS);
+
+    // Adaptive effective limit: tightens by 1 for each previously dropped message
+    let effectiveLimit = Math.max(2, state.baseLimit - state.droppedCount);
+
+    // Leniency boost if a human has replied recently
+    if (now - state.lastHumanReply < HUMAN_REPLY_LENIENCY_MS) {
+        effectiveLimit += 5;
+    }
+
+    if (state.messages.length >= effectiveLimit) {
+        state.droppedCount++;
+        userRateCache.set(userId, state); // TTL reset = "5 min from last message"
+        return false;
+    }
+
+    state.messages.push(now);
+    userRateCache.set(userId, state);
+    return true;
+}
+
+/**
+ * Returns true if the user has crossed the spam threshold and no human has
+ * replied recently. Only fires once per session (spamActionTaken guard).
+ */
+function isSpam(userId) {
+    const state = userRateCache.get(userId);
+    if (!state || state.spamActionTaken) return false;
+    const recentReply = (Date.now() - state.lastHumanReply) < HUMAN_REPLY_LENIENCY_MS;
+    return state.droppedCount >= SPAM_DROP_THRESHOLD && !recentReply;
+}
+
+/**
+ * Execute the configured spam action for a user.
+ * "ignore" = 1-hour temp block (in-memory).
+ * "ban"    = permanent bot-ban via existing addBotBan().
+ */
+async function executeSpamAction(userId) {
+    if (!yunoInstance) return; // guard against pre-init calls
+
+    // Mark as actioned to prevent repeat
+    const state = userRateCache.get(userId);
+    if (state) {
+        state.spamActionTaken = true;
+        userRateCache.set(userId, state);
+    }
+
+    // Always apply in-memory temp block as an immediate backstop
+    tempBlockList.set(userId, true);
+
+    const spamAction = (yunoInstance.config.get("dm-rate-limit.spamAction") || "ignore").toLowerCase();
+
+    if (spamAction === "ban") {
+        try {
+            const alreadyBanned = await yunoInstance.dbCommands.isBotBanned(yunoInstance.database, userId, null);
+            if (!alreadyBanned.banned) {
+                await yunoInstance.dbCommands.addBotBan(
+                    yunoInstance.database,
+                    userId,
+                    "user",
+                    "Automatic ban: DM spam detected",
+                    "auto-rate-limit"
+                );
+                yunoInstance.prompt.warn(`[DM Rate Limit] Auto-banned ${userId} for DM spam`);
+            }
+        } catch (e) {
+            yunoInstance.prompt.error(`[DM Rate Limit] Failed to auto-ban ${userId}, temp block applied: ${e.message}`);
+        }
+    } else {
+        yunoInstance.prompt.warn(`[DM Rate Limit] Temp-blocked ${userId} for 1 hour (DM spam)`);
+    }
+}
 
 /**
  * Format timestamp for display
@@ -137,6 +248,23 @@ async function onMessage(message) {
     if (message.author.bot) return;
 
     const user = message.author;
+    const userId = user.id;
+
+    // --- Adaptive rate limiting ---
+    const rateLimitEnabled = yunoInstance?.config?.get("dm-rate-limit.enabled");
+    if (rateLimitEnabled !== false) {
+        // Check in-memory temp block list
+        if (tempBlockList.has(userId)) return; // LRU TTL handles 1-hour expiry
+
+        const allowed = checkAndRecord(userId);
+        if (!allowed) {
+            if (isSpam(userId)) {
+                await executeSpamAction(userId);
+            }
+            return; // silently drop
+        }
+    }
+    // --- End rate limiting ---
 
     try {
         // Check if user is bot-banned
@@ -234,8 +362,31 @@ module.exports.init = async function(Yuno, hotReloaded) {
 
 module.exports.configLoaded = function() {};
 
+/**
+ * Called by the reply command when a human sends a reply to a user.
+ * Grants the user leniency in the adaptive rate limiter for 10 minutes.
+ * @param {string} userId
+ */
+module.exports.notifyHumanReply = function(userId) {
+    let state = userRateCache.get(userId);
+    if (!state) {
+        // No active session; create one to preserve the reply leniency for their next message
+        state = {
+            messages: [],
+            baseLimit: 6 + Math.floor(Math.random() * 5),
+            droppedCount: 0,
+            lastHumanReply: 0,
+            spamActionTaken: false
+        };
+    }
+    state.lastHumanReply = Date.now();
+    userRateCache.set(userId, state);
+};
+
 module.exports.beforeShutdown = async function(Yuno) {
     rateLimitState.clear();
+    tempBlockList.clear();
+    userRateCache.clear();
 
     if (discClient && messageHandler) {
         discClient.removeListener("messageCreate", messageHandler);
