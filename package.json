@@ -21,6 +21,7 @@
   "dependencies": {
     "discord-alt-detector": "^1.0.4",
     "discord.js": "^14.25.1",
+    "neo-blessed": "^0.2.0",
     "urban": "^0.3.2"
   },
   "overrides": {

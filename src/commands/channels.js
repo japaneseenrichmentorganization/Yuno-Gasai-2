@@ -73,6 +73,8 @@ module.exports.runTerminal = async function(yuno, args) {
         console.log("  channels 123456789012345678");
         console.log("  channels \"My Server\"");
         console.log("  channels MyServer");
+        console.log("");
+        console.log("Tip: Use 'servers' to list all servers with their IDs.");
         return;
     }
 
@@ -146,10 +148,7 @@ function printChannels(channels, botMember) {
             }
         }
 
-        // Truncate ID for display
-        const shortId = channel.id.slice(0, 8) + "...";
-
-        console.log(`   [${icon}] ${channel.name} [${shortId}] (${typeName})${perms}`);
+        console.log(`   [${icon}] ${channel.name} [${channel.id}] (${typeName})${perms}`);
     }
 }
 
