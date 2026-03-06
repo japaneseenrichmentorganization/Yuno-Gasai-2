@@ -112,6 +112,7 @@ class Yuno extends EventEmitter {
         this.modules = []
 
         this.interactivity = true;
+        this.tuiMode = false;
 
         this.version = PACKAGE.version;
         this.intVersion = parseInt(PACKAGE.version.replaceAll(".", ""), 10);
@@ -187,6 +188,17 @@ class Yuno extends EventEmitter {
                 this.prompt.error("Discord.JS's client threw an error", e);
             });
         }
+
+        this.on('discord-connected', () => {
+            if (this.tuiMode) {
+                const tui = require('./lib/tui/index.js');
+                tui.activate(this, {
+                    onQuit: () => {
+                        this.prompt.info('TUI exited.');
+                    }
+                });
+            }
+        });
     }
 
     /**
@@ -223,6 +235,9 @@ class Yuno extends EventEmitter {
                 "argument": "--no-colors",
                 "aliases": ["-nc"],
                 "description": "Logs without any color."
+            }, {
+                "argument": "--tui",
+                "description": "Start in full terminal UI mode (XChat-style)."
             }
         ])
     }
@@ -428,6 +443,12 @@ ${YUNO_PINK}           "I'll protect this server forever... just for you~"${RESE
                         console.log("unhandledRejection", e);
                         this.shutdown(-1);
                     });
+                }
+            },
+            tui: {
+                test: (arg) => arg === "--tui",
+                handle: () => {
+                    this.tuiMode = true;
                 }
             }
         };
