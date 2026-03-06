@@ -3,16 +3,18 @@ const assert = require('node:assert/strict');
 const { formatMessage, formatEmbed } = require('../../src/lib/tui/chatPane.js');
 
 test('formatMessage includes username and content', () => {
+    const date = new Date();
+    const expectedTime = `${String(date.getHours()).padStart(2,'0')}:${String(date.getMinutes()).padStart(2,'0')}`;
     const msg = {
         author: { username: 'Alice' },
         content: 'hello world',
         embeds: [],
-        createdAt: new Date('2024-01-01T12:34:00Z')
+        createdAt: date
     };
     const out = formatMessage(msg);
     assert.ok(out.includes('Alice'));
     assert.ok(out.includes('hello world'));
-    assert.ok(out.includes('12:34'));
+    assert.ok(out.includes(expectedTime));
 });
 
 test('formatMessage renders embeds when content is empty', () => {
