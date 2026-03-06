@@ -23,7 +23,7 @@ function formatMessage(msg) {
     return `[${time}] ${user}: ${body}`;
 }
 
-function createChatPane(screen, hintBarVisible) {
+function createChatPane(screen) {
     const box = blessed.log({
         parent: screen,
         top: 1,

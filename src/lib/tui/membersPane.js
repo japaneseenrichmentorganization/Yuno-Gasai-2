@@ -1,6 +1,6 @@
 const blessed = require('neo-blessed');
 
-function createMembersPane(screen, hintBarVisible) {
+function createMembersPane(screen) {
     let visible = false;
 
     const list = blessed.list({

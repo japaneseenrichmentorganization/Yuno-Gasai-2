@@ -34,7 +34,7 @@ function buildTreeItems(client, cache) {
     return items;
 }
 
-function createChannelTree(screen, hintBarVisible) {
+function createChannelTree(screen) {
     const list = blessed.list({
         parent: screen,
         top: 1,

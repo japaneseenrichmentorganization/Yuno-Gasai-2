@@ -3,7 +3,7 @@ const { runCommand } = require('./commandBridge.js');
 
 const MAX_HISTORY = 50;
 
-function createInputBar(screen, hintBarVisible) {
+function createInputBar(screen) {
     const box = blessed.textbox({
         parent: screen,
         bottom: 1,
