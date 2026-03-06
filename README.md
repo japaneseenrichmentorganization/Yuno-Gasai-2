@@ -177,6 +177,16 @@ Yuno is a **yandere-themed Discord bot** combining powerful moderation tools wit
 </td>
 <td width="50%">
 
+### 🖥️ Terminal UI (TUI)
+*"Now you can watch over everything... from a single screen~"* 💻
+- 🌳 XChat-style server/channel tree
+- 💬 Live chat — read & send in any channel
+- 💌 DM conversations inline
+- 🔴 Unread badges with live counts
+- 👥 Toggleable member list (`Alt+M`)
+- ⌨️ Bot commands via `:command` bar
+- ⌨️ Shortcut hint bar (`Alt+H` to hide)
+
 </td>
 </tr>
 </table>
@@ -300,6 +310,9 @@ tmux
 
 # Manual run with native SQLite
 node --experimental-sqlite index.js
+
+# Launch straight into the Terminal UI~
+node --experimental-sqlite index.js --tui
 ```
 
 > 💡 *Set `NODE_ENV=development` for full stack traces during development~*
@@ -808,6 +821,78 @@ timportbans <server-id> ./BANS-123456.txt
 
 ---
 
+## 🖥️ Terminal UI (TUI)
+
+*"You can watch over everything from right here... with me~"* 💕
+
+Yuno includes a full XChat-style terminal UI built with [neo-blessed](https://github.com/nicolo-ribaudo/neo-blessed). Read and send in any guild channel or DM conversation, with live incoming messages, unread badges, and full bot command access — all without leaving the terminal.
+
+### 📐 Layout
+
+```
+┌──────────────────────────────────────────────────────────────┐
+│  Yuno  │  bot#1234  │  Servers: 3  │  Ping: 42ms  │  [3]    │
+├──────────────────┬───────────────────────────────────────────┤
+│ ▼ My Server      │  #general — My Server                     │
+│    #general [3]  │                                           │
+│    #talk         │  [12:01] SomeUser: hello~                 │
+│ ▶ Other Server   │  [12:02] OtherUser: hey there             │
+│──────────────────│                                           │
+│ DMs              │───────────────────────────────────────────│
+│  SomeUser  [2]   │  > _                                      │
+├──────────────────┴───────────────────────────────────────────┤
+│  Tab:Focus  PgUp/Dn:Scroll  Alt+M:Members  Ctrl+Q:Quit  :shortcuts  Alt+H:Hide │
+└──────────────────────────────────────────────────────────────┘
+```
+
+### 🚀 Launching
+
+```bash
+# Start in TUI mode from the beginning~
+node --experimental-sqlite index.js --tui
+
+# Or activate at runtime from the REPL~
+tui
+```
+
+### ⌨️ Key Bindings
+
+| Key | Action |
+|-----|--------|
+| `↑` / `↓` | Navigate channel tree / input history |
+| `Enter` | Open channel or send message |
+| `Tab` | Cycle focus: sidebar ↔ input bar |
+| `Esc` | Return focus to sidebar |
+| `PgUp` / `PgDn` | Scroll chat history |
+| `Alt+M` | Toggle members list |
+| `Alt+H` | Toggle hint bar |
+| `Ctrl+Q` | Exit TUI (returns to REPL) |
+
+### ⌨️ Command Mode
+
+Type `:` in the input bar to run any bot command without leaving the chat view:
+
+```
+:ban 123456789012345678 reason
+:kick @user
+:servers
+:channels My Server
+:inbox
+:shortcuts        ← shows full key binding overlay
+```
+
+Output appears in a dismissable overlay. Press any key to close it.
+
+### 💬 Chat Features
+
+- **Live messages** — incoming messages appear instantly in the active pane
+- **Message history** — last 50 messages fetched on first open, cached for the session
+- **DMs** — listed in the sidebar, open like any channel
+- **Unread badges** — `[n]` appears next to channels with new messages, cleared on open
+- **Members list** — toggle with `Alt+M`, shows cached guild members alphabetically
+
+---
+
 ## 🔍 Alt Account Detection
 
 *"I can always tell when someone's an imposter... I won't let them near you~"* 💢
@@ -950,6 +1035,7 @@ Yuno can check for updates from git, download them, and apply them via hot-reloa
 | `timportbans` | *"Loading my enemies~"* 📥 |
 | `set-presence` | *"Changing my mood~"* 🎭 |
 | `auto-update` | *"Evolving to perfection~"* 🔄 |
+| `tui` | *"Watch everything from one screen~"* 🖥️ |
 
 *Use the `list` command to see all available commands!*
 
