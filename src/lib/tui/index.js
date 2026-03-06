@@ -29,7 +29,9 @@ function activate(yuno, { onQuit } = {}) {
         const channelId = message.channelId;
         const activeId  = _layout.chatPane.box._getActiveChannelId();
 
-        // Cap cache per channel to avoid unbounded growth
+        // Cap cache per channel to avoid unbounded growth.
+        // NOTE: _cache.get() returns the live array reference (not a copy),
+        // so msgs.shift() mutates the stored array directly before append.
         const msgs = _cache.get(channelId);
         if (msgs.length >= MAX_CACHED_MESSAGES) msgs.shift();
 

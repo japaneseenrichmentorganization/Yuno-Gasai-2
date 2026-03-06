@@ -119,7 +119,7 @@ function buildLayout(client, yuno, commandMan, cache) {
     screen.on('hint-bar-toggled', (visible) => {
         const bottomVal = visible ? 1 : 0;
         channelTree.list.bottom = bottomVal;
-        chatPane.box.bottom     = visible ? 4 : 3;  // 3 for input bar height
+        chatPane.box.bottom     = visible ? 4 : 3;  // inputBar height(3) + hintBar height(1 when visible)
         inputBar.box.bottom     = bottomVal;
         membersPane.list.bottom = bottomVal;
         screen.render();
