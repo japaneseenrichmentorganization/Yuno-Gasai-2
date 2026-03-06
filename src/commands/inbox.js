@@ -76,7 +76,7 @@ module.exports.runTerminal = async function(yuno, args) {
             const status = msg.replied ? "REPLIED" : "UNREPLIED";
             const time = formatRelativeTime(msg.timestamp);
 
-            console.log(`[${msg.id}] (${time}) - ${status}`);
+            console.log(`[${msg.id}] ${userId} (${time}) - ${status}`);
             console.log(`    "${truncate(msg.content, 150)}"`);
             if (msg.attachments.length > 0) {
                 console.log(`    [${msg.attachments.length} attachment(s)]`);
@@ -111,7 +111,7 @@ module.exports.runTerminal = async function(yuno, args) {
         const time = formatRelativeTime(msg.timestamp);
         const marker = msg.replied ? " " : "*";
 
-        console.log(`${marker}[${msg.id}] ${msg.userTag} (${time}) - ${status}`);
+        console.log(`${marker}[${msg.id}] ${msg.userTag} [${msg.usrId}] (${time}) - ${status}`);
         console.log(`     "${truncate(msg.content, 120)}"`);
         if (msg.attachments.length > 0) {
             console.log(`     [${msg.attachments.length} attachment(s)]`);
