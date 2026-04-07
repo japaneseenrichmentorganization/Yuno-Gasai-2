@@ -68,7 +68,7 @@ function pruneHistory(state) {
     }
 }
 
-const MAX_IMAGE_BYTES = 4 * 1024 * 1024; // 4 MB hard cap per image
+const MAX_IMAGE_BYTES = 10 * 1024 * 1024; // 10 MB (current non-Nitro Discord upload limit)
 
 /**
  * Download an image URL into a Buffer.
