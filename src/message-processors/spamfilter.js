@@ -114,6 +114,19 @@ module.exports.message = async function(content, msg) {
     
 }
 
+module.exports.messageDelete = async function(msg) {
+    if (!msg.guild) return;
+
+    // Check if this specific guild has a custom rule file loaded
+    if (Object.prototype.hasOwnProperty.call(customspamrules, msg.guild.id)) {
+        const rule = customspamrules[msg.guild.id];
+        // If the custom rule file has a messageDelete function, run it
+        if (typeof rule.messageDelete === "function") {
+            return rule.messageDelete(msg);
+        }
+    }
+};
+
 module.exports.discordConnected = async function(Yuno) {
     await loadCustomSpamRules();
     spamfilt = await Yuno.dbCommands.getSpamFilterEnabled(Yuno.database);
