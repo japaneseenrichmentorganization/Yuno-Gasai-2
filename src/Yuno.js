@@ -187,6 +187,16 @@ class Yuno extends EventEmitter {
             this.dC.on("error", (e) => {
                 this.prompt.error("Discord.JS's client threw an error", e);
             });
+            this.dC.on("messageDelete", async (msg) => {
+                if (msg.partial) {
+                    try { await msg.fetch(); } catch { return; }
+                }
+                // Call the messageDelete function in spam-filter.js
+                const spamFilter = this.modules.find(m => m.messageProcName === "spam-filter");
+                if (spamFilter && typeof spamFilter.messageDelete === "function") {
+                    await spamFilter.messageDelete(msg);
+                }
+            });
         }
 
         this.on('discord-connected', () => {
