@@ -6,8 +6,24 @@
 # Enable Node.js 24 experimental features
 export NODE_ENV=production
 
+# Resolve the bot's directory from the script's location so that the
+# Node.js Permission Model paths are correct regardless of where start.sh
+# is called from (e.g. a tmux session launched from a different cwd).
+BOT_DIR="$(cd "$(dirname "$0")" && pwd)"
+
 # Node.js 24 native SQLite support
 NODE_OPTIONS="--experimental-sqlite"
+
+# === PERMISSION MODEL ===
+# Restricts the process to its own directory only.
+# --allow-fs-read=$BOT_DIR   : read config, db, node_modules, src
+# --allow-fs-write=$BOT_DIR  : write database, BANS-*.txt, logs
+# --allow-child-process      : db-integrity-check.js, git (auto-update)
+# --allow-addons             : bufferutil, utf-8-validate, zlib-sync (Discord.js native addons)
+#
+# NOTE: If your database path in config.json is an absolute path outside the
+# bot directory, add an extra --allow-fs-read=/path/to/db --allow-fs-write=/path/to/db
+NODE_OPTIONS="$NODE_OPTIONS --permission --allow-fs-read=$BOT_DIR --allow-fs-write=$BOT_DIR --allow-child-process --allow-addons"
 
 # === MEMORY CONFIGURATION ===
 # Detect if running on a low-memory system (Pi, embedded, <4GB RAM)
