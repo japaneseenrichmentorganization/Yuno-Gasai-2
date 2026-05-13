@@ -105,10 +105,14 @@ function _checkRateLimit(userId, isMaster) {
 
 // Amortised map cleanup: evict entries whose backoff has expired and bucket is
 // essentially full (they would be re-initialised identically on next touch).
+// Threshold is randomized 300–699 so an attacker cannot infer map size from
+// the periodic cleanup pause.
 let _rlTrimCounter = 0;
+let _rlTrimThreshold = 300 + Math.floor(Math.random() * 400);
 function _maybeCleanRateLimitMap() {
-    if (++_rlTrimCounter < 500) return;
+    if (++_rlTrimCounter < _rlTrimThreshold) return;
     _rlTrimCounter = 0;
+    _rlTrimThreshold = 300 + Math.floor(Math.random() * 400); // re-randomize each cycle
     const now = Date.now();
     for (const [uid, entry] of _rlBuckets) {
         if (entry.backoffUntil < now && entry.violations === 0) _rlBuckets.delete(uid);

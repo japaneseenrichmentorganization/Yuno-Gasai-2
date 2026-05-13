@@ -57,13 +57,16 @@ function getRateLimitDelay(client) {
         // Exponential backoff if we're hitting limits frequently
         if (rateLimitState.consecutiveHits > 0) {
             const timeSinceLastHit = now - rateLimitState.lastHit;
-            // Reset consecutive hits if it's been more than 30 seconds
-            if (timeSinceLastHit > 30000) {
+            // Reset window is jittered ±17% around 30s so probe timing is not predictable
+            const resetWindow = 25000 + Math.floor(Math.random() * 10000);
+            if (timeSinceLastHit > resetWindow) {
                 rateLimitState.consecutiveHits = 0;
                 return 10;
             }
-            // Exponential backoff: 50ms * 2^hits, max 5 seconds
-            return Math.min(50 * Math.pow(2, rateLimitState.consecutiveHits), 5000);
+            // Exponential backoff with ±25% jitter so penalty duration is non-deterministic
+            const rawBackoff = 50 * Math.pow(2, rateLimitState.consecutiveHits);
+            const backoffJitter = 0.75 + Math.random() * 0.5;
+            return Math.min(rawBackoff * backoffJitter, 5000);
         }
 
         // No rate limit issues - minimal delay

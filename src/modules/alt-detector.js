@@ -107,6 +107,10 @@ let discordConnected = async function(Yuno) {
                 const action = config[actionField] || "none";
                 if (action === "none") return;
 
+                // Random delay (200–700ms) before acting so join→action latency does
+                // not reveal whether detection fired or what the outcome is.
+                await new Promise(resolve => setTimeout(resolve, 200 + Math.floor(Math.random() * 500)));
+
                 // Always log to the log channel if one is set (regardless of action type)
                 if (config.logChannelId) {
                     await postToLogChannel(config.logChannelId, member, category, score, member.guild);
