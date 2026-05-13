@@ -14,7 +14,10 @@
     "generate-doc": "jsdoc .\\src -r -p -d docs -t node_modules/docdash",
     "generate-doc-notheme": "jsdoc .\\src -r -p -d docs",
     "check-db": "node --experimental-sqlite src/scripts/db-integrity-check.js",
-    "check-db:fix": "node --experimental-sqlite src/scripts/db-integrity-check.js --fix"
+<<<<<<< HEAD
+    "check-db:fix": "node --experimental-sqlite src/scripts/db-integrity-check.js --fix",
+    "migrate-v2": "node --experimental-sqlite src/scripts/migrate-encryption-v2.js",
+    "migrate-v2:dry": "node --experimental-sqlite src/scripts/migrate-encryption-v2.js --dry-run"
   },
   "engines": {
     "node": ">=24.0.0"
