@@ -28,12 +28,29 @@ const detector = new AltDetector();
 // Actionable categories only (skip trusted/normal/highly-trusted)
 const ACTIONABLE_CATEGORIES = new Set(["newbie", "suspicious", "highly-suspicious", "mega-suspicious"]);
 
+// Ordered most-severe → least-severe. Used to compute "this category and above" slices.
+const CATEGORY_ORDER = ["mega-suspicious", "highly-suspicious", "suspicious", "newbie"];
+
 const CATEGORY_EMOJI = {
     "newbie": "🟠",
     "suspicious": "🔴",
     "highly-suspicious": "🚨",
     "mega-suspicious": "☠️"
 };
+
+// Labels and descriptions for per-threshold ban select menu options.
+const BAN_THRESHOLD_META = {
+    "mega-suspicious":  { label: "☠️ Ban mega-suspicious only",  desc: "Ban only the highest-severity members" },
+    "highly-suspicious":{ label: "🚨 Ban highly-suspicious+",    desc: "Ban highly-suspicious and mega-suspicious" },
+    "suspicious":       { label: "🔴 Ban suspicious+",           desc: "Ban suspicious, highly-suspicious, and mega-suspicious" },
+    "newbie":           { label: "🟠 Ban all flagged (newbie+)", desc: "Ban all flagged members across every category" },
+};
+
+// Returns a flat array of GuildMember objects at or above the given category threshold.
+function getMembersAtOrAbove(flaggedByCategory, threshold) {
+    const idx = CATEGORY_ORDER.indexOf(threshold);
+    return CATEGORY_ORDER.slice(0, idx + 1).flatMap(cat => flaggedByCategory[cat].map(f => f.member));
+}
 
 // Chunk size for member processing
 const CHUNK_SIZE = 50;
@@ -143,11 +160,27 @@ module.exports.run = async function(yuno, author, args, msg) {
         // Check if alt detector has a quarantine role configured
         const config = await yuno.dbCommands.getAltDetectorConfig(yuno.database, msg.guild.id);
 
-        // Build select menu options
+        // Build per-threshold ban options — only include a threshold if that category itself
+        // has at least one member (avoids redundant entries when adjacent tiers are empty).
+        // Each option's count is cumulative: threshold + all more-severe categories above it.
+        const banOptions = [];
+        for (let i = 0; i < CATEGORY_ORDER.length; i++) {
+            const threshold = CATEGORY_ORDER[i];
+            if (flaggedByCategory[threshold].length === 0) continue;
+            const cumulative = CATEGORY_ORDER.slice(0, i + 1)
+                .reduce((n, cat) => n + flaggedByCategory[cat].length, 0);
+            const meta = BAN_THRESHOLD_META[threshold];
+            banOptions.push({
+                label: `${meta.label} (${cumulative})`,
+                value: `ban_from_${threshold}`,
+                description: meta.desc,
+            });
+        }
+
         const options = [
             { label: "Do nothing", value: "none", description: "Keep the report, take no action" },
             { label: `Kick all flagged (${totalFlagged})`, value: "kick", description: "Kick all flagged members from the server" },
-            { label: `Ban all flagged (${totalFlagged})`, value: "ban", description: "Ban all flagged members from the server" },
+            ...banOptions,
         ];
 
         if (config?.quarantineRoleId) {
@@ -160,7 +193,7 @@ module.exports.run = async function(yuno, author, args, msg) {
 
         const selectMenu = new StringSelectMenuBuilder()
             .setCustomId(`scan-alts-action-${msg.author.id}`)
-            .setPlaceholder("Choose an action for all flagged members...")
+            .setPlaceholder("Choose an action for flagged members...")
             .addOptions(options);
 
         const row = new ActionRowBuilder().addComponents(selectMenu);
@@ -182,16 +215,36 @@ module.exports.run = async function(yuno, author, args, msg) {
                 return;
             }
 
-            await interaction.update({ content: `:hourglass: Applying action \`${action}\` to ${totalFlagged} members...`, components: [] });
+            // Determine the target member list based on the selected action.
+            let toBan = null;
+            if (action.startsWith("ban_from_")) {
+                const threshold = action.slice("ban_from_".length);
+                toBan = getMembersAtOrAbove(flaggedByCategory, threshold);
+            }
 
-            let succeeded = 0, failed = 0;
-            const reason = `Alt scan bulk action — ${action} by ${msg.author.tag}`;
+            const targetList = toBan ?? allFlagged.map(f => f.member);
+            const actionLabel = toBan
+                ? BAN_THRESHOLD_META[action.slice("ban_from_".length)]?.label ?? action
+                : action;
 
-            for (const { member } of allFlagged) {
+            await interaction.update({
+                content: `:hourglass: Applying **${actionLabel}** to ${targetList.length} member(s)…`,
+                components: []
+            });
+
+            let succeeded = 0, skipped = 0, failed = 0;
+            const reason = `Alt scan bulk action — ${actionLabel} by ${msg.author.tag}`;
+
+            for (const member of targetList) {
+                // Never act on master users or the server owner
+                if (yuno.commandMan._isUserMaster(member.id) || member.id === msg.guild.ownerId) {
+                    skipped++;
+                    continue;
+                }
                 try {
                     if (action === "kick") {
                         await member.kick(reason);
-                    } else if (action === "ban") {
+                    } else if (action.startsWith("ban_from_")) {
                         await member.ban({ deleteMessageSeconds: 0, reason });
                     } else if (action === "role" && config?.quarantineRoleId) {
                         const role = await msg.guild.roles.fetch(config.quarantineRoleId);
@@ -207,10 +260,11 @@ module.exports.run = async function(yuno, author, args, msg) {
             const resultEmbed = new EmbedBuilder()
                 .setColor(failed === 0 ? "#43cc24" : "#ffa500")
                 .setTitle(`:white_check_mark: Bulk Action Complete`)
-                .setDescription(`Action \`${action}\` applied to flagged members.`)
+                .setDescription(`**${actionLabel}** applied to flagged members.`)
                 .addFields(
-                    { name: "Succeeded", value: String(succeeded), inline: true },
-                    { name: "Failed", value: String(failed), inline: true }
+                    { name: "Actioned", value: String(succeeded), inline: true },
+                    { name: "Skipped",  value: String(skipped),   inline: true },
+                    { name: "Failed",   value: String(failed),    inline: true }
                 )
                 .setTimestamp();
 
