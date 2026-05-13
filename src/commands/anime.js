@@ -21,10 +21,11 @@
 const { ReactionCollector, EmbedBuilder } = require('discord.js');
 
 module.exports.run = async function(yuno, author, args, msg) {
-    let res = Yuno.animeClient.searchAnimes(args.join(' '));
+    const query = args.join(' ').slice(0, 200);
+    let res = yuno.animeClient.searchAnimes(query);
 
     if (!res[0]) {
-        return msg.channel.send(`No anime result found for \`${args.join(' ')}\`. Did you perhaps mean the \`manga\` command?`);
+        return msg.channel.send(`No anime result found for \`${query}\`. Did you perhaps mean the \`manga\` command?`);
     }
 
     res = await Promise.all(res.map(async item => {
@@ -41,7 +42,7 @@ module.exports.run = async function(yuno, author, args, msg) {
                 { name: 'Episodes', value: item.episodes === 0 ? 'TBD' : item.episodes, inline: true },
                 { name: 'Score', value: `${item.score}`, inline: true }
             ])
-            .setDescription(Yuno.Util.cleanSynopsis(Yuno.Util.decodeHTML(item.synopsis), item.id, 'anime'))
+            .setDescription(yuno.Util.cleanSynopsis(yuno.Util.decodeHTML(item.synopsis), item.id, 'anime'))
             .setThumbnail(item.image)
             .setFooter({ text: `Use the reactions to browse | Page 1/${res.length}`});
         return embed;
