@@ -79,7 +79,7 @@ module.exports.run = async function(yuno, author, args, msg) {
             await yuno.dbCommands.clearPresence(yuno.database);
             return msg.channel.send(":white_check_mark: Presence cleared~");
         } catch (e) {
-            return msg.channel.send(`:negative_squared_cross_mark: Failed to clear presence: ${e.message}`);
+            return msg.channel.send(`:negative_squared_cross_mark: Failed to clear presence: ${String(e.message).substring(0, 150)}`);
         }
     }
 
@@ -107,7 +107,7 @@ module.exports.run = async function(yuno, author, args, msg) {
             };
             return msg.channel.send(`${statusEmoji[status]} Status set to **${status}**~`);
         } catch (e) {
-            return msg.channel.send(`:negative_squared_cross_mark: Failed to set status: ${e.message}`);
+            return msg.channel.send(`:negative_squared_cross_mark: Failed to set status: ${String(e.message).substring(0, 150)}`);
         }
     }
 
@@ -167,7 +167,7 @@ Example: \`set-presence streaming My Stream https://twitch.tv/example\``);
         const typeDisplay = subcommand.charAt(0).toUpperCase() + subcommand.slice(1);
         return msg.channel.send(`:white_check_mark: Now **${typeDisplay}** ${activityText}${streamUrl ? ` (${streamUrl})` : ""}~`);
     } catch (e) {
-        return msg.channel.send(`:negative_squared_cross_mark: Failed to set presence: ${e.message}`);
+        return msg.channel.send(`:negative_squared_cross_mark: Failed to set presence: ${String(e.message).substring(0, 150)}`);
     }
 }
 

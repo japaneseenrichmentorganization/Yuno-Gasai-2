@@ -48,7 +48,7 @@ module.exports.run = async function(yuno, author, args, msg) {
             await statusMsg.edit(`Error while saving bans :( :${err.code}`);
         }
     } catch(e) {
-        msg.channel.send("Error while fetching bans: " + e.message);
+        msg.channel.send("Error while fetching bans: " + String(e.message).substring(0, 150));
         console.error("Export bans error:", e);
     }
 }

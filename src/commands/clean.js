@@ -53,7 +53,7 @@ module.exports.run = async function(yuno, author, args, msg) {
                     .setAuthor({name: "Yuno is done cleaning.", iconURL: yuno.UTIL.getAvatarURL(yuno.dC.user)})
                     .setColor("#ff51ff")]});
                 } catch(e) {
-                    msg.author.send("Cleaning failed: ```" + e.message + "```" + "```" + e.stack + "```");
+                    msg.author.send("Cleaning failed: ```" + String(e.message).substring(0, 200) + "```");
                 }
             }
             coll.stop();

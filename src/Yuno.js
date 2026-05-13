@@ -100,7 +100,13 @@ class Yuno extends EventEmitter {
                 GatewayIntentBits.GuildBans,
                 GatewayIntentBits.GuildVoiceStates,
                 GatewayIntentBits.GuildPresences
-            ]
+            ],
+            // Global allowedMentions default: allow only explicit user pings
+            // (which the bot inserts as snowflakes it controls), never role
+            // mentions or @everyone/@here. Any user-controlled content echoed
+            // in a message cannot cause unintended mass pings.
+            // Commands that legitimately need role mentions override per-send.
+            allowedMentions: { parse: ["users"] },
         });
         this.dC = this.discordClient;
 
@@ -347,6 +353,10 @@ ${YUNO_PINK}           "I'll protect this server forever... just for you~"${RESE
             token: {
                 test: (arg) => arg.startsWith("--token"),
                 handle: (arg) => {
+                    // WARNING: passing the token as a CLI argument exposes it
+                    // in `ps aux` output and shell history. Prefer storing it in
+                    // config.json or a DISCORD_TOKEN environment variable instead.
+                    prompt.warning("[SECURITY] --token passed via CLI — visible in process list (ps aux). Prefer config.json.");
                     CUSTOM_TOKEN = arg.startsWith("--token=")
                         ? arg.split("=")[1]
                         : (prompt.warning("Not any new token defined. You have to define token like --token=yourtoken"), null);

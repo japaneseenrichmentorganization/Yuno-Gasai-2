@@ -95,9 +95,12 @@ const subcommandHandlers = {
         if (clean === null)
             return msg.channel.send(":negative_squared_cross_mark: This channel doesn't have any auto-clean set up.");
 
+        const delayMinutes = parseInt(args[1], 10);
+        if (isNaN(delayMinutes) || delayMinutes <= 0)
+            return msg.channel.send(":negative_squared_cross_mark: Delay must be a positive number of minutes.");
         const { timeFEachClean, timeBeforeClean, remainingTime } = clean;
-        await dbCommands.setClean(database, ch.guild.id, ch.name, timeFEachClean, timeBeforeClean, remainingTime + parseInt(args[1]));
-        return msg.channel.send(`:white_check_mark: Delayed the clean from ${args[1]} minutes!`);
+        await dbCommands.setClean(database, ch.guild.id, ch.name, timeFEachClean, timeBeforeClean, remainingTime + delayMinutes);
+        return msg.channel.send(`:white_check_mark: Delayed the clean by ${delayMinutes} minutes!`);
     },
 
     async addOrEdit(yuno, ch, args, msg) {

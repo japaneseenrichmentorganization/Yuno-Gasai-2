@@ -127,7 +127,7 @@ module.exports.run = async function(yuno, author, args, msg) {
 
     } catch (e) {
         console.log(`[BanMSystem] Bans weren't saved as JSON or bulk ban failed. Error: ${e.message}`);
-        msg.channel.send(`Error during ban import: ${e.message}`);
+        msg.channel.send(`Error during ban import (check server logs for details).`);
     }
 };
 

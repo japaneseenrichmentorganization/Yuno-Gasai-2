@@ -91,7 +91,7 @@ module.exports.run = async function(yuno, author, args, msg) {
 
     } catch (e) {
         console.error("Timeout error:", e);
-        return msg.channel.send(`:x: Error timing out user: ${e.message}`);
+        return msg.channel.send(`:x: Error timing out user: ${String(e.message).substring(0, 150)}`);
     }
 }
 
