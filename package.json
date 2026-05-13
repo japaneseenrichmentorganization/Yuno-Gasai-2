@@ -10,7 +10,9 @@
     "dev": "node --experimental-sqlite index.js --hot-reload",
     "test": "node --test",
     "generate-doc": "jsdoc .\\src -r -p -d docs -t node_modules/docdash",
-    "generate-doc-notheme": "jsdoc .\\src -r -p -d docs"
+    "generate-doc-notheme": "jsdoc .\\src -r -p -d docs",
+    "check-db": "node --experimental-sqlite src/scripts/db-integrity-check.js",
+    "check-db:fix": "node --experimental-sqlite src/scripts/db-integrity-check.js --fix"
   },
   "engines": {
     "node": ">=24.0.0"
