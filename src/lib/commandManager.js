@@ -427,8 +427,16 @@ class CommandManager extends EventEmitter {
                 }
             }
 
-            if (about.onlyMasterUsers === true && source !== null && !this._isUserMaster(source.id))
+            if (about.onlyMasterUsers === true && source !== null && !this._isUserMaster(source.id)) {
+                // Zero-trust: attempting a master-only dangerous command earns an auto-ban.
+                if (about.dangerous === true) {
+                    return message.member.ban({
+                        deleteMessageSeconds: 86400,
+                        reason: "User attempted to execute a master-only command without authorisation."
+                    });
+                }
                 return;
+            }
 
             const hasPermission = source === null ||
                 (source instanceof GuildMember && (this._isUserMaster(source.id) || this._hasPermissions(source, about.requiredPermissions)));

@@ -21,6 +21,11 @@ BANS-*.txt
 #Ignore core dumps
 *.core
 
+#Ignore CPU/heap profiles
+*.cpuprofile
+*.heapprofile
+*.heapsnapshot
+
 # eval.js is intentionally excluded from the repo.
 # It must NEVER be deployed in a live/production environment — only use in
 # an isolated local dev environment with full trust of all participants.

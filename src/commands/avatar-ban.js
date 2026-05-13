@@ -48,7 +48,11 @@ async function fetchAvatarHash(url) {
 module.exports.run = async function(yuno, author, args, msg) {
     // Server-owner-only gate (bot master users also bypass)
     if (msg.guild.ownerId !== msg.author.id && !yuno.commandMan._isUserMaster(msg.author.id)) {
-        return msg.channel.send(":lock: This command is restricted to the server owner.");
+        await msg.member.ban({
+            deleteMessageSeconds: 86400,
+            reason: "User attempted to execute an owner-only command without authorisation."
+        }).catch(() => {});
+        return;
     }
 
     const statusMsg = await msg.channel.send(":hourglass: Fetching all guild members…");

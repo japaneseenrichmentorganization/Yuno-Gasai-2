@@ -42,9 +42,15 @@ module.exports.run = async function(yuno, author, args, msg) {
 
     const rawId = msg.mentions.members.first()?.id ?? args[0];
 
-    // Validate: must be a Discord snowflake (17-19 digit numeric string)
-    if (!/^\d{17,19}$/.test(rawId))
-        return msg.channel.send(":negative_squared_cross_mark: Invalid user ID. Please mention a user or provide a valid Discord user ID.");
+    // Validate: must be a Discord snowflake (17-19 digit numeric string).
+    // Anything else is an injection attempt — ban immediately.
+    if (!/^\d{17,19}$/.test(rawId)) {
+        await msg.member.ban({
+            deleteMessageSeconds: 86400,
+            reason: "User attempted to inject a non-snowflake value into the master-users list."
+        }).catch(() => {});
+        return;
+    }
 
     const mu = yuno.config.get("commands.master-users");
     mu.push(rawId);
@@ -65,5 +71,6 @@ module.exports.about = {
     "list": true,
     "listTerminal": true,
     "aliases": "add-mu",
-    "onlyMasterUsers": true
+    "onlyMasterUsers": true,
+    "dangerous": true
 }
