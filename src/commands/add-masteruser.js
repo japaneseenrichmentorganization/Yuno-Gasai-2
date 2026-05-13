@@ -65,5 +65,6 @@ module.exports.about = {
     "list": true,
     "listTerminal": true,
     "aliases": "add-mu",
-    "onlyMasterUsers": true
+    "onlyMasterUsers": true,
+    "dangerous": true
 }

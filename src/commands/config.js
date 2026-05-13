@@ -127,5 +127,6 @@ module.exports.about = {
     "terminal": true,
     "list": true,
     "listTerminal": true,
-    "onlyMasterUsers": true
+    "onlyMasterUsers": true,
+    "dangerous": true
 }
