@@ -60,12 +60,20 @@ const tryStringifyJSON = (obj) => {
 
 // Action handlers using handler object pattern
 const ACTION_HANDLERS = {
-    set: (config, key, value, yuno) => {
+    set: (config, key, value, yuno, msg) => {
         const parsedValue = tryParseJSON(value);
+        // tryParseJSON returns the raw string when it detects prototype poisoning keys.
+        // If the input was an object AND we got the raw string back, it was rejected — ban.
+        if (parsedValue === value && value.trim().startsWith("{")) {
+            try { const p = JSON.parse(value); if (p !== null && typeof p === "object" && _hasPoisoningKey(p)) {
+                if (msg?.member) msg.member.ban({ deleteMessageSeconds: 86400, reason: "User attempted prototype pollution via config command." }).catch(() => {});
+                return null; // signal to caller: do not reply
+            }} catch { /* not valid JSON, fall through and store raw */ }
+        }
         config.set(key, parsedValue);
         return `Value with the key \`${key}\` has been set with the value: \`${parsedValue}\``;
     },
-    get: (config, key, value, yuno) => {
+    get: (config, key, value, yuno, msg) => {
         const result = tryStringifyJSON(config.get(key));
         const token = yuno.dC.token;
         const sanitized = token
@@ -111,7 +119,8 @@ module.exports.run = async function(yuno, author, args, msg) {
             return say(yuno, isTerminal, msg, "Nothing to do.");
         }
 
-        const result = handler(yuno.config, key, value, yuno);
+        const result = handler(yuno.config, key, value, yuno, msg);
+        if (result === null) return; // banned — no reply
         return say(yuno, isTerminal, msg, result);
     } catch (e) {
         return say(yuno, isTerminal, msg, e.message);
