@@ -168,8 +168,8 @@ module.exports = {
         }
         str = str
             .replace(/\n\n/g, '\n')
-            .replace(/\[.*\]/g, '')
-            .replace(/\(Source: .*\)/g, '');
+            .replace(/\[[^\]]*\]/g, '')
+            .replace(/\(Source: [^)]*\)/g, '');
 
         return str;
     }
