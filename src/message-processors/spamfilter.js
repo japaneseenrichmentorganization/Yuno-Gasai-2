@@ -19,11 +19,17 @@ const { ensureMembersInCache } = require("../lib/discordHelpers");
 
 const {EmbedBuilder, PermissionsBitField} = require("discord.js"),
     fs = require("fs"),
+    path = require("path"),
     fsPromises = require("fs").promises,
     prompt = (require("../lib/prompt")).init();
 
-const DISCORD_INVITE_REGEX = /(https)*(http)*:*(\/\/)*discord(.gg|app.com\/invite)\/[a-zA-Z0-9]{1,}/i;
-const LINK_REGEX = /(ftp|http|https):\/\/(www\.)??[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}\b([-a-zA-Z0-9@:%_\+.~#?&//=]*)/ig;
+// Safe regexes — original patterns had nested optional groups (e.g. (https)*(http)*:*(\/\/)*) that
+// allow catastrophic backtracking on attacker-controlled input. These replacements are linear-time.
+const DISCORD_INVITE_REGEX = /discord(?:\.gg|app\.com\/invite|\.com\/invite)\/[a-zA-Z0-9]{1,12}/i;
+const LINK_REGEX = /(?:ftp|https?):\/\/\S+/i;
+
+// Discord's enforced per-message character limit; anything longer is impossible in practice.
+const MAX_CONTENT_LENGTH = 2000;
 
 let maxWarnings = 3,
     spamfilt = {},
@@ -35,12 +41,24 @@ let maxWarnings = 3,
 async function loadCustomSpamRules() {
     if (customSpamRulesLoaded) return;
     try {
-        const files = await fsPromises.readdir("./src/message-processors/custom-spam-rules", "utf8");
+        const rulesDir = path.resolve(__dirname, "custom-spam-rules");
+        const files = await fsPromises.readdir(rulesDir, "utf8");
         for (const el of files) {
-            let filePath = "./custom-spam-rules/" + el;
-            let resolvedPath = require.resolve(filePath);
+            // Only load plain .js files; filenames on Linux cannot contain '/' so
+            // directory traversal via readdir output is impossible, but we still
+            // defend-in-depth against unexpected filenames.
+            if (!el.endsWith(".js") || el.startsWith(".") || el.includes(path.sep)) {
+                prompt.warning(`[SpamFilter] Skipping non-.js or suspicious entry: ${el}`);
+                continue;
+            }
+            const resolvedPath = path.resolve(rulesDir, el);
+            // Confirm the resolved path stays inside the rules directory (symlink safety).
+            if (!resolvedPath.startsWith(rulesDir + path.sep)) {
+                prompt.error(`[SpamFilter] Path traversal blocked for entry: ${el}`);
+                continue;
+            }
             delete require.cache[resolvedPath];
-            let req = require(filePath);
+            let req = require(resolvedPath);
             customspamrules[req.id] = req;
         }
         customSpamRulesLoaded = true;
@@ -77,6 +95,10 @@ let ban = function(msg, banreason, warningmsg) {
 
 
 module.exports.message = async function(content, msg) {
+    // Hard length cap before any regex work — a message exceeding Discord's limit is
+    // impossible under normal circumstances and signals attempted DoS.
+    if (!content || content.length > MAX_CONTENT_LENGTH) return;
+
     // Check if spam filter is disabled for this guild
     const filterSetting = spamfilt[msg.guild.id];
     if (filterSetting === false || filterSetting === "false") return;
@@ -95,13 +117,21 @@ module.exports.message = async function(content, msg) {
     if (content.indexOf("@everyone") > -1 || content.indexOf("@here") > -1)
         return ban(msg, "Autobanned by spam filter: usage of @everyone/@here.", "Don't mention @everyone or @here.");
 
-    let test = DISCORD_INVITE_REGEX.exec(content);
+    // Fast string pre-check before applying regex — avoids running the pattern at all
+    // on messages that cannot possibly match, which is the common case.
+    let test = null;
+    if (content.includes("discord")) {
+        test = DISCORD_INVITE_REGEX.exec(content);
+    }
 
     //If the user sends a discord invite link, warn them and then ban them after 3 warnings
     if (test !== null && test.length > 0)
         return ban(msg, "Autobanned by spam filter: Discord invitation link sent.", "Don't send any Discord invitation links here.");
 
-    let linkReg = LINK_REGEX.exec(content);
+    let linkReg = null;
+    if (content.includes("://")) {
+        linkReg = LINK_REGEX.exec(content);
+    }
 
     //If a user sends a link, warn them and then ban them after 3 warnings
     if (linkReg !== null && linkReg.length > 0)

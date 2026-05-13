@@ -16,12 +16,29 @@
     along with this program.  If not, see https://www.gnu.org/licenses/.
 */
 
+function escapeRegex(s) {
+    return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 const say = (yuno, isTerminal, msg, tosay) =>
     isTerminal ? yuno.prompt.info(tosay) : msg.channel.send(tosay);
 
+// Reject parsed objects that carry prototype-poisoning keys before they reach
+// the config store. JSON.parse in modern Node.js does not actually pollute
+// Object.prototype, but downstream code or future changes might; this provides
+// defense-in-depth for a state-actor threat model.
+const POISONING_KEYS = new Set(["__proto__", "constructor", "prototype"]);
+
 const tryParseJSON = (str) => {
-    try { return JSON.parse(str); }
-    catch { return str; }
+    try {
+        const parsed = JSON.parse(str);
+        if (parsed !== null && typeof parsed === "object" && !Array.isArray(parsed)) {
+            for (const key of Object.keys(parsed)) {
+                if (POISONING_KEYS.has(key)) return str; // reject, use raw string
+            }
+        }
+        return parsed;
+    } catch { return str; }
 };
 
 const tryStringifyJSON = (obj) => {
@@ -39,7 +56,11 @@ const ACTION_HANDLERS = {
     },
     get: (config, key, value, yuno) => {
         const result = tryStringifyJSON(config.get(key));
-        return String(result).replace(new RegExp(RegExp.escape(yuno.dC.token), "gi"), "[token]");
+        const token = yuno.dC.token;
+        const sanitized = token
+            ? String(result).replace(new RegExp(escapeRegex(token), "gi"), "[token]")
+            : String(result);
+        return sanitized;
     }
 };
 

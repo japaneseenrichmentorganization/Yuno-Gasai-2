@@ -24,6 +24,11 @@ const { fetchAllBannedUserIds } = require("../lib/discordHelpers");
 const BATCH_SIZE = 50;
 const AUDIT_BATCH_SIZE = 100;
 
+// SQLite's SQLITE_MAX_VARIABLE_NUMBER defaults to 999 on older builds (< 3.32.0)
+// and 32766 on newer ones.  We stay well under the old limit so the code works
+// regardless of which SQLite version the driver was compiled against.
+const SQLITE_MAX_PARAMS = 900;
+
 module.exports.run = async function(yuno, author, args, msg) {
     const mode = args[0]?.toLowerCase();
 
@@ -37,57 +42,77 @@ module.exports.run = async function(yuno, author, args, msg) {
 }
 
 /**
- * Batch check which mod actions already exist in the database
- * @param {Object} database
- * @param {String} guildId
- * @param {Array} entries - Array of {targetId, action, timestamp?}
- * @returns {Set} Set of keys that already exist
+ * Batch check which mod actions already exist in the database.
+ * Chunked to stay under SQLITE_MAX_PARAMS regardless of input size.
  */
 async function batchCheckExists(database, guildId, entries) {
     if (entries.length === 0) return new Set();
 
-    // Build a query to check all entries at once
-    const placeholders = entries.map(() => "(?, ?, ?)").join(", ");
-    const values = entries.flatMap(e => [guildId, e.targetId, e.action]);
+    const PARAMS_PER_ROW = 3; // guildId, targetId, action
+    const CHUNK = Math.floor(SQLITE_MAX_PARAMS / PARAMS_PER_ROW);
+    const found = new Set();
 
-    const results = await database.allPromise(
-        `SELECT targetId, action FROM modActions WHERE (gid, targetId, action) IN (VALUES ${placeholders})`,
-        values
-    );
+    for (let i = 0; i < entries.length; i += CHUNK) {
+        const slice = entries.slice(i, i + CHUNK);
+        const placeholders = slice.map(() => "(?, ?, ?)").join(", ");
+        const values = slice.flatMap(e => [guildId, e.targetId, e.action]);
 
-    return new Set(results.map(r => `${r.targetId}:${r.action}`));
+        const rows = await database.allPromise(
+            `SELECT targetId, action FROM modActions WHERE (gid, targetId, action) IN (VALUES ${placeholders})`,
+            values
+        );
+        for (const r of rows) found.add(`${r.targetId}:${r.action}`);
+    }
+
+    return found;
 }
 
 /**
- * Batch check with timestamp for audit log entries
+ * Batch check with timestamp for audit log entries.
+ * Chunked to stay under SQLITE_MAX_PARAMS.
  */
 async function batchCheckExistsWithTimestamp(database, guildId, entries) {
     if (entries.length === 0) return new Set();
 
-    const placeholders = entries.map(() => "(?, ?, ?, ?)").join(", ");
-    const values = entries.flatMap(e => [guildId, e.targetId, e.action, e.timestamp]);
+    const PARAMS_PER_ROW = 4; // guildId, targetId, action, timestamp
+    const CHUNK = Math.floor(SQLITE_MAX_PARAMS / PARAMS_PER_ROW);
+    const found = new Set();
 
-    const results = await database.allPromise(
-        `SELECT targetId, action, timestamp FROM modActions WHERE (gid, targetId, action, timestamp) IN (VALUES ${placeholders})`,
-        values
-    );
+    for (let i = 0; i < entries.length; i += CHUNK) {
+        const slice = entries.slice(i, i + CHUNK);
+        const placeholders = slice.map(() => "(?, ?, ?, ?)").join(", ");
+        const values = slice.flatMap(e => [guildId, e.targetId, e.action, e.timestamp]);
 
-    return new Set(results.map(r => `${r.targetId}:${r.action}:${r.timestamp}`));
+        const rows = await database.allPromise(
+            `SELECT targetId, action, timestamp FROM modActions WHERE (gid, targetId, action, timestamp) IN (VALUES ${placeholders})`,
+            values
+        );
+        for (const r of rows) found.add(`${r.targetId}:${r.action}:${r.timestamp}`);
+    }
+
+    return found;
 }
 
 /**
- * Batch insert mod actions
+ * Batch insert mod actions.
+ * Chunked to stay under SQLITE_MAX_PARAMS.
  */
 async function batchInsertModActions(database, guildId, actions) {
     if (actions.length === 0) return;
 
-    const placeholders = actions.map(() => "(null, ?, ?, ?, ?, ?, ?)").join(", ");
-    const values = actions.flatMap(a => [guildId, a.moderatorId, a.targetId, a.action, a.reason || null, a.timestamp]);
+    const PARAMS_PER_ROW = 6; // guildId, moderatorId, targetId, action, reason, timestamp
+    const CHUNK = Math.floor(SQLITE_MAX_PARAMS / PARAMS_PER_ROW);
 
-    await database.runPromise(
-        `INSERT INTO modActions(id, gid, moderatorId, targetId, action, reason, timestamp) VALUES ${placeholders}`,
-        values
-    );
+    for (let i = 0; i < actions.length; i += CHUNK) {
+        const slice = actions.slice(i, i + CHUNK);
+        const placeholders = slice.map(() => "(null, ?, ?, ?, ?, ?, ?)").join(", ");
+        const values = slice.flatMap(a => [guildId, a.moderatorId, a.targetId, a.action, a.reason || null, a.timestamp]);
+
+        await database.runPromise(
+            `INSERT INTO modActions(id, gid, moderatorId, targetId, action, reason, timestamp) VALUES ${placeholders}`,
+            values
+        );
+    }
 }
 
 async function scanBanList(yuno, msg) {

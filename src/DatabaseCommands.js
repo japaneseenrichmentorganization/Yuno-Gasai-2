@@ -36,6 +36,40 @@ const altDetectorConfigCache = new LRUCache(500, 5 * 60 * 1000);
 
 let self;
 
+// ---------------------------------------------------------------------------
+// DB-layer input guards
+//
+// Parameterized queries already prevent SQL injection; these guards provide a
+// second layer that catches oversized or malformed values before they reach
+// SQLite. They throw synchronously so callers get an early, descriptive error
+// instead of a silent truncation or a confusing SQLite constraint violation.
+// ---------------------------------------------------------------------------
+
+const _SNOWFLAKE_RE = /^\d{17,19}$/;
+
+function _assertSnowflake(value, name) {
+    if (typeof value !== 'string' || !_SNOWFLAKE_RE.test(value))
+        throw new TypeError(
+            `Expected Discord snowflake for '${name}', got: ${String(value).substring(0, 40)}`
+        );
+}
+
+function _assertBoundedString(value, name, maxLen) {
+    if (typeof value !== 'string')
+        throw new TypeError(`Expected string for '${name}', got: ${typeof value}`);
+    if (value.length > maxLen)
+        throw new RangeError(`'${name}' exceeds max length ${maxLen} (received ${value.length})`);
+}
+
+function _assertEnum(value, allowed, name) {
+    if (!allowed.includes(value))
+        throw new RangeError(
+            `'${name}' must be one of [${allowed.join(', ')}], got: ${String(value).substring(0, 40)}`
+        );
+}
+
+// ---------------------------------------------------------------------------
+
 const zeroPadding = (num, places) => {
     const zero = places - num.toString().length + 1;
     return Array(+(zero > 0 && zero)).join("0") + num;
@@ -293,6 +327,8 @@ module.exports = self = {
      * @async
      */
     "setPrefix": async function(database, guildid, prefix) {
+        _assertSnowflake(guildid, 'guildid');
+        _assertBoundedString(prefix, 'prefix', 10);
         await self.initGuild(database, guildid);
         await database.runPromise("UPDATE guilds SET prefix = ? WHERE id = ?", [prefix, guildid]);
     },
@@ -320,6 +356,8 @@ module.exports = self = {
      * @async
      */
     "setJoinDMMessage": async function(database, guildid, message) {
+        _assertSnowflake(guildid, 'guildid');
+        _assertBoundedString(message, 'message', 2000);
         await self.initGuild(database, guildid);
         await database.runPromise("UPDATE guilds SET onJoinDMMsg = ? WHERE id = ?", [database.encrypt(message), guildid]);
     },
@@ -617,6 +655,10 @@ module.exports = self = {
      * @param {String} image
      */
     "addMentionResponses": async function(database, guildid, trigger, response, image) {
+        _assertSnowflake(guildid, 'guildid');
+        _assertBoundedString(trigger, 'trigger', 200);
+        _assertBoundedString(response, 'response', 2000);
+
         if (typeof image !== "string")
             image = "null";
 
@@ -1287,6 +1329,9 @@ module.exports = self = {
      * @async
      */
     "addBotBan": async function(database, id, type, reason, bannedBy) {
+        _assertSnowflake(id, 'id');
+        _assertEnum(type, ['user', 'guild'], 'type');
+        if (reason != null) _assertBoundedString(reason, 'reason', 500);
         botBanCache.delete(`botBan:${id}`);
         const encryptedReason = reason ? database.encrypt(reason) : null;
         const now = Date.now();
@@ -1412,6 +1457,9 @@ module.exports = self = {
      * @return {number} The inserted row ID
      */
     "saveDm": async function(database, usrId, userTag, content, attachments) {
+        _assertSnowflake(usrId, 'usrId');
+        // Discord enforces 2000 chars; 4000 gives headroom for system-generated content.
+        _assertBoundedString(content || '', 'content', 4000);
         const attachmentsJson = JSON.stringify(attachments || []);
         const result = await database.runPromise(
             "INSERT INTO dmInbox(usrId, userTag, content, attachments, timestamp, replied) VALUES(?, ?, ?, ?, ?, 0)",
@@ -1618,20 +1666,31 @@ module.exports = self = {
      * @param {*} value
      */
     "setAltDetectorConfig": async function(database, guildId, field, value) {
-        const ALLOWED_FIELDS = new Set([
-            'enabled', 'logChannelId', 'quarantineRoleId',
-            'actionNewbie', 'actionSuspicious',
-            'actionHighlySuspicious', 'actionMegaSuspicious'
-        ]);
-        if (!ALLOWED_FIELDS.has(field)) {
+        // Use a frozen lookup table rather than interpolating the caller's raw string.
+        // A Set check alone still allows the caller's value into the SQL string, which
+        // is the column-name injection vector.  With FIELD_MAP the SQL always contains
+        // a compile-time constant — never any caller-supplied data.
+        const FIELD_MAP = Object.freeze({
+            enabled:                'enabled',
+            logChannelId:           'logChannelId',
+            quarantineRoleId:       'quarantineRoleId',
+            actionNewbie:           'actionNewbie',
+            actionSuspicious:       'actionSuspicious',
+            actionHighlySuspicious: 'actionHighlySuspicious',
+            actionMegaSuspicious:   'actionMegaSuspicious',
+        });
+
+        const safeField = FIELD_MAP[field];
+        if (safeField === undefined) {
             throw new Error(`Invalid altDetectorConfig field: ${field}`);
         }
+
         altDetectorConfigCache.delete(`altDetectorConfig:${guildId}`);
         const exists = await database.allPromise("SELECT gid FROM altDetectorConfig WHERE gid = ?", [guildId]);
         if (exists.length === 0) {
             await database.runPromise("INSERT INTO altDetectorConfig(gid) VALUES(?)", [guildId]);
         }
-        await database.runPromise(`UPDATE altDetectorConfig SET ${field} = ? WHERE gid = ?`, [value, guildId]);
+        await database.runPromise(`UPDATE altDetectorConfig SET ${safeField} = ? WHERE gid = ?`, [value, guildId]);
     },
 
     // ==================== Spam Checksum Functions ====================
