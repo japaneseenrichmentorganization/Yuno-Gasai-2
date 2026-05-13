@@ -28,11 +28,85 @@ let workOnlyOnGuild = null,
 
 module.exports.modulename = "command-executor";
 
+// ---------------------------------------------------------------------------
+// DM exploit / probing detection
+//
+// All checks use String.prototype.includes() on lowercased input — O(n*k) with
+// no regex engine and therefore no catastrophic backtracking risk.
+//
+// Design notes (state-actor threat model):
+//  • Only non-master users are subject to auto-ban; master users can legitimately
+//    discuss these topics or test the bot.
+//  • We do not warn the user before banning — doing so confirms detection worked
+//    and gives an attacker a signal to tune their payload.
+//  • Failure to persist the ban is logged but never surfaces to the sender.
+//  • The list is conservative: markers that can plausibly appear in benign DMs
+//    (e.g. "exec(" alone) are not included; only unambiguous injection vocabulary
+//    or explicit master-only command invocations qualify.
+// ---------------------------------------------------------------------------
+
+// Strings that appear exclusively in code-execution payloads, not normal chat.
+const CODE_INJECTION_MARKERS = [
+    "eval(",
+    "new function(",
+    "child_process",
+    "execsync(",
+    "execfile(",
+    "node:fs",
+    "node:child",
+    "process.env",
+    "process.exit(",
+    "process.kill(",
+    "process.mainmodule",
+    "__proto__[",
+    "__proto__=",
+    "constructor.prototype",
+    "global.process",
+    "import('fs",
+    'import("fs',
+    "import('child",
+    'import("child',
+];
+
+// Master-only commands that a regular user should never attempt via DM.
+// Trying them signals deliberate probing rather than accidental use.
+const MASTER_ONLY_DM_COMMANDS = new Set([
+    "eval", "hot-reload", "shutdown", "db-encrypt", "debug-error",
+    "drop-errors-on", "add-masteruser", "config", "exec",
+    "init-guild", "bot-ban", "importbans", "scan-alts",
+]);
+
+/**
+ * Returns true if the DM content looks like an exploit or privilege-probing
+ * attempt.  All checks are done with plain string operations (no regex).
+ * @param {string} content
+ * @param {string|null} prefix  The guild's effective command prefix
+ */
+function detectExploitAttempt(content, prefix) {
+    if (!content || typeof content !== "string") return false;
+    const lower = content.toLowerCase();
+
+    for (const marker of CODE_INJECTION_MARKERS) {
+        if (lower.includes(marker)) return true;
+    }
+
+    // Detect explicit invocation of master-only commands via DM.
+    if (prefix && lower.startsWith(prefix.toLowerCase())) {
+        const cmd = lower.substring(prefix.length).trim().split(/\s+/)[0];
+        if (MASTER_ONLY_DM_COMMANDS.has(cmd)) return true;
+    }
+
+    return false;
+}
+
 let msgEvent = (async function(msg) {
     if (msg.author.id === discClient.user.id)
         return;
 
-    // Check if user or server is bot-banned
+    // Check if user or server is bot-banned.
+    // Fail CLOSED: if the ban-list lookup fails for any reason (database unavailable,
+    // transient error, deliberate disruption) we deny the request rather than allowing
+    // a banned user to bypass the list during an outage.
     try {
         const banStatus = await Yuno.dbCommands.isBotBanned(
             Yuno.database,
@@ -41,15 +115,37 @@ let msgEvent = (async function(msg) {
         );
 
         if (banStatus.banned) {
-            // Silently ignore messages from banned users/servers
             return;
         }
     } catch (e) {
-        // If ban check fails, continue processing (fail open for commands)
+        return; // deny on uncertainty
     }
 
     // if message sent in DM
     if (!msg.guild) {
+        const isMaster = Yuno.commandMan._isUserMaster(msg.author.id);
+
+        // Exploit / probing detection — auto-bot-ban before any further processing.
+        if (!isMaster && detectExploitAttempt(msg.content, defaultPrefix)) {
+            const snippet = msg.content.substring(0, 120).replace(/\n/g, " ");
+            console.warn(
+                `[SECURITY] Auto-bot-banning ${msg.author.tag ?? msg.author.id} ` +
+                `(${msg.author.id}) — DM exploit attempt. Snippet: ${snippet}`
+            );
+            try {
+                await Yuno.dbCommands.addBotBan(
+                    Yuno.database,
+                    msg.author.id,
+                    "user",
+                    "Automated: DM exploit/probing attempt detected",
+                    "system"
+                );
+            } catch (banErr) {
+                console.error(`[SECURITY] Failed to persist bot-ban for ${msg.author.id}:`, banErr.message);
+            }
+            return; // silently drop — do not confirm detection to sender
+        }
+
         let command = msg.content.substring(defaultPrefix.length);
 
         if (Yuno.commandMan.isDMCommand(command))

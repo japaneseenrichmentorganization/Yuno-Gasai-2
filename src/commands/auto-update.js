@@ -16,16 +16,23 @@
     along with this program.  If not, see https://www.gnu.org/licenses/.
 */
 
-const { exec } = require("child_process");
+const { execFile } = require("child_process");
 const { promisify } = require("util");
-const execAsync = promisify(exec);
+const execFileAsync = promisify(execFile);
+
+// Allowlist for git branch names: alphanumeric, dash, dot, underscore, forward-slash.
+// Rejects anything that could be interpreted as a shell token or git flag, and
+// explicitly blocks '..' to prevent refspec path-traversal.
+const SAFE_BRANCH_RE = /^[a-zA-Z0-9][a-zA-Z0-9\/_.-]*$/;
 
 /**
- * Execute a shell command and return stdout
+ * Run a git sub-command with an explicit args array.
+ * Using execFile (not exec) means no shell is spawned, so branch names and
+ * other git arguments cannot be used for shell injection.
  */
-async function runCommand(cmd, cwd) {
+async function runGitCommand(args, cwd) {
     try {
-        const { stdout, stderr } = await execAsync(cmd, { cwd, timeout: 60000 });
+        const { stdout, stderr } = await execFileAsync("git", args, { cwd, timeout: 60000 });
         return { success: true, stdout: stdout.trim(), stderr: stderr.trim() };
     } catch (e) {
         return { success: false, error: e.message, stdout: e.stdout?.trim(), stderr: e.stderr?.trim() };
@@ -36,22 +43,26 @@ async function runCommand(cmd, cwd) {
  * Check for updates from git remote
  */
 async function checkForUpdates(cwd) {
-    // Fetch latest from remote
-    const fetchResult = await runCommand("git fetch origin", cwd);
+    const fetchResult = await runGitCommand(["fetch", "origin"], cwd);
     if (!fetchResult.success) {
         return { hasUpdates: false, error: `Failed to fetch: ${fetchResult.error}` };
     }
 
-    // Get current branch
-    const branchResult = await runCommand("git rev-parse --abbrev-ref HEAD", cwd);
+    const branchResult = await runGitCommand(["rev-parse", "--abbrev-ref", "HEAD"], cwd);
     if (!branchResult.success) {
         return { hasUpdates: false, error: `Failed to get branch: ${branchResult.error}` };
     }
     const branch = branchResult.stdout;
 
-    // Compare local and remote
-    const localResult = await runCommand("git rev-parse HEAD", cwd);
-    const remoteResult = await runCommand(`git rev-parse origin/${branch}`, cwd);
+    // Validate before the branch name is used as a git refspec argument.
+    // An attacker who can write to .git/HEAD could otherwise inject git flags or
+    // (with exec) shell metacharacters.
+    if (!SAFE_BRANCH_RE.test(branch) || branch.includes("..")) {
+        return { hasUpdates: false, error: "Unexpected branch name format" };
+    }
+
+    const localResult = await runGitCommand(["rev-parse", "HEAD"], cwd);
+    const remoteResult = await runGitCommand(["rev-parse", `origin/${branch}`], cwd);
 
     if (!localResult.success || !remoteResult.success) {
         return { hasUpdates: false, error: "Failed to compare versions" };
@@ -64,12 +75,10 @@ async function checkForUpdates(cwd) {
         return { hasUpdates: false, branch, localCommit: localCommit.substring(0, 7) };
     }
 
-    // Get commit count difference
-    const countResult = await runCommand(`git rev-list HEAD..origin/${branch} --count`, cwd);
+    const countResult = await runGitCommand(["rev-list", `HEAD..origin/${branch}`, "--count"], cwd);
     const commitsBehind = parseInt(countResult.stdout, 10) || 0;
 
-    // Get commit messages for the updates
-    const logResult = await runCommand(`git log HEAD..origin/${branch} --oneline --max-count=10`, cwd);
+    const logResult = await runGitCommand(["log", `HEAD..origin/${branch}`, "--oneline", "--max-count=10"], cwd);
 
     return {
         hasUpdates: true,
@@ -85,20 +94,16 @@ async function checkForUpdates(cwd) {
  * Pull updates from git
  */
 async function pullUpdates(cwd) {
-    // Stash any local changes first
-    await runCommand("git stash", cwd);
+    await runGitCommand(["stash"], cwd);
 
-    // Pull the updates
-    const pullResult = await runCommand("git pull --ff-only", cwd);
+    const pullResult = await runGitCommand(["pull", "--ff-only"], cwd);
 
     if (!pullResult.success) {
-        // Try to restore stashed changes
-        await runCommand("git stash pop", cwd);
+        await runGitCommand(["stash", "pop"], cwd);
         return { success: false, error: pullResult.error || pullResult.stderr };
     }
 
-    // Pop stashed changes if any
-    await runCommand("git stash pop", cwd);
+    await runGitCommand(["stash", "pop"], cwd);
 
     return { success: true, output: pullResult.stdout };
 }

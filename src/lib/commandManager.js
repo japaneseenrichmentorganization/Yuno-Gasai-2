@@ -25,6 +25,93 @@ const EventEmitter = require("events"),
 let insufficientPermissionsMessage = "Insufficient permissions.",
     masterusers = [];
 
+// ---------------------------------------------------------------------------
+// Per-user token-bucket rate limiter with refill jitter + exponential backoff
+//
+// Why token bucket over simple sliding window?
+//   A fixed-window counter has a predictable reset boundary that a state-actor
+//   can profile (send N-1 commands, wait for reset, repeat indefinitely without
+//   ever triggering the limit).  A token bucket has no hard window edge — tokens
+//   are replenished continuously, so there is no observable "reset" moment to
+//   exploit.
+//
+// Why jitter on the refill rate?
+//   Even knowing the nominal refill rate an attacker could pace requests to stay
+//   just under it.  The ±JITTER_FACTOR variance makes the effective refill rate
+//   non-deterministic on each check, so the attacker cannot reliably calculate
+//   when they will have exactly 1 token available.
+//
+// Why exponential backoff with jitter?
+//   After repeated violations the backoff duration doubles each time.  Adding
+//   random jitter to the backoff window prevents a "thundering herd" of
+//   coordinated accounts all resuming at the same instant and also defeats
+//   timing-based reconnaissance of how long the penalty lasts.
+// ---------------------------------------------------------------------------
+
+const _rlBuckets = new Map(); // userId -> { tokens, lastRefill, violations, backoffUntil }
+
+const RL = {
+    CAPACITY_REGULAR:  5,      // max burst for regular users
+    CAPACITY_MASTER:   20,
+    REFILL_RATE_REG:   0.8,    // tokens/second for regular (≈ 1 cmd per 1.25 s sustained)
+    REFILL_RATE_MASTER: 4,
+    JITTER_FACTOR:     0.25,   // ±25 % variance applied to each refill calculation
+    BASE_BACKOFF_MS:   1_000,  // 1 s base backoff; doubles per violation
+    MAX_BACKOFF_MS:    120_000, // caps at 2 minutes
+    MAX_VIOLATIONS:    10,     // exponent cap to prevent integer overflow
+};
+
+function _checkRateLimit(userId, isMaster) {
+    const now = Date.now();
+    const capacity   = isMaster ? RL.CAPACITY_MASTER   : RL.CAPACITY_REGULAR;
+    const refillRate = isMaster ? RL.REFILL_RATE_MASTER : RL.REFILL_RATE_REG;
+
+    let entry = _rlBuckets.get(userId);
+    if (!entry) {
+        // New user — start with a full bucket, no violations.
+        entry = { tokens: capacity, lastRefill: now, violations: 0, backoffUntil: 0 };
+        _rlBuckets.set(userId, entry);
+    }
+
+    // --- exponential backoff check ---
+    if (now < entry.backoffUntil) return true; // still penalised
+
+    // --- token refill with jitter ---
+    const elapsedSec = (now - entry.lastRefill) / 1000;
+    // Jitter multiplier: uniform in [1 - JITTER_FACTOR, 1 + JITTER_FACTOR]
+    const jitter = 1 + (Math.random() * 2 - 1) * RL.JITTER_FACTOR;
+    entry.tokens = Math.min(capacity, entry.tokens + elapsedSec * refillRate * jitter);
+    entry.lastRefill = now;
+
+    // --- consume a token or deny ---
+    if (entry.tokens < 1) {
+        // Violation: escalate backoff.
+        entry.violations = Math.min(entry.violations + 1, RL.MAX_VIOLATIONS);
+        const rawBackoff = RL.BASE_BACKOFF_MS * Math.pow(2, entry.violations - 1);
+        // Jitter on backoff: uniform in [0.75×, 1.25×] of the computed duration.
+        const backoffJitter = rawBackoff * (0.75 + Math.random() * 0.5);
+        entry.backoffUntil = now + Math.min(backoffJitter, RL.MAX_BACKOFF_MS);
+        return true; // rate-limited
+    }
+
+    entry.tokens -= 1;
+    // Slowly forgive past violations on successful, un-throttled commands.
+    if (entry.violations > 0) entry.violations -= 1;
+    return false; // allowed
+}
+
+// Amortised map cleanup: evict entries whose backoff has expired and bucket is
+// essentially full (they would be re-initialised identically on next touch).
+let _rlTrimCounter = 0;
+function _maybeCleanRateLimitMap() {
+    if (++_rlTrimCounter < 500) return;
+    _rlTrimCounter = 0;
+    const now = Date.now();
+    for (const [uid, entry] of _rlBuckets) {
+        if (entry.backoffUntil < now && entry.violations === 0) _rlBuckets.delete(uid);
+    }
+}
+
 /**
  * A command manager.
  * Parses commands, triggers them, returns error messages, etc...
@@ -324,6 +411,15 @@ class CommandManager extends EventEmitter {
             if (about.discord === false && source instanceof GuildMember)
                 return;
 
+            // Rate-limit Discord invocations (terminal is exempt).
+            if (source instanceof GuildMember) {
+                const isMaster = this._isUserMaster(source.id);
+                _maybeCleanRateLimitMap();
+                if (_checkRateLimit(source.id, isMaster)) {
+                    return; // silently drop; logging would itself be spammable
+                }
+            }
+
             if (about.onlyMasterUsers === true && source !== null && !this._isUserMaster(source.id))
                 return;
 
@@ -331,6 +427,14 @@ class CommandManager extends EventEmitter {
                 (source instanceof GuildMember && (this._isUserMaster(source.id) || this._hasPermissions(source, about.requiredPermissions)));
 
             if (hasPermission) {
+                // Structured audit trail for any privileged or dangerous command.
+                if (source instanceof GuildMember && (about.onlyMasterUsers === true || about.dangerous === true)) {
+                    prompt.warning(
+                        `[AUDIT] cmd="${command}" user=${source.user?.tag}(${source.id})` +
+                        ` guild=${source.guild?.id} ts=${new Date().toISOString()}`
+                    );
+                }
+
                 let _error;
 
                 try {

@@ -1,5 +1,6 @@
 #Ignore config files
 config.json
+DEFAULT_CONFIG.json
 
 #Ignore folders
 /node_modules/

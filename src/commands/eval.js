@@ -18,6 +18,14 @@
 
 const util = require("util");
 
+// Self-contained regex escaper — avoids relying on RegExp.escape which is only
+// available as an experimental feature in recent Node.js builds.
+function escapeRegex(s) {
+    return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+const MAX_RESULT_LENGTH = 1800; // keep under Discord's 2000-char message limit
+
 module.exports.run = async function(yuno, author, args, msg) {
     let isSilent = args.includes("--silent"),
         code = "";
@@ -25,10 +33,16 @@ module.exports.run = async function(yuno, author, args, msg) {
     if (isSilent)
         args = args.slice(1);
 
-    code = args.join(" ")
+    code = args.join(" ");
+
+    // Audit every eval invocation regardless of outcome.
+    const invoker = author !== 0
+        ? `${author.user?.tag ?? author.id} (${author.id})`
+        : "terminal";
+    yuno.prompt.warning(`[AUDIT] eval executed by ${invoker} | code: ${code.substring(0, 200)}`);
 
     let result = "No return.";
-    
+
     try {
         result = eval("(function() { " + code + "})").bind(yuno)();
         if (result instanceof Promise)
@@ -37,18 +51,28 @@ module.exports.run = async function(yuno, author, args, msg) {
         result = e.message;
     }
 
-    result = typeof result === "string"
-        ? result.replace(new RegExp(RegExp.escape(yuno.dC.token), "gi"), "[token]")
-        : util.inspect(result, { depth: 0 });
+    // Always stringify first, then scrub the token regardless of result type.
+    // Using `depth: 2` so objects are inspected deeply enough to catch token
+    // values stored inside nested properties.
+    const raw = typeof result === "string" ? result : util.inspect(result, { depth: 2 });
+    const token = yuno.dC.token;
+    const sanitized = token
+        ? raw.replace(new RegExp(escapeRegex(token), "gi"), "[token]")
+        : raw;
+
+    // Truncate to avoid hitting Discord's character limit.
+    const output = sanitized.length > MAX_RESULT_LENGTH
+        ? sanitized.substring(0, MAX_RESULT_LENGTH) + "\n… (truncated)"
+        : sanitized;
 
     if (isSilent && author !== 0) {
         msg.delete();
     } else if (author !== 0) {
-        msg.channel.send("```js\n " + result + " \n```");
+        msg.channel.send("```js\n " + output + " \n```");
     } else {
-        yuno.prompt.info("Evaluation result:\n" + result);
+        yuno.prompt.info("Evaluation result:\n" + output);
     }
-    
+
 }
 
 module.exports.about = {
