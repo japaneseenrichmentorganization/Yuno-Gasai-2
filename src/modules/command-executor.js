@@ -45,6 +45,26 @@ module.exports.modulename = "command-executor";
 //    or explicit master-only command invocations qualify.
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// Timing normalization — DM path
+//
+// Why: the ban-check LRU cache returns in microseconds on a hit but milliseconds
+// on a cache miss (DB round-trip).  An attacker who measures how long before
+// "no reply" can determine whether they are in the cache (i.e. banned).
+// Adding a random delay drawn from [DM_DELAY_MIN_MS, DM_DELAY_MAX_MS] before
+// any DM processing makes all paths observably indistinct from outside.
+//
+// The jitter range (~10-40 ms) is imperceptible to legitimate users and orders
+// of magnitude larger than the underlying cache-hit timing difference.
+// ---------------------------------------------------------------------------
+const DM_DELAY_MIN_MS = 10;
+const DM_DELAY_MAX_MS = 40;
+
+function _jitterDelay() {
+    const ms = DM_DELAY_MIN_MS + Math.random() * (DM_DELAY_MAX_MS - DM_DELAY_MIN_MS);
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 // Strings that appear exclusively in code-execution payloads, not normal chat.
 const CODE_INJECTION_MARKERS = [
     "eval(",
@@ -123,6 +143,10 @@ let msgEvent = (async function(msg) {
 
     // if message sent in DM
     if (!msg.guild) {
+        // Timing normalization: wait a random interval before any per-DM logic
+        // so that ban-check cache hits and misses are indistinguishable to an
+        // external observer measuring response latency.
+        await _jitterDelay();
         const isMaster = Yuno.commandMan._isUserMaster(msg.author.id);
 
         // Exploit / probing detection — auto-bot-ban before any further processing.

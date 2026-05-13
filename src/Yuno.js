@@ -27,6 +27,7 @@ const DEFAULT_CONFIG_FILE = "config.json",
 
 const fsPromises = require("fs").promises,
     EventEmitter = require("events"),
+    { execFile } = require("child_process"),
     {Client, GatewayIntentBits} = require("discord.js");
 
 let ModuleExporter = (require("./ModuleExporter.js")).init(),
@@ -788,6 +789,24 @@ ${YUNO_PINK}           "I'll protect this server forever... just for you~"${RESE
         }
 
         this.emit("sqlite-opened");
+
+        // Run DB integrity check asynchronously after startup so it never
+        // delays bot availability. Issues are logged but do not abort startup.
+        setImmediate(() => {
+            const checkArgs = [`--db=${dbPath}`];
+            if (fieldEncryptionKey) checkArgs.push(`--passphrase=${fieldEncryptionKey}`);
+            const checkScript = require("path").resolve(__dirname, "scripts/db-integrity-check.js");
+            const nodeArgs = ["--experimental-sqlite", checkScript, ...checkArgs];
+            execFile(process.execPath, nodeArgs, { timeout: 120_000 }, (err, stdout, stderr) => {
+                if (stdout) this.prompt.info("[DB-INTEGRITY] " + stdout.trim().replace(/\n/g, "\n[DB-INTEGRITY] "));
+                if (stderr) this.prompt.warn("[DB-INTEGRITY] " + stderr.trim().replace(/\n/g, "\n[DB-INTEGRITY] "));
+                if (err && err.code === 1) {
+                    this.prompt.warn("[DB-INTEGRITY] Integrity check found issues — run `npm run check-db` for details, `npm run check-db:fix` to auto-sanitize.");
+                } else if (!err) {
+                    this.prompt.info("[DB-INTEGRITY] Database integrity check passed.");
+                }
+            });
+        });
 
         this.prompt.info("Connecting to Discord...");
         try {

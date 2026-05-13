@@ -16,6 +16,7 @@
     along with this program.  If not, see https://www.gnu.org/licenses/.
 */
 
+const crypto = require("crypto");
 const Database = require("./database");
 const LRUCache = require("./lib/lruCache");
 
@@ -59,6 +60,10 @@ function _assertBoundedString(value, name, maxLen) {
         throw new TypeError(`Expected string for '${name}', got: ${typeof value}`);
     if (value.length > maxLen)
         throw new RangeError(`'${name}' exceeds max length ${maxLen} (received ${value.length})`);
+    // Null bytes can truncate strings in C-backed libraries (SQLite uses C).
+    // A payload like "abc\x00DROP TABLE" would be stored as "abc" by SQLite.
+    if (value.includes('\x00'))
+        throw new TypeError(`'${name}' must not contain null bytes`);
 }
 
 function _assertEnum(value, allowed, name) {
@@ -66,6 +71,28 @@ function _assertEnum(value, allowed, name) {
         throw new RangeError(
             `'${name}' must be one of [${allowed.join(', ')}], got: ${String(value).substring(0, 40)}`
         );
+}
+
+// ---------------------------------------------------------------------------
+// Constant-time string comparison.
+//
+// crypto.timingSafeEqual requires equal-length buffers. When lengths differ
+// we still run the comparison against a dummy buffer of the correct length so
+// the branch is not observable, then return false. We cannot hide the length
+// mismatch itself (lengths are not secret data here), but we prevent early
+// exit on content mismatch.
+// ---------------------------------------------------------------------------
+function _timingSafeStringEqual(a, b) {
+    const bufA = Buffer.from(typeof a === "string" ? a : "", "utf8");
+    const bufB = Buffer.from(typeof b === "string" ? b : "", "utf8");
+    if (bufA.length !== bufB.length) {
+        // Run a dummy comparison against a zero-filled buffer of the correct
+        // length so that code paths after this call see consistent timing.
+        const dummy = Buffer.alloc(bufA.length, 0);
+        crypto.timingSafeEqual(bufA, dummy);
+        return false;
+    }
+    return crypto.timingSafeEqual(bufA, bufB);
 }
 
 // ---------------------------------------------------------------------------
@@ -662,10 +689,13 @@ module.exports = self = {
         if (typeof image !== "string")
             image = "null";
 
+        // Normalize to NFC on insert so stored form always matches the query-time
+        // normalization in getMentionResponseFromTrigger.
+        const normalizedTrigger = trigger.normalize("NFC");
         await self.initGuild(database, guildid);
         return await database.runPromise("INSERT INTO mentionResponses(id, gid, trigger, response, image) VALUES(null, ?, ?, ?, ?)", [
             guildid,
-            database.encrypt(trigger),
+            database.encrypt(normalizedTrigger),
             database.encrypt(response),
             database.encrypt(image)
         ]);
@@ -701,20 +731,39 @@ module.exports = self = {
      * @async
      */
     "getMentionResponseFromTrigger": async function(database, guildid, trigger) {
-        // Since triggers are encrypted, we need to search all and compare decrypted values
+        // Since triggers are encrypted, we must decrypt and compare each one.
+        //
+        // Timing-attack hardening:
+        //  • We NEVER short-circuit on a match — Array.find() would reveal the
+        //    match position via the number of PBKDF2 decryptions performed
+        //    (each decrypt is ~100 k iterations, so position × 100 k is easily
+        //    observable over a network).
+        //  • We use _timingSafeStringEqual for the comparison itself so content
+        //    mismatch does not exit early inside the string bytes.
+        //  • We record the *last* match found (all iterations always complete).
         const allResponses = await database.allPromise("SELECT * FROM mentionResponses WHERE gid = ?", [guildid]);
-        const mentionResponse = allResponses.find(el => database.decrypt(el.trigger) === trigger);
-
-        if (typeof mentionResponse === "undefined")
-            return null;
-        else
-            return {
-                "id": mentionResponse.id,
-                "guildId": mentionResponse.gid,
-                "trigger": database.decrypt(mentionResponse.trigger),
-                "response": database.decrypt(mentionResponse.response),
-                "image": database.decrypt(mentionResponse.image)
+        // NFC-normalize the query trigger so visually identical Unicode sequences
+        // (e.g. composed vs. decomposed accents) always compare equal, and so
+        // a fuzzer cannot sneak through with lookalike code points.
+        const normalizedTrigger = (typeof trigger === "string") ? trigger.normalize("NFC") : "";
+        let mentionResponse = null;
+        for (const el of allResponses) {
+            // NFC-normalize stored trigger for the same reason.
+            const decryptedTrigger = (database.decrypt(el.trigger) ?? "").normalize("NFC");
+            if (_timingSafeStringEqual(decryptedTrigger, normalizedTrigger)) {
+                mentionResponse = el; // overwrite — do NOT break, must scan all
             }
+        }
+
+        if (mentionResponse === null)
+            return null;
+        return {
+            "id": mentionResponse.id,
+            "guildId": mentionResponse.gid,
+            "trigger": database.decrypt(mentionResponse.trigger),
+            "response": database.decrypt(mentionResponse.response),
+            "image": database.decrypt(mentionResponse.image)
+        };
     },
 
     /**
