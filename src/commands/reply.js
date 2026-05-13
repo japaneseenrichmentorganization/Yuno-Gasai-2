@@ -16,6 +16,9 @@
     along with this program.  If not, see https://www.gnu.org/licenses/.
 */
 
+"use strict";
+
+
 module.exports.runTerminal = async function(yuno, args, rawInput, rl) {
     if (args.length < 1) {
         console.log("Usage: reply <inbox-id|user-id> [message]");

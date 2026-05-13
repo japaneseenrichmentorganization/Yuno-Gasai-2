@@ -16,6 +16,9 @@
     along with this program.  If not, see https://www.gnu.org/licenses/.
 */
 
+"use strict";
+
+
 // Database driver detection - priority: native SQLite > sqlcipher > sqlite3
 let sqlite;
 let encryptionAvailable = false;
@@ -23,7 +26,7 @@ let useNativeSQLite = false;
 let DatabaseImpl;
 
 // Field-level encryption support
-const { createEncryptionHelper } = require('./lib/cryptoUtils');
+const { createEncryptionHelper, createEncryptionHelperAsync } = require('./lib/cryptoUtils');
 
 // Try Node.js 24+ native SQLite first
 try {
@@ -66,14 +69,14 @@ class NativeDatabase {
     }
 
     /**
-     * Enable field-level encryption with the given passphrase
+     * Enable field-level encryption with the given passphrase.
+     * Derives the master key asynchronously (once) so subsequent
+     * encrypt/decrypt calls are fast synchronous AES operations.
      * @param {string} passphrase - The encryption passphrase
      */
-    setFieldEncryptionKey(passphrase) {
-        this.fieldEncryption = createEncryptionHelper(passphrase);
-        if (this.fieldEncryption.enabled) {
-            console.log("[Database] Field-level encryption enabled");
-        }
+    async setFieldEncryptionKey(passphrase) {
+        this.fieldEncryption = await createEncryptionHelperAsync(passphrase);
+        console.log("[Database] Field-level encryption enabled (v2 format, master key cached)");
     }
 
     /**
@@ -386,14 +389,14 @@ class LegacyDatabase {
     }
 
     /**
-     * Enable field-level encryption with the given passphrase
+     * Enable field-level encryption with the given passphrase.
+     * Derives the master key asynchronously (once) so subsequent
+     * encrypt/decrypt calls are fast synchronous AES operations.
      * @param {string} passphrase - The encryption passphrase
      */
-    setFieldEncryptionKey(passphrase) {
-        this.fieldEncryption = createEncryptionHelper(passphrase);
-        if (this.fieldEncryption.enabled) {
-            console.log("[Database] Field-level encryption enabled");
-        }
+    async setFieldEncryptionKey(passphrase) {
+        this.fieldEncryption = await createEncryptionHelperAsync(passphrase);
+        console.log("[Database] Field-level encryption enabled (v2 format, master key cached)");
     }
 
     /**

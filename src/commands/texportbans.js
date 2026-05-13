@@ -16,6 +16,9 @@
     along with this program.  If not, see https://www.gnu.org/licenses/.
 */
 
+"use strict";
+
+
 const fs = require("fs").promises;
 const path = require("path");
 const { isValidSnowflake, fetchAllBannedUserIds } = require("../lib/discordHelpers");

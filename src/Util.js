@@ -2,6 +2,9 @@
  * HTML entity decode map for common entities
  * Native replacement for 'he' library
  */
+
+"use strict";
+
 const HTML_ENTITIES = {
     '&amp;': '&',
     '&lt;': '<',

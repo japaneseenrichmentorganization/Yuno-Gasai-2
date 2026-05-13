@@ -16,6 +16,9 @@
     along with this program.  If not, see https://www.gnu.org/licenses/.
 */
 
+"use strict";
+
+
 module.exports.run = async function(yuno, author, args, msg) {
     let prefix = "!";
 

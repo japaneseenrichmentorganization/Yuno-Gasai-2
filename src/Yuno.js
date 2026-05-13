@@ -16,6 +16,9 @@
     along with this program.  If not, see https://www.gnu.org/licenses/.
 */
 
+"use strict";
+
+
 /**
  * @prop {String} DEFAULT_CONFIG_FILE The default file for config.
  * @prop {Object} DEFAULT_CONFIG The default configuration.
@@ -773,7 +776,7 @@ ${YUNO_PINK}           "I'll protect this server forever... just for you~"${RESE
                     this.shutdown(-1);
                     return;
                 }
-                this.database.setFieldEncryptionKey(fieldEncryptionKey);
+                await this.database.setFieldEncryptionKey(fieldEncryptionKey);
                 this.prompt.info("Field-level encryption enabled for sensitive data.");
             }
 

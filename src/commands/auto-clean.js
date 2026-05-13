@@ -16,6 +16,9 @@
     along with this program.  If not, see https://www.gnu.org/licenses/.
 */
 
+"use strict";
+
+
 const {TextChannel, EmbedBuilder} = require("discord.js")
 
 // Handler object pattern for cleaner command routing

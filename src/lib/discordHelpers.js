@@ -6,6 +6,9 @@ const { PermissionsBitField } = require("discord.js");
  * @param {import("discord.js").Message} msg
  * @param {import("discord.js").Client} client
  */
+
+"use strict";
+
 async function ensureMembersInCache(msg, client) {
     if (msg.guild && !msg.guild.members.cache.has(msg.author.id) && !msg.webhookId) {
         msg.member = await msg.guild.members.fetch(msg.author);

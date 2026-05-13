@@ -16,6 +16,9 @@
     along with this program.  If not, see https://www.gnu.org/licenses/.
 */
 
+"use strict";
+
+
 const readline = require("readline"),
 
     GROUPWIDTH = 10;

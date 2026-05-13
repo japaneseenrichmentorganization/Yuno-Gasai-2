@@ -16,6 +16,9 @@
     along with this program.  If not, see https://www.gnu.org/licenses/.
 */
 
+"use strict";
+
+
 module.exports.run = async function(yuno, author, args, msg) {
     if (args.length < 1) {
         const settings = await yuno.dbCommands.getLogSettings(yuno.database, msg.guild.id);

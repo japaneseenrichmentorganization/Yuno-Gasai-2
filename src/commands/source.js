@@ -1,3 +1,5 @@
+"use strict";
+
 const {EmbedBuilder} = require("discord.js");
 
 module.exports.run = async function(yuno, author, args, msg) {

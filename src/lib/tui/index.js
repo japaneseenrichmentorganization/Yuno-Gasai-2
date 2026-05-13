@@ -1,3 +1,5 @@
+"use strict";
+
 const MessageCache = require('./messageCache.js');
 const { buildLayout } = require('./layout.js');
 

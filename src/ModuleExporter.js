@@ -16,6 +16,9 @@
     along with this program.  If not, see https://www.gnu.org/licenses/.
 */
 
+"use strict";
+
+
 const EventEmitter = require("events"),
     fs = require("fs"),
     prompt = (require("./lib/prompt")).init(),
@@ -79,6 +82,10 @@ class ModuleExporter extends EventEmitter {
     hrReference(instance, prop, file) {
         let path = require.resolve(file),
             ee = new EventEmitter();
+
+        ee.on('error', (err) => {
+            prompt.error(`[ModuleExporter] Hot-reload error for ${file}: ${err.message}`);
+        });
 
         this.hotreloadReferences[path] = {
             "eventEmitter": ee,

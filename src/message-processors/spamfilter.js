@@ -13,6 +13,9 @@
     along with this program.  If not, see https://www.gnu.org/licenses/.
 */
 
+"use strict";
+
+
 module.exports.messageProcName = "spam-filter"
 
 const { ensureMembersInCache } = require("../lib/discordHelpers");

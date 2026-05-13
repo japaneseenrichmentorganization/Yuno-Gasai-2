@@ -13,6 +13,9 @@
     along with this program.  If not, see https://www.gnu.org/licenses/.
 */
 
+"use strict";
+
+
 const {EmbedBuilder} = require("discord.js");
 const { ensureMembersInCache } = require("../lib/discordHelpers");
 const { xpNeededForLevel } = require("../lib/xpFormulas");

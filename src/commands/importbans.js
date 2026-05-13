@@ -16,6 +16,9 @@
     along with this program.  If not, see https://www.gnu.org/licenses/.
 */
 
+"use strict";
+
+
 const fs = require("fs").promises;
 const { setupRateLimitListener, waitForRateLimit } = require("../lib/rateLimitHelper");
 const { isValidSnowflake } = require("../lib/discordHelpers");

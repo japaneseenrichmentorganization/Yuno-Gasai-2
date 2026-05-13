@@ -16,6 +16,9 @@
     along with this program.  If not, see https://www.gnu.org/licenses/.
 */
 
+"use strict";
+
+
 /**
  * Simple LRU (Least Recently Used) Cache implementation
  * @param {number} maxSize Maximum number of entries in the cache

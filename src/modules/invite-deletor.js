@@ -16,6 +16,9 @@
     along with this program.  If not, see https://www.gnu.org/licenses/.
 */
 
+"use strict";
+
+
 module.exports.modulename = "invite-deletor";
 
 let DISCORD_EVENTED = false;

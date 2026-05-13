@@ -16,6 +16,9 @@
     along with this program.  If not, see https://www.gnu.org/licenses/.
 */
 
+"use strict";
+
+
 const { EmbedBuilder, AuditLogEvent } = require("discord.js");
 const { setupRateLimitListener, waitForRateLimit } = require("../lib/rateLimitHelper");
 const { fetchAllBannedUserIds } = require("../lib/discordHelpers");

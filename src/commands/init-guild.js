@@ -16,6 +16,9 @@
     along with this program.  If not, see https://www.gnu.org/licenses/.
 */
 
+"use strict";
+
+
 module.exports.runTerminal = async function(yuno, args) {
     if (args.length === 0 || isNaN(parseInt(args[0], 10)))
         return yuno.prompt.error("Please give the id of the guild in argument.")
