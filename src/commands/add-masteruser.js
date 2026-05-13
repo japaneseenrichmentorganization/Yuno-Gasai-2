@@ -40,10 +40,14 @@ module.exports.run = async function(yuno, author, args, msg) {
     if (args.length === 0)
         return msg.channel.send(":negative_squared_cross_mark: Not enough arguments.");
 
-    const user = msg.mentions.members.first()?.id ?? args[0];
+    const rawId = msg.mentions.members.first()?.id ?? args[0];
+
+    // Validate: must be a Discord snowflake (17-19 digit numeric string)
+    if (!/^\d{17,19}$/.test(rawId))
+        return msg.channel.send(":negative_squared_cross_mark: Invalid user ID. Please mention a user or provide a valid Discord user ID.");
 
     const mu = yuno.config.get("commands.master-users");
-    mu.push(user);
+    mu.push(rawId);
     yuno.config.set("commands.master-users", mu);
 
     yuno.config.save();

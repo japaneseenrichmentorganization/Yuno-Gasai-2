@@ -30,15 +30,23 @@ const say = (yuno, isTerminal, msg, tosay) =>
 // the config store. JSON.parse in modern Node.js does not actually pollute
 // Object.prototype, but downstream code or future changes might; this provides
 // defense-in-depth for a state-actor threat model.
+// Deep-walk required: a nested {"a": {"__proto__": ...}} bypasses shallow checks.
 const POISONING_KEYS = new Set(["__proto__", "constructor", "prototype"]);
+
+function _hasPoisoningKey(obj, depth = 0) {
+    if (depth > 20 || obj === null || typeof obj !== "object") return false;
+    for (const key of Object.keys(obj)) {
+        if (POISONING_KEYS.has(key)) return true;
+        if (_hasPoisoningKey(obj[key], depth + 1)) return true;
+    }
+    return false;
+}
 
 const tryParseJSON = (str) => {
     try {
         const parsed = JSON.parse(str);
-        if (parsed !== null && typeof parsed === "object" && !Array.isArray(parsed)) {
-            for (const key of Object.keys(parsed)) {
-                if (POISONING_KEYS.has(key)) return str; // reject, use raw string
-            }
+        if (parsed !== null && typeof parsed === "object" && _hasPoisoningKey(parsed)) {
+            return str; // reject — return raw string so it's stored literally, not executed
         }
         return parsed;
     } catch { return str; }
