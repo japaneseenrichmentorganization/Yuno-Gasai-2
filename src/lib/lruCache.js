@@ -43,8 +43,8 @@ LRUCache.prototype.get = function(key) {
         return undefined;
     }
 
-    // Check if expired
-    if (this.ttl > 0 && Date.now() - entry.timestamp > this.ttl) {
+    // Check if expired using per-entry jittered TTL (set at insertion time)
+    if (this.ttl > 0 && Date.now() - entry.timestamp > entry.effectiveTtl) {
         this.cache.delete(key);
         return undefined;
     }
@@ -73,9 +73,12 @@ LRUCache.prototype.set = function(key, value) {
         this.cache.delete(oldestKey);
     }
 
+    // Per-entry TTL jitter ±10% so cache expiry timing is not exactly predictable
+    const effectiveTtl = this.ttl > 0 ? this.ttl * (0.9 + Math.random() * 0.2) : 0;
     this.cache.set(key, {
         value: value,
-        timestamp: Date.now()
+        timestamp: Date.now(),
+        effectiveTtl
     });
 };
 
@@ -91,8 +94,8 @@ LRUCache.prototype.has = function(key) {
         return false;
     }
 
-    // Check if expired
-    if (this.ttl > 0 && Date.now() - entry.timestamp > this.ttl) {
+    // Check if expired using per-entry jittered TTL
+    if (this.ttl > 0 && Date.now() - entry.timestamp > entry.effectiveTtl) {
         this.cache.delete(key);
         return false;
     }

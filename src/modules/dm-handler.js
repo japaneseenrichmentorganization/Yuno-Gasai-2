@@ -44,7 +44,9 @@ const rateLimitState = new Map();
 
 /**
  * Get or create per-user rate limit state.
- * baseLimit is randomized per session (re-randomizes on TTL expiry).
+ * baseLimit, spamThreshold, and leniencyMs are all randomized per session
+ * (re-randomize on TTL expiry) so an attacker probing one session cannot
+ * deduce the thresholds for the next.
  */
 function getOrCreateState(userId) {
     let state = userRateCache.get(userId);
@@ -54,7 +56,9 @@ function getOrCreateState(userId) {
             baseLimit: 6 + Math.floor(Math.random() * 5),  // jittered: 6-10
             droppedCount: 0,                                // messages dropped this session
             lastHumanReply: 0,                              // timestamp of last human reply
-            spamActionTaken: false
+            spamActionTaken: false,
+            spamThreshold: 4 + Math.floor(Math.random() * 3),              // 4-6 (was fixed 5)
+            leniencyMs: HUMAN_REPLY_LENIENCY_MS * (0.75 + Math.random() * 0.5) // ±25%
         };
     }
     return state;
@@ -71,11 +75,12 @@ function checkAndRecord(userId) {
     // Prune messages outside the sliding window
     state.messages = state.messages.filter(t => now - t < RATE_WINDOW_MS);
 
-    // Adaptive effective limit: tightens by 1 for each previously dropped message
-    let effectiveLimit = Math.max(2, state.baseLimit - state.droppedCount);
+    // Adaptive effective limit: tightens by 1 for each previously dropped message.
+    // ±1 micro-jitter makes the exact threshold unpredictable per-check.
+    let effectiveLimit = Math.max(2, state.baseLimit - state.droppedCount + Math.floor(Math.random() * 3) - 1);
 
-    // Leniency boost if a human has replied recently
-    if (now - state.lastHumanReply < HUMAN_REPLY_LENIENCY_MS) {
+    // Leniency boost if a human has replied recently (window is per-session randomized)
+    if (now - state.lastHumanReply < (state.leniencyMs || HUMAN_REPLY_LENIENCY_MS)) {
         effectiveLimit += 5;
     }
 
@@ -97,8 +102,10 @@ function checkAndRecord(userId) {
 function isSpam(userId) {
     const state = userRateCache.get(userId);
     if (!state || state.spamActionTaken) return false;
-    const recentReply = (Date.now() - state.lastHumanReply) < HUMAN_REPLY_LENIENCY_MS;
-    return state.droppedCount >= SPAM_DROP_THRESHOLD && !recentReply;
+    const leniencyMs = state.leniencyMs || HUMAN_REPLY_LENIENCY_MS;
+    const threshold = state.spamThreshold || SPAM_DROP_THRESHOLD;
+    const recentReply = (Date.now() - state.lastHumanReply) < leniencyMs;
+    return state.droppedCount >= threshold && !recentReply;
 }
 
 /**
@@ -379,7 +386,9 @@ module.exports.notifyHumanReply = function(userId) {
             baseLimit: 6 + Math.floor(Math.random() * 5),
             droppedCount: 0,
             lastHumanReply: 0,
-            spamActionTaken: false
+            spamActionTaken: false,
+            spamThreshold: 4 + Math.floor(Math.random() * 3),
+            leniencyMs: HUMAN_REPLY_LENIENCY_MS * (0.75 + Math.random() * 0.5)
         };
     }
     state.lastHumanReply = Date.now();

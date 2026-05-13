@@ -182,7 +182,9 @@ const STATUS_EMOJIS = {
  */
 async function getGuildSettings(guildId) {
     const cached = settingsCache.get(guildId);
-    if (cached && Date.now() - cached.time < SETTINGS_CACHE_TTL) {
+    // TTL jitter ±30% so an attacker cannot time cache-miss latency spikes precisely
+    const effectiveTtl = SETTINGS_CACHE_TTL * (0.7 + Math.random() * 0.6);
+    if (cached && Date.now() - cached.time < effectiveTtl) {
         return cached.settings;
     }
 
@@ -448,9 +450,11 @@ async function flushAllLogs() {
         const settings = await getGuildSettings(guildId);
         const flushIntervalMs = (settings.flushInterval || DEFAULT_FLUSH_INTERVAL) * 1000;
 
-        // Check if enough time has passed since last flush for this guild
+        // Check if enough time has passed since last flush for this guild.
+        // ±25% jitter on the interval prevents an observer from timing the exact flush cadence.
+        const jitteredIntervalMs = flushIntervalMs * (0.75 + Math.random() * 0.5);
         const lastFlush = lastFlushTime.get(guildId) || 0;
-        if (now - lastFlush < flushIntervalMs) {
+        if (now - lastFlush < jitteredIntervalMs) {
             continue; // Not time to flush this guild yet
         }
 
