@@ -14,7 +14,9 @@ module.exports.message = async function(content, msg) {
             if (mentionResponse.image !== "null")
                 embed.setImage(mentionResponse.image);
 
-            await msg.channel.send({embeds: [embed]});
+            // allowedMentions: { parse: [] } prevents a stored response that
+            // contains <@userId> or <@&roleId> from pinging real users/roles.
+            await msg.channel.send({ embeds: [embed], allowedMentions: { parse: [] } });
             break;
         }
     }

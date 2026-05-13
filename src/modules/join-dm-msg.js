@@ -61,7 +61,7 @@ let eventDiscord = function() {
         }
 
         if (send)
-            member.send({embeds: [embed]}).catch(error => {
+            member.send({ embeds: [embed], allowedMentions: { parse: [] } }).catch(error => {
     if (error.code === 50007) {
         console.error('Failed to send message:', error);
     }
