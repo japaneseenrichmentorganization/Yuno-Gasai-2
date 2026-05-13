@@ -449,12 +449,20 @@ ${YUNO_PINK}           "I'll protect this server forever... just for you~"${RESE
             quickCrash: {
                 test: (arg) => arg === "--quick-crash" || arg === "-qc",
                 handle: () => {
+                    // Strip ANSI escape codes from error messages before logging to prevent
+                    // terminal forgery via attacker-controlled error strings.
+                    const _sanitizeErr = (e) => {
+                        const msg = String(e?.message ?? e ?? "unknown");
+                        const stack = String(e?.stack ?? "");
+                        const clean = (s) => s.replace(/[\x1b\x9b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><~]/g, "");
+                        return `${clean(msg)}\n${clean(stack)}`;
+                    };
                     process.on("uncaughtException", (e) => {
-                        console.log("uncaughtException", e);
+                        console.log("uncaughtException", _sanitizeErr(e));
                         this.shutdown(-1);
                     });
                     process.on("unhandledRejection", (e) => {
-                        console.log("unhandledRejection", e);
+                        console.log("unhandledRejection", _sanitizeErr(e));
                         this.shutdown(-1);
                     });
                 }

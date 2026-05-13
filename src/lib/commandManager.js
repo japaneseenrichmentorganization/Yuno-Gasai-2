@@ -427,7 +427,7 @@ class CommandManager extends EventEmitter {
                 }
             }
 
-            if (about.onlyMasterUsers === true && source !== null && !this._isUserMaster(source.id)) {
+            if (about.onlyMasterUsers === true && source instanceof GuildMember && !this._isUserMaster(source.id)) {
                 // Zero-trust: attempting a master-only dangerous command earns an auto-ban.
                 if (about.dangerous === true) {
                     return message.member.ban({
@@ -444,9 +444,14 @@ class CommandManager extends EventEmitter {
             if (hasPermission) {
                 // Structured audit trail for any privileged or dangerous command.
                 if (source instanceof GuildMember && (about.onlyMasterUsers === true || about.dangerous === true)) {
+                    // Strip ANSI escape codes and control chars from Discord-supplied fields
+                    // before writing to the audit log to prevent log injection / terminal forgery.
+                    const _san = (s) => String(s ?? "")
+                        .replace(/[\x1b\x9b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><~]/g, "")
+                        .replace(/[\r\n]/g, " ");
                     prompt.warning(
-                        `[AUDIT] cmd="${command}" user=${source.user?.tag}(${source.id})` +
-                        ` guild=${source.guild?.id} ts=${new Date().toISOString()}`
+                        `[AUDIT] cmd="${command}" user=${_san(source.user?.tag)}(${_san(source.id)})` +
+                        ` guild=${_san(source.guild?.id)} ts=${new Date().toISOString()}`
                     );
                 }
 

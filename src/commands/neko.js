@@ -32,8 +32,18 @@ module.exports.run = async function(yuno, author, args, msg) {
         url += '/neko';
     }
 
-    const res = await fetch(url);
-    const data = await res.json();
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 10_000);
+    let data;
+    try {
+        const res = await fetch(url, { signal: controller.signal });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        data = await res.json();
+    } catch {
+        return msg.channel.send(":negative_squared_cross_mark: Failed to fetch a neko image. Try again later.");
+    } finally {
+        clearTimeout(timer);
+    }
     msg.channel.send({embeds: [new EmbedBuilder()
         .setImage(data.neko)
         .setFooter({text: `Requested by ${msg.author.tag}`})

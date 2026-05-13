@@ -57,8 +57,28 @@ module.exports.run = async function(yuno, author, args, msg) {
 
     let res;
     try {
-        const response = await fetch(url);
-        const text = await response.text();
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), 15_000);
+        let text;
+        try {
+            const response = await fetch(url, { signal: controller.signal });
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            // Cap response body at 2 MB to prevent memory exhaustion
+            const reader = response.body.getReader();
+            const MAX_BYTES = 2 * 1024 * 1024;
+            const chunks = [];
+            let totalBytes = 0;
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                totalBytes += value.length;
+                if (totalBytes > MAX_BYTES) throw new Error("Response too large");
+                chunks.push(value);
+            }
+            text = Buffer.concat(chunks.map(c => Buffer.from(c))).toString("utf8");
+        } finally {
+            clearTimeout(timer);
+        }
         res = JSON.parse(text);
     } catch (e) {
         return msg.channel.send(`No search results found for \`${args[0]}\`. Please try a different query.`);
@@ -74,7 +94,16 @@ module.exports.run = async function(yuno, author, args, msg) {
         return;
     }
 
-    const images = getRandomsFromArray(res.map(i => [i.image, i.directory]), targetPosts);
+    // Validate API response entries — only accept items with non-empty string fields
+    // to prevent trust-boundary violations if the API response is malformed or poisoned.
+    const valid = Array.isArray(res)
+        ? res.filter(i => typeof i?.image === "string" && i.image.length > 0
+                       && typeof i?.directory === "string" && i.directory.length > 0)
+        : [];
+    if (valid.length === 0) {
+        return msg.channel.send(`No search results found for \`${args[0]}\`. Please try a different query.`);
+    }
+    const images = getRandomsFromArray(valid.map(i => [i.image, i.directory]), targetPosts);
 
     // Send in batches of 4
     for (let i = 0; i < images.length; i += 4) {
