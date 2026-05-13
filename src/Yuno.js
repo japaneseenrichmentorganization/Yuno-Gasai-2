@@ -42,6 +42,22 @@ let ModuleExporter = (require("./ModuleExporter.js")).init(),
 
 let ONETIME_EVENT = false
 
+// Event loop lag monitor — warns if the loop was blocked for > 100ms.
+// Uses .unref() so it does not prevent a clean process exit.
+const _EL_INTERVAL_MS = 1000;
+const _EL_LAG_THRESHOLD_MS = 100;
+function _startEventLoopMonitor(prompt) {
+    let last = Date.now();
+    setInterval(() => {
+        const now = Date.now();
+        const lag = now - last - _EL_INTERVAL_MS;
+        last = now;
+        if (lag > _EL_LAG_THRESHOLD_MS) {
+            prompt.warn(`[EventLoop] Blocked for ~${lag}ms — check for synchronous I/O or heavy CPU work.`);
+        }
+    }, _EL_INTERVAL_MS).unref();
+}
+
 // Connection state tracking for auto-reconnection
 let connectionState = {
     isConnected: false,
@@ -242,9 +258,6 @@ class Yuno extends EventEmitter {
                 "aliases": ["-noit"],
                 "description": "Removes the interactions with the terminal."
             }, {
-                "argument": "--debug-script",
-                "description": "Evalutes debug-script.js when ready."
-            }, {
                 "argument": "--upgrade-database=v1yunodb.db;destination.db",
                 "description": "Updates the Yuno's 1st version database to the Yuno's 2nd database"
             }, {
@@ -260,18 +273,6 @@ class Yuno extends EventEmitter {
                 "description": "Start in full terminal UI mode (XChat-style)."
             }
         ])
-    }
-
-    /**
-     * Evals a code under with the Yuno's context.
-     * @param {String} code
-     * @warning Don't provide any shit to this method.
-     * @async
-     * @returns {any} The result of the "eval"
-     * @private
-     */
-    _eval(code) {
-        return eval(code)
     }
 
     /**
@@ -439,17 +440,6 @@ ${YUNO_PINK}           "I'll protect this server forever... just for you~"${RESE
                 test: (arg) => arg.startsWith("--hot-reload") || arg.startsWith("-hr"),
                 handle: (arg) => {
                     prompt.debug("Hot-Reload enabled on " + ModuleExporter.watch(arg.split("=")[1] ?? undefined));
-                }
-            },
-            debugScript: {
-                test: (arg) => arg === "--debug-script",
-                handle: () => {
-                    this.on("ready", () => {
-                        require("fs").readFile("./debug-script.js", "utf8", (err, data) => {
-                            this._eval(data);
-                            prompt.info("Debug-script loaded.");
-                        });
-                    });
                 }
             },
             noColors: {
@@ -841,6 +831,9 @@ ${YUNO_PINK}           "I'll protect this server forever... just for you~"${RESE
 
         // Setup auto-reconnection handlers
         this._setupReconnectionHandlers();
+
+        // Start event loop lag monitor (100ms threshold)
+        _startEventLoopMonitor(this.prompt);
 
         this.prompt.info("Bot launched.");
     }

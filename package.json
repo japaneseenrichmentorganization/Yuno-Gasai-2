@@ -5,10 +5,11 @@
   "main": "index.js",
   "type": "commonjs",
   "scripts": {
-    "start": "node --experimental-sqlite index.js",
-    "start:legacy": "node index.js",
+    "start": "node --experimental-sqlite --permission --allow-fs-read=. --allow-fs-write=. --allow-child-process index.js",
+    "start:legacy": "node --permission --allow-fs-read=. --allow-fs-write=. --allow-child-process index.js",
     "dev": "node --experimental-sqlite index.js --hot-reload",
     "test": "node --test",
+    "lint": "eslint src/",
     "generate-doc": "jsdoc .\\src -r -p -d docs -t node_modules/docdash",
     "generate-doc-notheme": "jsdoc .\\src -r -p -d docs",
     "check-db": "node --experimental-sqlite src/scripts/db-integrity-check.js",
@@ -18,7 +19,10 @@
     "node": ">=24.0.0"
   },
   "devDependencies": {
-    "docdash": ">=2.0.2"
+    "docdash": ">=2.0.2",
+    "eslint": "^9.0.0",
+    "@eslint/js": "^9.0.0",
+    "eslint-plugin-security": "^3.0.0"
   },
   "dependencies": {
     "discord-alt-detector": "^1.0.4",
