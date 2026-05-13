@@ -1,3 +1,5 @@
+"use strict";
+
 class MessageCache {
     constructor() {
         this._messages = new Map();

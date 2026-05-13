@@ -5,6 +5,9 @@
  * @param {string} str
  * @returns {boolean|null}
  */
+
+"use strict";
+
 function parseToggle(str) {
     if (!str || typeof str !== "string") return null;
     const lower = str.toLowerCase();

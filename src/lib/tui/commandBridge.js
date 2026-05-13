@@ -1,3 +1,5 @@
+"use strict";
+
 async function captureLog(fn) {
     const lines = [];
     const orig = console.log;

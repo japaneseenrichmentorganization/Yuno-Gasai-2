@@ -16,6 +16,9 @@
     along with this program.  If not, see https://www.gnu.org/licenses/.
 */
 
+"use strict";
+
+
 const { ChannelType, PermissionsBitField } = require("discord.js");
 
 // Track active watch sessions

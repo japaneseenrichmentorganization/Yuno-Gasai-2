@@ -16,6 +16,9 @@
     along with this program.  If not, see https://www.gnu.org/licenses/.
 */
 
+"use strict";
+
+
 // Use Set for O(1) lookup instead of array O(n)
 const BANNED_SEARCH = new Set(["loli", "gore", "guro", "scat", "small_breast", "vore", "underage", "shota"]);
 

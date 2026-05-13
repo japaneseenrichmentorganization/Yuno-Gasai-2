@@ -16,6 +16,9 @@
     along with this program.  If not, see https://www.gnu.org/licenses/.
 */
 
+"use strict";
+
+
 const { execFile } = require("child_process");
 const { promisify } = require("util");
 const execFileAsync = promisify(execFile);

@@ -16,6 +16,9 @@
     along with this program.  If not, see https://www.gnu.org/licenses/.
 */
 
+"use strict";
+
+
 const { EmbedBuilder } = require("discord.js");
 
 // Track delay usage per guild/channel: { "guildId-channelName": { count: 0, resetTime: timestamp } }

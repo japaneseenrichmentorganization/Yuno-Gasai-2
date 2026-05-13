@@ -16,6 +16,9 @@
     along with this program.  If not, see https://www.gnu.org/licenses/.
 */
 
+"use strict";
+
+
 const totalMem = require("os").totalmem();
 const { version, EmbedBuilder } = require("discord.js");
 

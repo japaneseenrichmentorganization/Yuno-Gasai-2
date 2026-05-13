@@ -3,6 +3,9 @@
     ♥ Showering them with love... whether they want it or not~ ♥
 */
 
+"use strict";
+
+
 const { fetchNonBotMembers } = require("../lib/discordHelpers");
 
 module.exports.run = async function(yuno, author, args, trigger) {

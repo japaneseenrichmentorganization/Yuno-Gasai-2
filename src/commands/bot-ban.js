@@ -16,6 +16,9 @@
     along with this program.  If not, see https://www.gnu.org/licenses/.
 */
 
+"use strict";
+
+
 const { isValidSnowflake } = require("../lib/discordHelpers");
 
 module.exports.run = async function(yuno, author, args, msg) {

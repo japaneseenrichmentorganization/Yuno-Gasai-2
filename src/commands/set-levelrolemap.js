@@ -16,6 +16,9 @@
     along with this program.  If not, see https://www.gnu.org/licenses/.
 */
 
+"use strict";
+
+
 module.exports.run = async function(yuno, author, args, msg) {
     if (args.length < 2)
         return msg.channel.send(":negative_squared_cross_mark: Not enough arguments. Usage: `set-levelrolemap <level> <@role>`");

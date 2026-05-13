@@ -16,6 +16,9 @@
     along with this program.  If not, see https://www.gnu.org/licenses/.
 */
 
+"use strict";
+
+
 const { EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder } = require("discord.js");
 const { AltDetector } = require("discord-alt-detector");
 const { setupRateLimitListener, waitForRateLimit } = require("../lib/rateLimitHelper");

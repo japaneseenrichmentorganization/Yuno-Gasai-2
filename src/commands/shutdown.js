@@ -16,6 +16,9 @@
     along with this program.  If not, see https://www.gnu.org/licenses/.
 */
 
+"use strict";
+
+
 let timeout = null;
 
 module.exports.runTerminal = async function(yuno, args) {

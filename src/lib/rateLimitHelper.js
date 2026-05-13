@@ -16,6 +16,9 @@
     along with this program.  If not, see https://www.gnu.org/licenses/.
 */
 
+"use strict";
+
+
 /**
  * Rate limit helper for Discord API operations
  * Provides dynamic delay calculation based on rate limit events

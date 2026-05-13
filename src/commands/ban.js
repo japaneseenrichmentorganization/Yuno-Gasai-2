@@ -16,6 +16,9 @@
     along with this program.  If not, see https://www.gnu.org/licenses/.
 */
 
+"use strict";
+
+
 const FAIL_COLOR = "#ff0000";
 const SUCCESS_COLOR = "#43cc24";
 

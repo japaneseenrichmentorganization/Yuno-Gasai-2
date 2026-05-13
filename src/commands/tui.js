@@ -1,3 +1,5 @@
+"use strict";
+
 const tuiController = require('../lib/tui/index.js');
 
 module.exports.runTerminal = async function(yuno, args) {

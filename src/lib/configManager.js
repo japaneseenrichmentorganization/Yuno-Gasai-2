@@ -16,6 +16,9 @@
     along with this program.  If not, see https://www.gnu.org/licenses/.
 */
 
+"use strict";
+
+
 const fs = require("fs"),
     fsPromises = require("fs").promises;
 

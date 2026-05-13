@@ -1,3 +1,5 @@
+"use strict";
+
 const blessed = require('neo-blessed');
 const { createStatusBar }   = require('./statusBar.js');
 const { createHintBar }     = require('./hintBar.js');

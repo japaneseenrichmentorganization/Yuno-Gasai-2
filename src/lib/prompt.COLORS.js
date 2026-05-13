@@ -1,3 +1,5 @@
+"use strict";
+
 module.exports = {
     "RESET": "\x1b[0m",
     "BRIGHT": "\x1b[1m",

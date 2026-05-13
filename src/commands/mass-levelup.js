@@ -3,6 +3,9 @@
     ♥ They will rise exactly to your will. No more. No less. Forever bound~ ♥
 */
 
+"use strict";
+
+
 const { totalXPForLevel } = require("../lib/xpFormulas");
 
 module.exports.run = async function(yuno, author, args, trigger) {

@@ -6,6 +6,9 @@
  * @param {string} [requiredPermission="BanMembers"] - Permission flag name
  * @returns {import("discord.js").Guild|null}
  */
+
+"use strict";
+
 function resolveGuildForTerminal(yuno, serverId, requiredPermission = "BanMembers") {
     if (!/^\d{17,19}$/.test(serverId)) {
         console.log("Error: Invalid server ID format.");

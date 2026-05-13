@@ -1,3 +1,5 @@
+"use strict";
+
 module.exports.messageProcName = "mention-responses"
 
 const {EmbedBuilder} = require("discord.js");

@@ -1,3 +1,5 @@
+"use strict";
+
 const blessed = require('neo-blessed');
 
 const HINT_TEXT = '  Tab:Focus  PgUp/Dn:Scroll  Alt+M:Members  Ctrl+Q:Quit  :shortcuts  Alt+H:Hide';

@@ -133,41 +133,80 @@ function runSql(sql, params = []) {
 
 // ---------------------------------------------------------------------------
 // Field-level decryption (mirrors src/lib/cryptoUtils.js)
+// Supports both V1 (legacy per-call PBKDF2) and V2 (master key) formats.
 // ---------------------------------------------------------------------------
 
 const ALGORITHM      = "aes-256-gcm";
-const IV_LENGTH      = 16;
 const AUTH_TAG_LEN   = 16;
-const SALT_LENGTH    = 16;
 const KEY_ITERATIONS = 100_000;
+
+// V2 format constants
+const V2_MAGIC    = Buffer.from([0x59, 0x4E, 0x02, 0x00]);
+const V2_IV_LEN   = 12;
+
+// V1 (legacy) format constants
+const V1_SALT_LEN = 16;
+const V1_IV_LEN   = 16;
+const V1_MIN_LEN  = V1_SALT_LEN + V1_IV_LEN + AUTH_TAG_LEN + 1; // 49
+
+// Cached V2 master keys by passphrase (derived once per script run)
+const _masterKeyCache = new Map();
+
+function _getMasterKeySync(passphrase) {
+    if (_masterKeyCache.has(passphrase)) return _masterKeyCache.get(passphrase);
+    const salt = crypto.createHash("sha256")
+        .update("yuno-gasai-field-encryption-v2-salt:")
+        .update(passphrase)
+        .digest();
+    const key = crypto.pbkdf2Sync(passphrase, salt, KEY_ITERATIONS, 32, "sha256");
+    _masterKeyCache.set(passphrase, key);
+    return key;
+}
 
 function _tryDecrypt(encryptedData, passphrase) {
     if (!passphrase || encryptedData === null || encryptedData === undefined) return encryptedData;
     try {
         const buf = Buffer.from(encryptedData, "base64");
-        if (buf.length < 49) return encryptedData; // not encrypted (legacy)
-        const salt    = buf.slice(0, SALT_LENGTH);
-        const iv      = buf.slice(SALT_LENGTH, SALT_LENGTH + IV_LENGTH);
-        const authTag = buf.slice(SALT_LENGTH + IV_LENGTH, SALT_LENGTH + IV_LENGTH + AUTH_TAG_LEN);
-        const cipher  = buf.slice(SALT_LENGTH + IV_LENGTH + AUTH_TAG_LEN);
-        const key     = crypto.pbkdf2Sync(passphrase, salt, KEY_ITERATIONS, 32, "sha256");
-        const dec     = crypto.createDecipheriv(ALGORITHM, key, iv);
-        dec.setAuthTag(authTag);
-        return Buffer.concat([dec.update(cipher), dec.final()]).toString("utf8");
+
+        // V2 format: starts with magic bytes
+        const minV2 = V2_MAGIC.length + V2_IV_LEN + AUTH_TAG_LEN + 1;
+        if (buf.length >= minV2 && buf.slice(0, V2_MAGIC.length).equals(V2_MAGIC)) {
+            const masterKey = _getMasterKeySync(passphrase);
+            const iv      = buf.slice(V2_MAGIC.length, V2_MAGIC.length + V2_IV_LEN);
+            const authTag = buf.slice(V2_MAGIC.length + V2_IV_LEN, V2_MAGIC.length + V2_IV_LEN + AUTH_TAG_LEN);
+            const cipher  = buf.slice(V2_MAGIC.length + V2_IV_LEN + AUTH_TAG_LEN);
+            const dec = crypto.createDecipheriv(ALGORITHM, masterKey, iv);
+            dec.setAuthTag(authTag);
+            return Buffer.concat([dec.update(cipher), dec.final()]).toString("utf8");
+        }
+
+        // V1 (legacy) format: salt + iv + authTag + ciphertext
+        if (buf.length >= V1_MIN_LEN) {
+            const salt    = buf.slice(0, V1_SALT_LEN);
+            const iv      = buf.slice(V1_SALT_LEN, V1_SALT_LEN + V1_IV_LEN);
+            const authTag = buf.slice(V1_SALT_LEN + V1_IV_LEN, V1_SALT_LEN + V1_IV_LEN + AUTH_TAG_LEN);
+            const cipher  = buf.slice(V1_SALT_LEN + V1_IV_LEN + AUTH_TAG_LEN);
+            const key     = crypto.pbkdf2Sync(passphrase, salt, KEY_ITERATIONS, 32, "sha256");
+            const dec     = crypto.createDecipheriv(ALGORITHM, key, iv);
+            dec.setAuthTag(authTag);
+            return Buffer.concat([dec.update(cipher), dec.final()]).toString("utf8");
+        }
+
+        return encryptedData; // Too short — unencrypted legacy data
     } catch {
         return encryptedData; // leave as-is if decryption fails
     }
 }
 
 function _tryEncrypt(plaintext, passphrase) {
+    // Re-encryption uses V2 format (no per-call KDF)
     if (!passphrase || plaintext === null || plaintext === undefined) return plaintext;
-    const salt = crypto.randomBytes(SALT_LENGTH);
-    const key  = crypto.pbkdf2Sync(passphrase, salt, KEY_ITERATIONS, 32, "sha256");
-    const iv   = crypto.randomBytes(IV_LENGTH);
-    const enc  = crypto.createCipheriv(ALGORITHM, key, iv);
+    const masterKey = _getMasterKeySync(passphrase);
+    const iv  = crypto.randomBytes(V2_IV_LEN);
+    const enc = crypto.createCipheriv(ALGORITHM, masterKey, iv);
     const encrypted = Buffer.concat([enc.update(String(plaintext), "utf8"), enc.final()]);
     const authTag = enc.getAuthTag();
-    return Buffer.concat([salt, iv, authTag, encrypted]).toString("base64");
+    return Buffer.concat([V2_MAGIC, iv, authTag, encrypted]).toString("base64");
 }
 
 // ---------------------------------------------------------------------------

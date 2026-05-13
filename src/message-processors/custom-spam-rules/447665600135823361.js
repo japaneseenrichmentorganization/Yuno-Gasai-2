@@ -2,6 +2,9 @@
     Yuno Gasai. A Discord.JS based bot, with multiple features.
     Copyright (C) 2018 Maeeen <maeeennn@gmail.com>
 */
+
+"use strict";
+
 const { EmbedBuilder, PermissionsBitField } = require("discord.js");
 const crypto = require("crypto");
 

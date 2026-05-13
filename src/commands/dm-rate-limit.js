@@ -16,6 +16,9 @@
     along with this program.  If not, see https://www.gnu.org/licenses/.
 */
 
+"use strict";
+
+
 delete require.cache[require.resolve("../lib/EmbedCmdResponse")];
 const EmbedCmdResponse = require("../lib/EmbedCmdResponse");
 
