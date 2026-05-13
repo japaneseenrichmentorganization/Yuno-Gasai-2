@@ -39,6 +39,10 @@ const CATEGORY_EMOJI = {
 const CHUNK_SIZE = 50;
 
 module.exports.run = async function(yuno, author, args, msg) {
+    if (msg.guild.ownerId !== msg.author.id && !yuno.commandMan._isUserMaster(msg.author.id)) {
+        return msg.channel.send(":lock: This command is restricted to the server owner.");
+    }
+
     const statusMsg = await msg.channel.send(":hourglass: Fetching all guild members... This may take a while for large servers.");
 
     const cleanupRateLimit = setupRateLimitListener(yuno.dC);
@@ -234,7 +238,7 @@ module.exports.about = {
     "terminal": false,
     "list": true,
     "listTerminal": false,
-    "requiredPermissions": ["ManageGuild", "KickMembers", "BanMembers"],
+    "requiredPermissions": ["BanMembers"],
     "aliases": ["scanalts", "altscan"],
     "dangerous": true
 };
