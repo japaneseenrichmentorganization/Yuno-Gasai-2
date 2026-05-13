@@ -238,7 +238,7 @@ module.exports.about = {
     "terminal": false,
     "list": true,
     "listTerminal": false,
-    "requiredPermissions": ["BanMembers"],
+    "requiredPermissions": ["ManageGuild", "BanMembers"],
     "aliases": ["scanalts", "altscan"],
     "dangerous": true
 };
