@@ -39,8 +39,18 @@ module.exports.run = async function(yuno, author, args, msg) {
         args.shift();
     }
 
-    let url = 'https://rule34.xxx/index.php?page=dapi&s=post&q=index&json=1&limit=100';
-    url += args[0] ? `&tags=${args[0]}` : `&pid=${Math.ceil(Math.random() * 2000)}`;
+    const base = new URL('https://rule34.xxx/index.php');
+    base.searchParams.set('page', 'dapi');
+    base.searchParams.set('s', 'post');
+    base.searchParams.set('q', 'index');
+    base.searchParams.set('json', '1');
+    base.searchParams.set('limit', '100');
+    if (args[0]) {
+        base.searchParams.set('tags', args[0]);
+    } else {
+        base.searchParams.set('pid', String(Math.ceil(Math.random() * 2000)));
+    }
+    const url = base.toString();
 
     let res;
     try {
