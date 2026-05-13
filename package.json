@@ -10,6 +10,7 @@
     "dev": "node --experimental-sqlite index.js --hot-reload",
     "test": "node --test",
     "lint": "eslint src/",
+    "verify": "npm audit && npm audit signatures",
     "generate-doc": "jsdoc .\\src -r -p -d docs -t node_modules/docdash",
     "generate-doc-notheme": "jsdoc .\\src -r -p -d docs",
     "check-db": "node --experimental-sqlite src/scripts/db-integrity-check.js",
@@ -19,23 +20,23 @@
     "node": ">=24.0.0"
   },
   "devDependencies": {
-    "docdash": ">=2.0.2",
-    "eslint": "^9.0.0",
-    "@eslint/js": "^9.0.0",
-    "eslint-plugin-security": "^3.0.0"
+    "docdash": "latest",
+    "eslint": "latest",
+    "@eslint/js": "latest",
+    "eslint-plugin-security": "latest"
   },
   "dependencies": {
-    "discord-alt-detector": "^1.0.4",
-    "discord.js": "^14.25.1",
-    "neo-blessed": "^0.2.0",
-    "urban": "^0.3.2"
+    "discord-alt-detector": "latest",
+    "discord.js": "latest",
+    "neo-blessed": "latest",
+    "urban": "latest"
   },
   "overrides": {
-    "undici": ">=6.23.0"
+    "undici": "latest"
   },
   "optionalDependencies": {
-    "bufferutil": ">=4.0.9",
-    "utf-8-validate": ">=6.0.5",
-    "zlib-sync": ">=0.1.9"
+    "bufferutil": "latest",
+    "utf-8-validate": "latest",
+    "zlib-sync": "latest"
   }
 }
