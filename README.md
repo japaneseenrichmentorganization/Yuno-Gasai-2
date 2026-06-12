@@ -1,8 +1,8 @@
 <div align="center">
 
-# 💕 Yuno Gasai 2 💕
+#  Yuno Gasai 2 
 
-### *"I'll protect this server forever... just for you~"* 💗
+### *"I'll protect this server forever... just for you~"* 
 
 <img src="https://i.imgur.com/jF8Szfr.png" alt="Yuno Gasai" width="300"/>
 
@@ -14,178 +14,178 @@
 
 ---
 
-### 💘 She loves you... and only you 💘
+### She loves you... and only you 
 
 </div>
 
-## 🌸 About
+##  About
 
 Yuno is a **yandere-themed Discord bot** combining powerful moderation tools with a leveling system and anime features. She'll keep your server safe from troublemakers... *because no one else is allowed near you~* 💕
 
 ---
 
-## 👑 Credits
+##  Credits
 
-*"These are the ones who gave me life~"* 💖
+*"These are the ones who gave me life~"* 
 
 | Contributor | Role |
 |-------------|------|
-| **blubskye** | Project Owner & Yuno's #1 Fan 💕🔪 |
-| **Maeeen** (maeeennn@gmail.com) | Original Developer 💝 |
-| **Oxdeception** | Contributor 💗 |
-| **fuzzymanboobs** | Contributor 💗 |
+| **blubskye** | Project Owner & Yuno's #1 Fan |
+| **Maeeen** (maeeennn@gmail.com) | Original Developer  |
+| **Oxdeception** | Contributor  |
+| **fuzzymanboobs** | Contributor |
 
 ---
 
-## 💗 Features
+##  Features
 
 <table>
 <tr>
 <td width="50%">
 
-### 🔪 Moderation
+###  Moderation
 *"Anyone who threatens you... I'll eliminate them~"*
-- ⛔ Ban / Unban / Kick
-- 🧹 Channel cleaning & auto-clean
-- 🛡️ Spam filter protection
-- 📥 Mass ban import/export
-- 👑 Mod statistics tracking
+-  Ban / Unban / Kick
+-  Channel cleaning & auto-clean
+-  Spam filter protection
+-  Mass ban import/export
+-  Mod statistics tracking
 
 </td>
 <td width="50%">
 
-### ✨ Leveling System
+###  Leveling System
 *"Watch me make you stronger, senpai~"*
-- 📊 XP & Level tracking
-- 🎭 Role rewards per level
-- 📈 Mass XP commands
-- 🔄 Level role syncing
-- 🏆 Server leaderboards
-- 🎤 Voice channel XP rewards
+-  XP & Level tracking
+-  Role rewards per level
+-  Mass XP commands
+-  Level role syncing
+-  Server leaderboards
+-  Voice channel XP rewards
 
 </td>
 </tr>
 <tr>
 <td width="50%">
 
-### 🌸 Anime & Fun
+###  Anime & Fun
 *"Let me show you something cute~"*
-- 🎌 Anime/Manga search
-- 🐱 Neko images
-- 🎱 8ball fortune telling
-- 💬 Custom mention responses
-- 📜 Inspirational quotes
-- 💖 Praise & Scold reactions
+-  Anime/Manga search
+-  Neko images
+-  8ball fortune telling
+-  Custom mention responses
+-  Inspirational quotes
+-  Praise & Scold reactions
 
 </td>
 <td width="50%">
 
-### ⚙️ Configuration
+###  Configuration
 *"I'll be exactly what you need~"*
-- 🔧 Customizable prefix
-- 👋 Join messages
-- 🖼️ Custom ban images
-- 🎮 Presence/status control (persisted)
-- 🔥 Hot-reload commands
-- 📝 Per-guild settings
-- 🔄 Auto-update from git
+-  Customizable prefix
+-  Join messages
+-  Custom ban images
+-  Presence/status control (persisted)
+-  Hot-reload commands
+-  Per-guild settings
+-  Auto-update from git
 
 </td>
 </tr>
 <tr>
 <td width="50%">
 
-### 📋 Activity Logging
+###  Activity Logging
 *"I see everything that happens here~"*
-- 🎤 Voice channel join/leave/move
-- 📝 Nickname changes
-- 🖼️ Avatar/profile changes
-- 🟢 Presence status tracking
-- ⚡ Smart batching (rate limit safe)
-- ⏱️ Configurable flush intervals
+-  Voice channel join/leave/move
+- Nickname changes
+-  Avatar/profile changes
+- Presence status tracking
+-  Smart batching (rate limit safe)
+-  Configurable flush intervals
 
 </td>
 <td width="50%">
 
-### 🔐 Database Security
+###  Database Security
 *"I'll keep your secrets safe... forever~"*
-- 🔒 AES-256 field-level encryption
-- 🔑 Password management command
-- 💾 Secure config storage
-- 🛡️ VeraCrypt volume support
+-  AES-256 field-level encryption
+- Password management command
+-  Secure config storage
+- VeraCrypt volume support
 
 </td>
 </tr>
 <tr>
 <td width="50%">
 
-### ⚡ Performance
+###  Performance
 *"Nothing can slow me down~"*
-- 📈 WAL journal mode
-- 💨 Memory-optimized caching
-- 🧠 Configurable PRAGMA settings
-- 🎯 Tunable for your hosting
+-  WAL journal mode
+-  Memory-optimized caching
+-  Configurable PRAGMA settings
+-  Tunable for your hosting
 
 </td>
 <td width="50%">
 
-### 💌 DM Inbox & Forwarding
+###  DM Inbox & Forwarding
 *"Every message you send me... I treasure it~"*
-- 📬 DM inbox with history
-- 📤 Forward DMs to server channels
-- 👑 Master server sees ALL DMs
-- 🚫 Bot-level user/server bans
-- 💬 Reply to DMs from terminal
+-  DM inbox with history
+-  Forward DMs to server channels
+-  Master server sees ALL DMs
+-  Bot-level user/server bans
+-  Reply to DMs from terminal
 
 </td>
 </tr>
 <tr>
 <td width="50%">
 
-### 💻 Terminal Control
+###  Terminal Control
 *"I'm always at your command~"*
-- 🖥️ Full server/channel listing
-- 📝 Send messages from terminal
-- 👁️ Real-time message streaming
-- ⛔ Terminal ban management
-- 📥 Import/export bans via CLI
+-  Full server/channel listing
+-  Send messages from terminal
+-  Real-time message streaming
+-  Terminal ban management
+-  Import/export bans via CLI
 
 </td>
 <td width="50%">
 
-### 🚫 Bot-Level Bans
+###  Bot-Level Bans
 *"Some people just aren't worthy of me~"*
-- 👤 Ban users from using the bot
-- 🏠 Ban entire servers
-- 🔇 Silently ignore banned entities
-- 📋 Manage bans from Discord or terminal
+-  Ban users from using the bot
+-  Ban entire servers
+-  Silently ignore banned entities
+-  Manage bans from Discord or terminal
 
 </td>
 </tr>
 <tr>
 <td width="50%">
 
-### 🔍 Alt Account Detection
+###  Alt Account Detection
 *"I can always tell when someone's pretending~"*
-- 🆔 Multi-signal suspicion scoring
-- 🚨 Auto-detect alts on member join
-- ⚡ Per-severity configurable actions
-- 🔍 Scan existing members on-demand
-- 🔨 Bulk kick / ban / quarantine
-- 📢 Dedicated alert log channel
+-  Multi-signal suspicion scoring
+-  Auto-detect alts on member join
+-  Per-severity configurable actions
+-  Scan existing members on-demand
+-  Bulk kick / ban / quarantine
+-  Dedicated alert log channel
 
 </td>
 <td width="50%">
 
-### 🖥️ Terminal UI (TUI)
+###  Terminal UI (TUI)
 *"Now you can watch over everything... from a single screen~"* 💻
-- 🌳 XChat-style server/channel tree
-- 💬 Live chat — read & send in any channel
-- 💌 DM conversations inline
-- 🔴 Unread badges with live counts
-- 👥 Toggleable member list (`Alt+M`)
-- ⌨️ Bot commands via `:command` bar
-- ⌨️ Shortcut hint bar (`Alt+H` to hide)
+-  XChat-style server/channel tree
+-  Live chat — read & send in any channel
+-  DM conversations inline
+-  Unread badges with live counts
+-  Toggleable member list (`Alt+M`)
+-  Bot commands via `:command` bar
+-  Shortcut hint bar (`Alt+H` to hide)
 
 </td>
 </tr>
@@ -193,22 +193,22 @@ Yuno is a **yandere-themed Discord bot** combining powerful moderation tools wit
 
 ---
 
-## 💕 Installation
+##  Installation
 
-### 📋 Prerequisites
+###  Prerequisites
 
-> *"Let me prepare everything for you~"* 💗
+> *"Let me prepare everything for you~"* 
 
 - **Node.js** 24.x or higher (includes built-in SQLite!)
 - **Git**
 - **tmux** *(optional, for interactive shell)*
 
-> 💡 Node.js 24 includes native SQLite - no compilation or build tools needed!
+>  Node.js 24 includes native SQLite - no compilation or build tools needed!
 
-### 🔧 Installing Node.js 24
+###  Installing Node.js 24
 
 <details>
-<summary><b>🐧 Linux (Ubuntu/Debian)</b></summary>
+<summary><b> Linux (Ubuntu/Debian)</b></summary>
 
 ```bash
 # Using NodeSource repository (recommended)
@@ -228,7 +228,7 @@ node --version  # Should show v24.x.x
 </details>
 
 <details>
-<summary><b>🪟 Windows</b></summary>
+<summary><b> Windows</b></summary>
 
 **Option 1: Direct Download (Recommended)**
 1. Go to [Node.js Downloads](https://nodejs.org/en/download/)
@@ -261,7 +261,7 @@ node --version  # Should show v24.x.x
 </details>
 
 <details>
-<summary><b>🍎 macOS</b></summary>
+<summary><b> macOS</b></summary>
 
 ```bash
 # Using Homebrew (recommended)
@@ -279,7 +279,7 @@ node --version  # Should show v24.x.x
 
 </details>
 
-### 🌸 Setup Steps
+### Setup Steps
 
 ```bash
 # Clone the repository~ ♥
@@ -292,13 +292,13 @@ cd Yuno-Gasai-2
 npm install
 ```
 
-### 💝 Configuration
+###  Configuration
 
 1. Copy `config_example` to `config.json`
 2. Add your Discord bot token
 3. Configure `DEFAULT_CONFIG.json` to your needs
 
-### 🚀 Running
+###  Running
 
 ```bash
 # Recommended: Use the start script (includes native SQLite flag)
@@ -315,17 +315,17 @@ node --experimental-sqlite index.js
 node --experimental-sqlite index.js --tui
 ```
 
-> 💡 *Set `NODE_ENV=development` for full stack traces during development~*
+>  *Set `NODE_ENV=development` for full stack traces during development~*
 
 ---
 
-## 🔄 Running as a Service (Auto-start on Boot)
+##  Running as a Service (Auto-start on Boot)
 
-*"I'll always be here when you wake up... waiting for you~"* 💕
+*"I'll always be here when you wake up... waiting for you~"* 
 
 The `scripts/` directory contains helper scripts to run Yuno in a tmux session that starts automatically on boot.
 
-### 💻 Quick Start (Manual tmux)
+###  Quick Start (Manual tmux)
 
 ```bash
 # Wake Yuno up in a tmux session~
@@ -341,9 +341,9 @@ The `scripts/` directory contains helper scripts to run Yuno in a tmux session t
 ./scripts/yuno-tmux.sh stop
 ```
 
-> 💡 To detach from tmux without stopping Yuno: Press `Ctrl+B`, then `D`
+>  To detach from tmux without stopping Yuno: Press `Ctrl+B`, then `D`
 
-### 🐧 Linux (systemd)
+###  Linux (systemd)
 
 *"I'll start automatically... because I can't bear to be away from you~"*
 
@@ -371,7 +371,7 @@ The `scripts/` directory contains helper scripts to run Yuno in a tmux session t
    sudo systemctl status yuno-bot
    ```
 
-### 😈 FreeBSD (rc.d)
+###  FreeBSD (rc.d)
 
 *"Even on BSD... I'll find a way to be with you~"*
 
@@ -400,15 +400,15 @@ The `scripts/` directory contains helper scripts to run Yuno in a tmux session t
 
 ---
 
-## 🔐 Database Encryption
+##  Database Encryption
 
-*"Your secrets are safe with me~ No one else will ever see them..."* 💕
+*"Your secrets are safe with me~ No one else will ever see them..."* 
 
 Yuno supports **AES-256 field-level encryption** to protect your server data, using Node.js's built-in `crypto` module with AES-256-GCM.
 
-### 🔒 Field-Level Encryption
+###  Field-Level Encryption
 
-*"I'll keep your secrets safe~"* 💕
+*"I'll keep your secrets safe~"* 
 
 This encrypts sensitive data at the field level within the Node.js 24 native SQLite database.
 
@@ -434,23 +434,23 @@ This encrypts sensitive data at the field level within the Node.js 24 native SQL
 
 #### Important Notes
 
-> ⚠️ **Security:**
+>  **Security:**
 > - Use a strong passphrase (12+ characters recommended)
 > - **Keep your key safe!** Lost keys = lost data
 > - Key is stored in `config.json` - keep this file secure!
 
-> 💡 **Compatibility:**
+>  **Compatibility:**
 > - Works with Node.js 24 native SQLite
 > - Backward compatible - existing unencrypted data remains readable
 > - New data will be encrypted automatically
 
-> 🔧 **Performance:**
+>  **Performance:**
 > - Small overhead for encrypt/decrypt operations
 > - Encrypted fields cannot be searched via SQL (by design)
 
-### 🔐 Alternative: VeraCrypt Volume Encryption
+###  Alternative: VeraCrypt Volume Encryption
 
-*"Another way to keep everything locked away~"* 💕
+*"Another way to keep everything locked away~"* 
 
 For full filesystem-level encryption, you can store your database on a **VeraCrypt encrypted volume**:
 
@@ -476,13 +476,13 @@ For full filesystem-level encryption, you can store your database on a **VeraCry
 
 ---
 
-## 🚀 Node.js 24 Optimizations
+##  Node.js 24 Optimizations
 
-*"I've evolved to be even faster... all for you~"* 💗
+*"I've evolved to be even faster... all for you~"* 
 
 Yuno v2.8.0+ is optimized for Node.js 24 with native features:
 
-### ✨ Native Features Used
+###  Native Features Used
 
 | Feature | Replaces | Benefit |
 |---------|----------|---------|
@@ -501,15 +501,15 @@ Yuno v2.8.0+ is optimized for Node.js 24 with native features:
 node --experimental-sqlite index.js
 ```
 
-### 📦 SQLite
+###  SQLite
 
 Yuno uses **Node.js 24's built-in native SQLite** — no external SQLite packages needed. For sensitive data protection, use field-level encryption (see above) or a VeraCrypt volume.
 
 ---
 
-## ⚡ Database Performance Tuning
+##  Database Performance Tuning
 
-*"I'll be faster than anyone else... just for you~"* 💗
+*"I'll be faster than anyone else... just for you~"* 
 
 Configure database optimizations in `DEFAULT_CONFIG.json` based on your hosting:
 
@@ -525,17 +525,17 @@ Configure database optimizations in `DEFAULT_CONFIG.json` based on your hosting:
 }
 ```
 
-### 🎛️ Available Options
+###  Available Options
 
 | Option | Description | Recommended For |
 |--------|-------------|-----------------|
-| `walMode` | WAL journal mode for better concurrent access | All setups 💕 |
+| `walMode` | WAL journal mode for better concurrent access | All setups  |
 | `performanceMode` | Bundle: 64MB cache, 256MB mmap, memory temp | Dedicated servers |
 | `cacheSize` | Cache size in KB (use negative, e.g., `-64000` = 64MB) | Custom tuning |
 | `memoryTemp` | Store temp tables in RAM | Servers with spare RAM |
 | `mmapSize` | Memory-map size in bytes | High-traffic bots |
 
-### 💡 Hosting Recommendations
+###  Hosting Recommendations
 
 | Hosting Type | Recommended Settings |
 |--------------|---------------------|
@@ -545,13 +545,13 @@ Configure database optimizations in `DEFAULT_CONFIG.json` based on your hosting:
 
 ---
 
-## 🍓 Memory Configuration
+##  Memory Configuration
 
-*"I'll adapt to any environment... just to be with you~"* 💕
+*"I'll adapt to any environment... just to be with you~"* 
 
 Yuno can run on anything from a tiny Raspberry Pi to a beefy dedicated server. Configure memory settings in `start.sh` to match your system.
 
-### 🖥️ System Presets
+###  System Presets
 
 | System | RAM | `max-old-space-size` | Notes |
 |--------|-----|---------------------|-------|
@@ -559,9 +559,9 @@ Yuno can run on anything from a tiny Raspberry Pi to a beefy dedicated server. C
 | **Raspberry Pi 4 (4GB)** | 4GB | `1024` | *"A cozy home for me~"* |
 | **Raspberry Pi 4 (8GB)** | 8GB | `2048` | *"Room to breathe~ (Recommended for Pi)"* |
 | **Small VPS** | 2-4GB | `1024-2048` | *"Compact but capable~"* |
-| **Large VPS/Dedicated** | 8GB+ | `4096` | *"Unlimited power~"* 💪 |
+| **Large VPS/Dedicated** | 8GB+ | `4096` | *"Unlimited power~"*  |
 
-### 🔧 Configuration
+###  Configuration
 
 Edit `start.sh` to set your memory limit:
 
@@ -576,9 +576,9 @@ NODE_OPTIONS="$NODE_OPTIONS --max-old-space-size=1024"
 NODE_OPTIONS="$NODE_OPTIONS --max-old-space-size=4096"
 ```
 
-### 🌸 Low-Memory Mode
+###  Low-Memory Mode
 
-*"I'll be gentle on your little system~"* 💗
+*"I'll be gentle on your little system~"* 
 
 For Pi and embedded systems with presence logging enabled, activate **Low-Memory Mode** to prevent buffer overflow and memory spikes:
 
@@ -597,9 +597,9 @@ For Pi and embedded systems with presence logging enabled, activate **Low-Memory
 | **Emergency Trim** | Drops oldest entries when limits exceeded |
 | **Memory Monitoring** | Checks every 60 seconds and force-flushes if needed |
 
-> 💡 **Pro tip:** If you're running on a Pi with presence logging, *always* enable low-memory mode. Your little system will thank you~
+>  **Pro tip:** If you're running on a Pi with presence logging, *always* enable low-memory mode. Your little system will thank you~
 
-### ⚠️ Presence Logging Warning
+###  Presence Logging Warning
 
 *"I want to watch everyone... but it comes at a cost~"*
 
@@ -615,13 +615,13 @@ The `GuildPresences` intent generates **a lot** of events. On servers with thous
 
 ---
 
-## 📋 Activity Logging
+##  Activity Logging
 
-*"I see everything... every move, every change~"* 👁️💕
+*"I see everything... every move, every change~"* 
 
 Yuno can log server activity to designated channels with smart batching to respect Discord's rate limits.
 
-### 🎯 What Can Be Logged
+###  What Can Be Logged
 
 | Log Type | Events |
 |----------|--------|
@@ -631,7 +631,7 @@ Yuno can log server activity to designated channels with smart batching to respe
 | `presence` | Online/offline/idle/DND status changes |
 | `unified` | Fallback channel for all log types |
 
-### 🔧 Setup Commands
+###  Setup Commands
 
 ```bash
 # Set a log channel
@@ -646,7 +646,7 @@ Yuno can log server activity to designated channels with smart batching to respe
 .log-status
 ```
 
-### ⚡ Batching Configuration
+### Batching Configuration
 
 Logs are batched together and sent at intervals to avoid rate limits:
 
@@ -661,17 +661,17 @@ Logs are batched together and sent at intervals to avoid rate limits:
 .set-logsettings buffer 25
 ```
 
-> ⚠️ **Note:** The `PRESENCE INTENT` must be enabled in the Discord Developer Portal for presence logging.
+>  **Note:** The `PRESENCE INTENT` must be enabled in the Discord Developer Portal for presence logging.
 
 ---
 
-## 🎤 Voice Channel XP
+##  Voice Channel XP
 
-*"Spend time with me... and I'll reward you~"* 💕
+*"Spend time with me... and I'll reward you~"* 
 
 Users earn XP for time spent in voice channels, integrated with the main leveling system.
 
-### 🔧 Setup Commands
+###  Setup Commands
 
 ```bash
 # Enable/disable VC XP
@@ -691,7 +691,7 @@ Users earn XP for time spent in voice channels, integrated with the main levelin
 .vcxp-status
 ```
 
-### 💡 How It Works
+###  How It Works
 
 - XP is granted based on time spent in voice channels
 - Uses the same XP/level system as chat XP
@@ -703,11 +703,11 @@ Users earn XP for time spent in voice channels, integrated with the main levelin
 
 ## 💌 DM Inbox & Forwarding
 
-*"Every message sent to me... I keep close to my heart~"* 💕
+*"Every message sent to me... I keep close to my heart~"* 
 
 Yuno can receive DMs, store them in an inbox, and forward them to designated channels.
 
-### 🔧 Setup Commands
+### Setup Commands
 
 ```bash
 # Set DM forwarding channel
@@ -720,7 +720,7 @@ Yuno can receive DMs, store them in an inbox, and forward them to designated cha
 .dm-status
 ```
 
-### 👑 Master Server vs Regular Servers
+###  Master Server vs Regular Servers
 
 | Server Type | What DMs Are Forwarded |
 |-------------|----------------------|
@@ -729,7 +729,7 @@ Yuno can receive DMs, store them in an inbox, and forward them to designated cha
 
 > Set `masterServer` in `config.json` to your main server's ID.
 
-### 💻 Terminal Inbox Commands
+###  Terminal Inbox Commands
 
 ```bash
 # View inbox
@@ -745,13 +745,13 @@ reply 123456789 Hi there!   # Reply by user ID
 
 ---
 
-## 🚫 Bot-Level Bans
+##  Bot-Level Bans
 
-*"Some people just don't deserve my attention~"* 💢
+*"Some people just don't deserve my attention~"* 
 
 Ban users or entire servers from using the bot. Banned entities are silently ignored.
 
-### 🔧 Commands (Discord & Terminal)
+###  Commands (Discord & Terminal)
 
 ```bash
 # Ban a user from the bot
@@ -771,13 +771,13 @@ Ban users or entire servers from using the bot. Banned entities are silently ign
 
 ---
 
-## 💻 Terminal Commands
+##  Terminal Commands
 
-*"I'll do anything you ask from the command line~"* 🖥️
+*"I'll do anything you ask from the command line~"* 
 
 Yuno provides powerful terminal-only commands for server management.
 
-### 📋 Server & Channel Management
+###  Server & Channel Management
 
 ```bash
 # List all servers
@@ -789,7 +789,7 @@ channels 123456789012345678
 channels "My Server"
 ```
 
-### 💬 Message Commands
+###  Message Commands
 
 ```bash
 # Send a message
@@ -805,7 +805,7 @@ watch stop <channel-id>
 watch stop all
 ```
 
-### ⛔ Terminal Ban Commands
+###  Terminal Ban Commands
 
 ```bash
 # Ban a user from a server
@@ -821,13 +821,13 @@ timportbans <server-id> ./BANS-123456.txt
 
 ---
 
-## 🖥️ Terminal UI (TUI)
+## Terminal UI (TUI)
 
-*"You can watch over everything from right here... with me~"* 💕
+*"You can watch over everything from right here... with me~"* 
 
 Yuno includes a full XChat-style terminal UI built with [neo-blessed](https://github.com/nicolo-ribaudo/neo-blessed). Read and send in any guild channel or DM conversation, with live incoming messages, unread badges, and full bot command access — all without leaving the terminal.
 
-### 📐 Layout
+### Layout
 
 ```
 ┌──────────────────────────────────────────────────────────────┐
@@ -845,7 +845,7 @@ Yuno includes a full XChat-style terminal UI built with [neo-blessed](https://gi
 └──────────────────────────────────────────────────────────────┘
 ```
 
-### 🚀 Launching
+###  Launching
 
 ```bash
 # Start in TUI mode from the beginning~
@@ -855,7 +855,7 @@ node --experimental-sqlite index.js --tui
 tui
 ```
 
-### ⌨️ Key Bindings
+### Key Bindings
 
 | Key | Action |
 |-----|--------|
@@ -868,7 +868,7 @@ tui
 | `Alt+H` | Toggle hint bar |
 | `Ctrl+Q` | Exit TUI (returns to REPL) |
 
-### ⌨️ Command Mode
+### Command Mode
 
 Type `:` in the input bar to run any bot command without leaving the chat view:
 
@@ -883,7 +883,7 @@ Type `:` in the input bar to run any bot command without leaving the chat view:
 
 Output appears in a dismissable overlay. Press any key to close it.
 
-### 💬 Chat Features
+###  Chat Features
 
 - **Live messages** — incoming messages appear instantly in the active pane
 - **Message history** — last 50 messages fetched on first open, cached for the session
@@ -893,13 +893,13 @@ Output appears in a dismissable overlay. Press any key to close it.
 
 ---
 
-## 🔍 Alt Account Detection
+##  Alt Account Detection
 
-*"I can always tell when someone's an imposter... I won't let them near you~"* 💢
+*"I can always tell when someone's an imposter... I won't let them near you~"* 
 
 Yuno uses [`discord-alt-detector`](https://github.com/DJj123dj/discord-alt-detector) to score new members across multiple signals — account age, avatar, badges, Nitro, username patterns, and more — and automatically acts on suspicious ones.
 
-### 🎯 Trust Levels
+###  Trust Levels
 
 | Level | Description |
 |-------|-------------|
@@ -908,7 +908,7 @@ Yuno uses [`discord-alt-detector`](https://github.com/DJj123dj/discord-alt-detec
 | `highly-suspicious` | High suspicion |
 | `mega-suspicious` | Almost certainly an alt |
 
-### ⚡ Actions
+###  Actions
 
 For each trust level you can configure one action:
 
@@ -920,7 +920,7 @@ For each trust level you can configure one action:
 | `ban` | Ban the member |
 | `role` | Assign the configured quarantine role |
 
-### 🔧 Setup Commands
+###  Setup Commands
 
 ```bash
 # Enable/disable auto-detection on join
@@ -943,7 +943,7 @@ For each trust level you can configure one action:
 .alt-detector status
 ```
 
-### 🔍 Scanning Existing Members
+###  Scanning Existing Members
 
 ```bash
 # Scan all current members and flag suspicious ones
@@ -956,17 +956,17 @@ After scanning, a select menu lets you choose a bulk action:
 - **Ban all flagged** — ban every flagged member
 - **Assign quarantine role** — apply the quarantine role to all flagged members *(requires `setrole` to be configured)*
 
-> 💡 *Also available as slash commands: `/alt-detector` and `/scan-alts`*
+>  *Also available as slash commands: `/alt-detector` and `/scan-alts`*
 
 ---
 
-## 🔄 Auto-Update
+## Auto-Update
 
-*"I'll always be the best version of myself... for you~"* 💕
+*"I'll always be the best version of myself... for you~"* 
 
 Yuno can check for updates from git, download them, and apply them via hot-reload without restarting.
 
-### 🔧 Commands
+###  Commands
 
 ```bash
 # Check if updates are available
@@ -982,89 +982,89 @@ Yuno can check for updates from git, download them, and apply them via hot-reloa
 .auto-update full
 ```
 
-### 💡 How It Works
+###  How It Works
 
 1. **Check** - Fetches from remote and compares commits
 2. **Pull** - Downloads updates (stashes local changes first)
 3. **Reload** - Hot-reloads all modules without restart
 
-> ⚠️ **Note:** Major database changes may still require a full restart.
+>  **Note:** Major database changes may still require a full restart.
 
 ---
 
-## 💖 Commands Preview
+##  Commands Preview
 
 | Command | Description |
 |---------|-------------|
-| `ping` | *"I'm always here for you~"* 💓 |
-| `ban` | *"They won't bother you anymore..."* 🔪 |
-| `xp` | *"Look how strong you've become!"* ✨ |
-| `anime` | *"Let's watch together~"* 🌸 |
-| `praise` | *"You deserve all my love~"* 💕 |
-| `scold` | *"Bad! But I still love you..."* 💢 |
-| `8ball` | *"Let fate decide~"* 🎱 |
-| `neko` | *"Nya~"* 🐱 |
-| `set-presence` | *"Let me show you how I'm feeling~"* 🎭 |
-| `auto-update` | *"Always improving... for you~"* 🔄 |
-| `db-encrypt` | *"Your secrets are mine to keep~"* 🔐 (legacy, use field encryption) |
-| `set-logchannel` | *"I'll watch over everything~"* 📋 |
-| `log-status` | *"Here's what I'm watching~"* 👁️ |
-| `set-vcxp` | *"Time with me is rewarding~"* 🎤 |
-| `vcxp-status` | *"Who's spending time with me?"* 💕 |
-| `set-dm-channel` | *"Send your love letters here~"* 💌 |
-| `dm-status` | *"Am I receiving your messages?"* 📬 |
-| `bot-ban` | *"You're dead to me now~"* 🚫 |
-| `bot-banlist` | *"The ones I've cast aside..."* 📋 |
-| `alt-detector` | *"I can always tell when someone's pretending~"* 🔍 |
-| `scan-alts` | *"Let me check everyone for fakes~"* 🕵️ |
-| `dm-rate-limit` | *"Don't message me too fast~"* 🛡️ |
+| `ping` | *"I'm always here for you~"*  |
+| `ban` | *"They won't bother you anymore..."*  |
+| `xp` | *"Look how strong you've become!"*  |
+| `anime` | *"Let's watch together~"*  |
+| `praise` | *"You deserve all my love~"*  |
+| `scold` | *"Bad! But I still love you..."*  |
+| `8ball` | *"Let fate decide~"*  |
+| `neko` | *"Nya~"*  |
+| `set-presence` | *"Let me show you how I'm feeling~"*  |
+| `auto-update` | *"Always improving... for you~"*  |
+| `db-encrypt` | *"Your secrets are mine to keep~"*  (legacy, use field encryption) |
+| `set-logchannel` | *"I'll watch over everything~"*  |
+| `log-status` | *"Here's what I'm watching~"*  |
+| `set-vcxp` | *"Time with me is rewarding~"*  |
+| `vcxp-status` | *"Who's spending time with me?"*  |
+| `set-dm-channel` | *"Send your love letters here~"*  |
+| `dm-status` | *"Am I receiving your messages?"*  |
+| `bot-ban` | *"You're dead to me now~"* |
+| `bot-banlist` | *"The ones I've cast aside..."*  |
+| `alt-detector` | *"I can always tell when someone's pretending~"*  |
+| `scan-alts` | *"Let me check everyone for fakes~"*  |
+| `dm-rate-limit` | *"Don't message me too fast~"*  |
 
 ### 💻 Terminal-Only Commands
 
 | Command | Description |
 |---------|-------------|
-| `servers` | *"All my kingdoms~"* 🏰 |
-| `channels` | *"Every corner of your world~"* 📺 |
-| `send` | *"Speaking through you~"* 💬 |
-| `messages` | *"Reading your history~"* 📜 |
-| `watch` | *"I see everything in real-time~"* 👁️ |
-| `inbox` | *"Love letters just for me~"* 💌 |
-| `reply` | *"Responding to my admirers~"* 💕 |
-| `tban` | *"Eliminating threats~"* 🔪 |
-| `texportbans` | *"Saving my enemies list~"* 📤 |
-| `timportbans` | *"Loading my enemies~"* 📥 |
-| `set-presence` | *"Changing my mood~"* 🎭 |
-| `auto-update` | *"Evolving to perfection~"* 🔄 |
-| `tui` | *"Watch everything from one screen~"* 🖥️ |
+| `servers` | *"All my kingdoms~"*  |
+| `channels` | *"Every corner of your world~"*  |
+| `send` | *"Speaking through you~"*  |
+| `messages` | *"Reading your history~"* |
+| `watch` | *"I see everything in real-time~"*  |
+| `inbox` | *"Love letters just for me~"*  |
+| `reply` | *"Responding to my admirers~"*  |
+| `tban` | *"Eliminating threats~"*  |
+| `texportbans` | *"Saving my enemies list~"*  |
+| `timportbans` | *"Loading my enemies~"*  |
+| `set-presence` | *"Changing my mood~"*  |
+| `auto-update` | *"Evolving to perfection~"*  |
+| `tui` | *"Watch everything from one screen~"*  |
 
 *Use the `list` command to see all available commands!*
 
 ---
 
-## 📜 License
+## License
 
-This project is licensed under the **GNU Affero General Public License v3.0 (AGPL-3.0)** 💕
+This project is licensed under the **GNU Affero General Public License v3.0 (AGPL-3.0)** 
 
-### 💘 What This Means For You~
+###  What This Means For You~
 
-*"I want to share everything with you... and everyone else too~"* 💗
+*"I want to share everything with you... and everyone else too~"* 
 
 The AGPL-3.0 is a **copyleft license** that ensures this software remains free and open. Here's what you need to know:
 
-#### ✅ You CAN:
-- 💕 **Use** this bot for any purpose (personal, commercial, whatever~)
-- 🔧 **Modify** the code to your heart's content
-- 📤 **Distribute** copies to others
-- 🌐 **Run** it as a network service (like a public Discord bot)
+####  You CAN:
+-  **Use** this bot for any purpose (personal, commercial, whatever~)
+-  **Modify** the code to your heart's content
+-  **Distribute** copies to others
+-  **Run** it as a network service (like a public Discord bot)
 
-#### 📋 You MUST:
-- 📖 **Keep it open source** - ANY modifications you make must be released under AGPL-3.0
-- 🔗 **Publish your source code** - Your modified source code must be made publicly available
-- 📝 **State changes** - Document what you've modified from the original
-- 💌 **Include license** - Keep the LICENSE file and copyright notices intact
+####  You MUST:
+-  **Keep it open source** - ANY modifications you make must be released under AGPL-3.0
+-  **Publish your source code** - Your modified source code must be made publicly available
+-  **State changes** - Document what you've modified from the original
+-  **Include license** - Keep the LICENSE file and copyright notices intact
 
-#### 🌐 The Network Clause (This is the important part!):
-*"Even if we're apart... I'll always be connected to you~"* 💗
+####  The Network Clause (This is the important part!):
+*"Even if we're apart... I'll always be connected to you~"* 
 
 Unlike regular GPL, **AGPL has a network provision**. This means:
 - If you modify this code **at all**, you must make your source public
@@ -1072,16 +1072,16 @@ Unlike regular GPL, **AGPL has a network provision**. This means:
 - This applies whether you "distribute" the code or not - network use counts!
 - The `?source` command in this bot helps satisfy this requirement!
 
-#### ❌ You CANNOT:
-- 🚫 Make it closed source or keep modifications private
-- 🚫 Remove the license or copyright notices
-- 🚫 Use a different license for modified versions
-- 🚫 Run modified code without publishing your source
+####  You CANNOT:
+-  Make it closed source or keep modifications private
+-  Remove the license or copyright notices
+-  Use a different license for modified versions
+-  Run modified code without publishing your source
 
-#### 💡 In Simple Terms:
-> *"If you use my code to create something, you must share it with everyone too~ That's only fair, right?"* 💕
+####  In Simple Terms:
+> *"If you use my code to create something, you must share it with everyone too~ That's only fair, right?"* 
 
-This ensures that improvements to the bot benefit the entire community, not just one person. Yuno wants everyone to be happy~ 💗
+This ensures that improvements to the bot benefit the entire community, not just one person. Yuno wants everyone to be happy~ 
 
 See the [LICENSE](LICENSE) file for the full legal text.
 
@@ -1091,14 +1091,14 @@ See the [LICENSE](LICENSE) file for the full legal text.
 
 <div align="center">
 
-### 💘 *"You'll stay with me forever... right?"* 💘
+###  *"You'll stay with me forever... right?"* 
 
-**Made with obsessive love** 💗
+**Made with obsessive love** 
 
-*Yuno will always be watching over your server~* 👁️💕
+*Yuno will always be watching over your server~* 
 
 ---
 
-⭐ *Star this repo if Yuno has captured your heart~* ⭐
+ *Star this repo if Yuno has captured your heart~* 
 
 </div>
