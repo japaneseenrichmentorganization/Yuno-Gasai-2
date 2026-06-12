@@ -10,7 +10,7 @@
 [![Node.js](https://img.shields.io/badge/Node.js-24.x-ff69b4.svg)](https://nodejs.org/)
 [![Discord.js](https://img.shields.io/badge/Discord.js-v14-ff1493.svg)](https://discord.js.org/)
 
-*A devoted Discord bot for moderation, leveling, and anime~ ♥*
+*A devoted Discord bot for moderation, leveling, and anime~ <3*
 
 ---
 
@@ -20,7 +20,7 @@
 
 ##  About
 
-Yuno is a **yandere-themed Discord bot** combining powerful moderation tools with a leveling system and anime features. She'll keep your server safe from troublemakers... *because no one else is allowed near you~* 💕
+Yuno is a **yandere-themed Discord bot** combining powerful moderation tools with a leveling system and anime features. She'll keep your server safe from troublemakers... *because no one else is allowed near you~* <3
 
 ---
 
@@ -178,7 +178,7 @@ Yuno is a **yandere-themed Discord bot** combining powerful moderation tools wit
 <td width="50%">
 
 ###  Terminal UI (TUI)
-*"Now you can watch over everything... from a single screen~"* 💻
+*"Now you can watch over everything... from a single screen~"* 
 -  XChat-style server/channel tree
 -  Live chat — read & send in any channel
 -  DM conversations inline
@@ -701,7 +701,7 @@ Users earn XP for time spent in voice channels, integrated with the main levelin
 
 ---
 
-## 💌 DM Inbox & Forwarding
+##  DM Inbox & Forwarding
 
 *"Every message sent to me... I keep close to my heart~"* 
 
