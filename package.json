@@ -22,9 +22,9 @@
     "node": ">=24.0.0"
   },
   "devDependencies": {
+    "@eslint/js": "latest",
     "docdash": "latest",
     "eslint": "latest",
-    "@eslint/js": "latest",
     "eslint-plugin-security": "latest"
   },
   "dependencies": {
@@ -32,9 +32,6 @@
     "discord.js": "latest",
     "neo-blessed": "latest",
     "urban": "latest"
-  },
-  "overrides": {
-    "undici": "latest"
   },
   "optionalDependencies": {
     "bufferutil": "latest",
